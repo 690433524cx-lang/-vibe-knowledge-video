@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { T, END, FPS } = require('./config');
+const { T, END, FPS, TL, toReal } = require('./config');
 const { renderFrame, makeCanvas } = require('./frame');
 
 const pos = process.argv.slice(2).filter((a, i, arr) => !a.startsWith('--') && !(arr[i - 1] || '').startsWith('--'));
@@ -15,6 +15,7 @@ const points = [
   ['T-1.0', T - 1], ['T-0.2', T - 0.2], ['T', T], ['T+1.0', T + 1],
   ['T+8', T + 8], ['T+20', T + 20], ['70s', 70], ['75s', 75], ['85s', 85],
   ['ending', END - 3], ['last', last],
+  ...(TL.KEYFRAMES_EXTRA || []).map(([n, d]) => [n, toReal(d)]),
 ];
 const [canvas, ctx] = makeCanvas();
 const files = [];

@@ -198,7 +198,17 @@ function scrollTicks(seed = 11, dur = 1.5) {
   return b;
 }
 
+// 12 路线熄灭：一声很闷的低音 + 继电器似的轻响（明显弱于 T 的冲击）
+function lightsOut(seed = 12) {
+  const b = buf(0.9), r = rng(seed), lp = biquad('lp', 240), bp = biquad('bp', 1800, 4);
+  for (let i = 0; i < b.length; i++) {
+    const t = i / SR;
+    b[i] = Math.sin(2 * Math.PI * (58 - 12 * t) * t) * Math.exp(-t * 6) * 0.6 + lp(r() * 2 - 1) * Math.exp(-t * 18) * 0.7 + bp(r() * 2 - 1) * Math.exp(-t * 80) * 0.6;
+  }
+  return b;
+}
+
 module.exports = {
   mixSfx, writeWav, SR,
-  synth: { drop, paper, tick, printer, photoDrop, threadTight, impact, stamp, pencilScratch, door, scrollTicks },
+  synth: { drop, paper, tick, printer, photoDrop, threadTight, impact, stamp, pencilScratch, door, scrollTicks, lightsOut },
 };

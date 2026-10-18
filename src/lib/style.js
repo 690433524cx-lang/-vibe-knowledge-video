@@ -7,6 +7,16 @@ GlobalFonts.registerFromPath(path.join(FONT_DIR, 'Noto_Serif_SC_wght_900.ttf'), 
 GlobalFonts.registerFromPath(path.join(FONT_DIR, 'Ma_Shan_Zheng.ttf'), 'Brush');
 GlobalFonts.registerFromPath(path.join(FONT_DIR, 'Long_Cang.ttf'), 'Hand');
 GlobalFonts.registerFromPath(path.join(FONT_DIR, 'Special_Elite.ttf'), 'Typewriter');
+// 第二版排版（选择困难起）：正文用常规字重，英文人名 / 术语用 EB Garamond
+for (const [file, name] of [
+  ['Noto_Serif_SC_wght_400.ttf', 'SerifSCReg'],
+  ['EB_Garamond_wght_400.ttf', 'Garamond'],
+  ['EB_Garamond_wght_500.ttf', 'GaramondMed'],
+  ['EB_Garamond_ital_wght_1_400.ttf', 'GaramondItalic'],
+]) {
+  const f = path.join(FONT_DIR, file);
+  if (require('fs').existsSync(f)) GlobalFonts.registerFromPath(f, name);
+}
 
 // 全片只用四套字体：
 //   正文字幕 / 术语  → 思源宋体（SerifSC / SerifSCBlack）
@@ -19,6 +29,10 @@ const FONT = {
   brush: (px) => `${px}px Brush`,
   hand: (px) => `${px}px Hand`,
   type: (px) => `${px}px Typewriter`,
+  body: (px) => `${px}px SerifSCReg`,
+  en: (px) => `${px}px Garamond`,
+  enMed: (px) => `${px}px GaramondMed`,
+  enItalic: (px) => `${px}px GaramondItalic`,
 };
 
 const C = {

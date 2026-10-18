@@ -12,3 +12,7 @@ get "Noto+Serif+SC:wght@900" Noto_Serif_SC_wght_900.ttf
 get "Ma+Shan+Zheng" Ma_Shan_Zheng.ttf
 get "Long+Cang" Long_Cang.ttf
 get "Special+Elite" Special_Elite.ttf
+get "Noto+Serif+SC:wght@400" Noto_Serif_SC_wght_400.ttf
+get "EB+Garamond:wght@400" EB_Garamond_wght_400.ttf
+get "EB+Garamond:ital,wght@1,400" EB_Garamond_ital_wght_1_400.ttf
+get "EB+Garamond:wght@500" EB_Garamond_wght_500.ttf

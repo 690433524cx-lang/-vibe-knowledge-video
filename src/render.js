@@ -1,4 +1,4 @@
-// 渲染：node src/render.js --from 0 --to 20 --out output/sample.mp4 [--T 52.37] [--music path]
+// 渲染：node src/render.js --from 0 --to 20 --out output/sample.mp4 [--T 52.37] [--music path] [--workers 4]
 //
 // 视频：逐帧 RGBA → ffmpeg（H.264 / yuv420p / 30fps / 1920×1080）
 // 音频：代码合成的音效；若提供 --music（《千年之后》），按 --music-offset 对齐后混入。
@@ -19,18 +19,46 @@ const out = arg('--out', 'output/render.mp4');
 const music = arg('--music');
 const musicOffset = parseFloat(arg('--music-offset', '0'));
 const crf = arg('--crf', '17');
+const workers = parseInt(arg('--workers', '1'), 10);
+const segOut = arg('--segment-out');
 
 fs.mkdirSync(path.dirname(out), { recursive: true });
 const tmpVideo = out.replace(/\.mp4$/, '.video.mp4');
 const tmpAudio = out.replace(/\.mp4$/, '.sfx.wav');
 
-async function main() {
-  const f0 = Math.round(from * FPS), f1 = Math.round(to * FPS);
-  console.log(`T=${T}s END=${END}s  frames ${f0}..${f1 - 1}`);
+// 多进程：把帧区间切成几段，各自编码，再无损拼接
+async function renderParallel(f0, f1) {
+  const n = Math.max(1, Math.min(workers, f1 - f0));
+  const pass = [];
+  for (let i = 2; i < process.argv.length; i++) {
+    const a = process.argv[i];
+    if (['--workers', '--out', '--from', '--to', '--music', '--music-offset'].includes(a)) { i++; continue; }
+    pass.push(a);
+  }
+  const segs = [];
+  const jobs = [];
+  for (let k = 0; k < n; k++) {
+    const a = f0 + Math.floor(((f1 - f0) * k) / n), b = f0 + Math.floor(((f1 - f0) * (k + 1)) / n);
+    const seg = out.replace(/\.mp4$/, `.seg${k}.mp4`);
+    segs.push(seg);
+    jobs.push(new Promise((res, rej) => {
+      const p = spawn(process.execPath, [__filename, ...pass, '--f0', String(a), '--f1', String(b), '--segment-out', seg],
+        { stdio: ['ignore', k === 0 ? 'inherit' : 'ignore', 'inherit'], env: process.env });
+      p.on('close', (code) => (code === 0 ? res() : rej(new Error(`segment ${k} failed`))));
+    }));
+  }
+  await Promise.all(jobs);
+  const list = out.replace(/\.mp4$/, '.segs.txt');
+  fs.writeFileSync(list, segs.map((f) => `file '${path.resolve(f)}'`).join('\n'));
+  execFileSync('ffmpeg', ['-loglevel', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', list, '-c', 'copy', tmpVideo], { stdio: 'inherit' });
+  for (const f of [...segs, list]) fs.unlinkSync(f);
+}
+
+async function renderRange(f0, f1, file) {
   const ff = spawn('ffmpeg', ['-loglevel', 'error', '-y',
     '-f', 'rawvideo', '-pix_fmt', 'rgba', '-s', `${W}x${H}`, '-r', String(FPS), '-i', '-',
     '-c:v', 'libx264', '-preset', 'slow', '-crf', crf, '-pix_fmt', 'yuv420p', '-r', String(FPS),
-    '-movflags', '+faststart', tmpVideo], { stdio: ['pipe', 'inherit', 'inherit'] });
+    '-movflags', '+faststart', file], { stdio: ['pipe', 'inherit', 'inherit'] });
   const [canvas, ctx] = makeCanvas();
   const t0 = Date.now();
   for (let f = f0; f < f1; f++) {
@@ -44,6 +72,18 @@ async function main() {
   }
   ff.stdin.end();
   await new Promise((r) => ff.on('close', r));
+}
+
+async function main() {
+  if (segOut) {
+    await renderRange(parseInt(arg('--f0'), 10), parseInt(arg('--f1'), 10), segOut);
+    return;
+  }
+  const f0 = Math.round(from * FPS), f1 = Math.round(to * FPS);
+  console.log(`T=${T}s END=${END}s  frames ${f0}..${f1 - 1}  workers ${workers}`);
+  const t0 = Date.now();
+  if (workers > 1) await renderParallel(f0, f1);
+  else await renderRange(f0, f1, tmpVideo);
 
   writeWav(tmpAudio, mixSfx(from, to));
   const dur = (f1 - f0) / FPS;

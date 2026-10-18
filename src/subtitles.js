@@ -80,8 +80,62 @@ function drawLine(ctx, s, a, k) {
   ctx.restore();
 }
 
+// ---------- 第二版：电影字幕 / 杂志排版 ----------
+// 常规字重、放松字距；位置可按构图给 x / y / align；淡入时有一点「对焦」。
+const V2 = {
+  sub: { font: (px) => FONT.body(px), px: 48, ls: 3, color: '#e8dfcc' },
+  small: { font: (px) => FONT.body(px), px: 36, ls: 3, color: '#d8ccb6' },
+  hook: { font: (px) => FONT.body(px), px: 74, ls: 6, color: '#efe6d3' },
+  quote: { font: (px) => FONT.body(px), px: 60, ls: 5, color: '#efe6d3' },
+  emph: { font: (px) => FONT.serif(px), px: 56, ls: 4, color: '#efe6d3' },
+  hand: { font: (px) => FONT.hand(px), px: 66, ls: 2, color: C.subRed },
+};
+
+function drawLineV2(ctx, s, a, k) {
+  const st = V2[s.style || 'sub'] || V2.sub;
+  const px = s.size || st.px;
+  ctx.save();
+  ctx.font = st.font(px);
+  ctx.letterSpacing = `${st.ls}px`;
+  ctx.textBaseline = 'alphabetic';
+  const segs = segments(s.text);
+  const widths = segs.map(([t]) => ctx.measureText(t).width);
+  const total = widths.reduce((p, q) => p + q, 0);
+  const align = s.align || 'center';
+  let x = s.x ?? W / 2;
+  if (align === 'center') x -= total / 2;
+  if (align === 'right') x -= total;
+  const y = (s.y ?? 962) + (1 - easeOut(k)) * 6;
+  const blur = (1 - smooth(k)) * 3;
+  ctx.globalAlpha = a;
+  ctx.shadowColor = 'rgba(0,0,0,0.55)';
+  ctx.shadowBlur = 14;
+  ctx.shadowOffsetY = 2;
+  if (blur > 0.2) ctx.filter = `blur(${blur.toFixed(1)}px)`;
+  if (s.style === 'hand') {
+    ctx.beginPath();
+    ctx.rect(x - 10, y - px * 1.4, (total + 20) * Math.min(1, k * 1.5), px * 2);
+    ctx.clip();
+  }
+  segs.forEach(([t, red], i) => {
+    ctx.fillStyle = red ? C.subRed : (s.color || st.color);
+    ctx.fillText(t, x, y);
+    x += widths[i];
+  });
+  ctx.restore();
+}
+
 // t 为设计时间
 function drawSubtitles(ctx, t) {
+  if (require('./config').TL.LOOK === 'v2') {
+    for (const s of SUBS) {
+      const fi = s.fi ?? 0.35, fo = s.fo ?? 0.35;
+      if (t < s.t || t > s.t + s.d + fo) continue;
+      const a = smooth(prog(t, s.t, s.t + fi)) * (1 - smooth(prog(t, s.t + s.d, s.t + s.d + fo)));
+      drawLineV2(ctx, s, a, prog(t, s.t, s.t + Math.max(0.45, fi)));
+    }
+    return;
+  }
   for (const s of SUBS) {
     const fi = s.fi ?? 0.28, fo = 0.3;
     if (t < s.t || t > s.t + s.d + fo) continue;

@@ -50,11 +50,31 @@ function strokePartial(ctx, pts, progress) {
   ctx.stroke();
 }
 
+// 笔压变化：分段描线，每段粗细随噪声起伏，起笔收笔更细
+function strokePressure(ctx, pts, progress, width, pressure, seed) {
+  const total = polyLength(pts) * clamp(progress);
+  let acc = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+    const L = Math.hypot(x1 - x0, y1 - y0);
+    if (acc >= total) break;
+    const f = Math.min(1, (total - acc) / (L || 1));
+    const u = acc / (total || 1);
+    const taper = Math.min(1, u * 6, (1 - u) * 6 + 0.25);
+    ctx.lineWidth = width * Math.max(0.25, (1 - pressure * 0.45) + pressure * 0.45 * noise1(acc / 23, seed)) * (0.55 + 0.45 * taper);
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x0 + (x1 - x0) * f, y0 + (y1 - y0) * f);
+    ctx.stroke();
+    acc += L;
+  }
+}
+
 // 铅笔线：两遍不同抖动叠加，透明度略有差异
 function pencil(ctx, pts, o = {}) {
   const {
     seed = 1, t = 0, width = 2, color = C.graphite, alpha = 1, progress = 1,
-    amp = 1.1, passes = 2, boil = true,
+    amp = 1.1, passes = 2, boil = true, pressure = 0,
   } = o;
   if (alpha <= 0.002 || progress <= 0) return;
   const b = boil ? boilOf(t) : 0;
@@ -66,7 +86,9 @@ function pencil(ctx, pts, o = {}) {
   for (let p = 0; p < passes; p++) {
     ctx.lineWidth = width * (p ? 0.6 : 1);
     ctx.globalAlpha = base * alpha * (p ? 0.55 : 0.9);
-    strokePartial(ctx, wobble(pts, seed * 7 + p * 131 + b * 17, amp * (p ? 1.6 : 1)), progress);
+    const wp = wobble(pts, seed * 7 + p * 131 + b * 17, amp * (p ? 1.6 : 1));
+    if (pressure > 0) strokePressure(ctx, wp, progress, ctx.lineWidth, pressure, seed + p);
+    else strokePartial(ctx, wp, progress);
   }
   ctx.restore();
 }
