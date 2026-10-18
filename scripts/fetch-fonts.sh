@@ -16,3 +16,4 @@ get "Noto+Serif+SC:wght@400" Noto_Serif_SC_wght_400.ttf
 get "EB+Garamond:wght@400" EB_Garamond_wght_400.ttf
 get "EB+Garamond:ital,wght@1,400" EB_Garamond_ital_wght_1_400.ttf
 get "EB+Garamond:wght@500" EB_Garamond_wght_500.ttf
+get "ZCOOL+XiaoWei" ZCOOL_XiaoWei.ttf

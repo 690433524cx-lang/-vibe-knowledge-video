@@ -326,19 +326,26 @@ function table(ctx, t, o = {}) {
   // 桌上的东西（从后往前画）
   const items = o.tidy ?? 0; // 结尾：收拾到一起的程度
   const at = (x, y, fn) => { ctx.save(); ctx.translate(x, y); fn(); ctx.restore(); };
-  at(1240, 790, () => plate(ctx, 70, 15, { seed: 3, crumbs: 18 }));
-  at(760, 788, () => plate(ctx, 62, 13, { seed: 4, crumbs: 10, food: (c, rx, ry) => { c.fillStyle = '#8a5a34'; c.beginPath(); c.ellipse(-rx * 0.2, 0, rx * 0.25, ry * 0.4, 0.2, 0, Math.PI * 2); c.fill(); } }));
-  at(1060, 800, () => bowl(ctx, 52, 13, 30, { inner: '#a07a48' }));
-  // 碗里剩的零食
-  const r = rng(55);
-  for (let i = 0; i < 12; i++) { ctx.fillStyle = r() < 0.5 ? '#c09a5a' : '#8f6a3a'; ctx.beginPath(); ctx.ellipse(1060 + (r() - 0.5) * 70, 770 + (r() - 0.5) * 12, 5, 3, r(), 0, Math.PI * 2); ctx.fill(); }
-  at(1340, 806, () => bottle(ctx, 30, 120, { col: [30, 54, 40] }));
-  at(690, 840, () => bottle(ctx, 26, 104, { col: [62, 40, 26], lying: true, label: false }));
-  at(1150, 838, () => napkin(ctx, 26, 7));
-  at(820, 846, () => napkin(ctx, 20, 8));
-  at(1290, 846, () => napkin(ctx, 18, 9));
-  at(990, 846, () => glassShape(ctx, 46, 78, { fill: 0.08, liquid: [140, 80, 40] }));
-  at(1195, 822, () => glassShape(ctx, 50, 86, { fill: 0.22, liquid: [150, 60, 36] }));
+  // 封面用的提炼版：只留一只盘子、一瓶酒、两只杯子
+  if (o.minimal) {
+    at(1210, 796, () => plate(ctx, 66, 14, { seed: 3, crumbs: 6 }));
+    at(1340, 806, () => bottle(ctx, 30, 120, { col: [30, 54, 40], label: false }));
+    at(1150, 826, () => glassShape(ctx, 48, 84, { fill: 0.18, liquid: [150, 60, 36] }));
+  } else {
+    at(1240, 790, () => plate(ctx, 70, 15, { seed: 3, crumbs: 18 }));
+    at(760, 788, () => plate(ctx, 62, 13, { seed: 4, crumbs: 10, food: (c, rx, ry) => { c.fillStyle = '#8a5a34'; c.beginPath(); c.ellipse(-rx * 0.2, 0, rx * 0.25, ry * 0.4, 0.2, 0, Math.PI * 2); c.fill(); } }));
+    at(1060, 800, () => bowl(ctx, 52, 13, 30, { inner: '#a07a48' }));
+    // 碗里剩的零食
+    const r = rng(55);
+    for (let i = 0; i < 12; i++) { ctx.fillStyle = r() < 0.5 ? '#c09a5a' : '#8f6a3a'; ctx.beginPath(); ctx.ellipse(1060 + (r() - 0.5) * 70, 770 + (r() - 0.5) * 12, 5, 3, r(), 0, Math.PI * 2); ctx.fill(); }
+    at(1340, 806, () => bottle(ctx, 30, 120, { col: [30, 54, 40] }));
+    at(690, 840, () => bottle(ctx, 26, 104, { col: [62, 40, 26], lying: true, label: false }));
+    at(1150, 838, () => napkin(ctx, 26, 7));
+    at(820, 846, () => napkin(ctx, 20, 8));
+    at(1290, 846, () => napkin(ctx, 18, 9));
+    at(990, 846, () => glassShape(ctx, 46, 78, { fill: 0.08, liquid: [140, 80, 40] }));
+    at(1195, 822, () => glassShape(ctx, 50, 86, { fill: 0.22, liquid: [150, 60, 36] }));
+  }
   at(GLASS.x, GLASS.y, () => glassShape(ctx, GLASS.w, GLASS.h, { fill: 0.3, liquid: [160, 64, 40] }));
   // 散场以后才会有的样子：倒下的杯子、更多纸巾、空瓶（只在脑内的未来里出现）
   const m = o.mess ?? 0;
@@ -573,4 +580,4 @@ function rimOnScreen(t) {
 // 静态画面（封面）用：指定门、楼道灯、灯串的状态
 function setStatic(st) { ST = st; }
 
-module.exports = { ...S, draw, drawOver, light, grade, cam, rimOnScreen, drawRoom, drawHero, cityLights, lampGlow, stringGlow, setStatic, future, GLASS, HERO, LAMP, roundRect };
+module.exports = { ...S, draw, drawOver, light, grade, cam, rimOnScreen, drawRoom, wall, floor, sofa, windowFrame, table, lamp, drawHero, cityLights, lampGlow, stringGlow, setStatic, future, GLASS, HERO, LAMP, roundRect };

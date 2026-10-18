@@ -13,6 +13,7 @@ for (const [file, name] of [
   ['EB_Garamond_wght_400.ttf', 'Garamond'],
   ['EB_Garamond_wght_500.ttf', 'GaramondMed'],
   ['EB_Garamond_ital_wght_1_400.ttf', 'GaramondItalic'],
+  ['ZCOOL_XiaoWei.ttf', 'XiaoWei'],   // 《悲观主义》封面：文学感的标题宋体
 ]) {
   const f = path.join(FONT_DIR, file);
   if (require('fs').existsSync(f)) GlobalFonts.registerFromPath(f, name);
@@ -33,6 +34,7 @@ const FONT = {
   en: (px) => `${px}px Garamond`,
   enMed: (px) => `${px}px GaramondMed`,
   enItalic: (px) => `${px}px GaramondItalic`,
+  xiaowei: (px) => `${px}px XiaoWei`,
 };
 
 const C = {
