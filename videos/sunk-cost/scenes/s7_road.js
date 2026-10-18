@@ -1,10 +1,10 @@
 // 第七幕 · 走错的路：时间轴「现在」之后的那一段长成一条路。
 // 一个很小的背影沿路往前走，经过「走错了」的路牌也没停。镜头拉远：路正弯离原本的方向。
-const { W, H } = require('../config');
-const { C, FONT } = require('../lib/style');
-const { pencil, handText, typeText } = require('../lib/draw');
-const { prog, smooth, easeInOut, easeOut, lerp, clamp } = require('../lib/util');
-const props = require('../lib/props');
+const { W, H } = require('../../../src/config');
+const { C, FONT } = require('../../../src/lib/style');
+const { pencil, handText, typeText } = require('../../../src/lib/draw');
+const { prog, smooth, easeInOut, easeOut, lerp, clamp } = require('../../../src/lib/util');
+const props = require('../../../src/lib/props');
 const { LY, NOW, X1 } = require('./s6_timeline');
 
 const S = { start: 64.6, end: 73.8 };

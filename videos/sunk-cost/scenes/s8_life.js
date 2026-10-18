@@ -1,10 +1,10 @@
 // 第八幕 · 更多生活：道路压平成游戏存档的进度条（128 HOURS），
 // 再变成半年的复习计划。最后五件「证据」并排，被同一根暗红线串起来。
-const { W, H } = require('../config');
-const { C, FONT } = require('../lib/style');
-const { pencil, typeText, handText, hatch, rectPts, sketchEllipse } = require('../lib/draw');
-const { prog, smooth, easeInOut, easeOut, lerp, clamp } = require('../lib/util');
-const props = require('../lib/props');
+const { W, H } = require('../../../src/config');
+const { C, FONT } = require('../../../src/lib/style');
+const { pencil, typeText, handText, hatch, rectPts, sketchEllipse } = require('../../../src/lib/draw');
+const { prog, smooth, easeInOut, easeOut, lerp, clamp } = require('../../../src/lib/util');
+const props = require('../../../src/lib/props');
 const road = require('./s7_road');
 
 const S = { start: 72.6, end: 82.8 };

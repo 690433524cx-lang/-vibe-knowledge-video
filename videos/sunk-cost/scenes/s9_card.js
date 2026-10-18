@@ -1,11 +1,11 @@
 // 第九幕 · 真正该问的问题：五件证据收拢成一张决策卡。
 // 「我已经投入多少？」被一根铅笔线克制地划掉；下面留下「从现在开始，还值得吗？」
 // 第十幕 · 一个能用的方法：卡片翻到背面——「如果今天才第一次遇见它——」
-const { W, H } = require('../config');
-const { C, FONT } = require('../lib/style');
-const { pencil, typeText } = require('../lib/draw');
-const { prog, smooth, easeInOut, easeOut, lerp } = require('../lib/util');
-const props = require('../lib/props');
+const { W, H } = require('../../../src/config');
+const { C, FONT } = require('../../../src/lib/style');
+const { pencil, typeText } = require('../../../src/lib/draw');
+const { prog, smooth, easeInOut, easeOut, lerp } = require('../../../src/lib/util');
+const props = require('../../../src/lib/props');
 
 const S = { start: 82.1, end: 99.4 };
 const CARD = { x: 960, y: 500, w: 980, h: 560 };

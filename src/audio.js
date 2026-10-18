@@ -1,7 +1,8 @@
 // 音效：全部由代码合成，按设计时间编排，渲染时映射到真实时间（随 T 移动）。
 // 全片核心音效控制在 8～12 种以内，且都很轻，不与《千年之后》抢。
 const fs = require('fs');
-const { toReal, DESIGN_T } = require('./config');
+const path = require('path');
+const { toReal, VIDEO_DIR } = require('./config');
 const { rng } = require('./lib/util');
 
 const SR = 48000;
@@ -142,27 +143,10 @@ function door(seed = 10, dur = 1.6) {
   return b;
 }
 
-// 编排（设计时间）。gain 为线性增益。
-const CUES = [
-  { t: 2.2, fx: () => drop(11), gain: 0.32 },
-  { t: 4.4, fx: () => drop(12), gain: 0.22 },
-  { t: 6.6, fx: () => drop(13), gain: 0.16 },
-  { t: 7.75, fx: () => paper(21, 0.8), gain: 0.18 },
-  { t: 9.6, fx: () => tick(31), gain: 0.16 },
-  { t: 11.6, fx: () => tick(32), gain: 0.14 },
-  { t: 13.9, fx: () => tick(33), gain: 0.13 },
-  { t: 17.45, fx: () => printer(41), gain: 0.16 },
-  { t: 29.05, fx: () => photoDrop(51), gain: 0.22 },
-  { t: 44.0, fx: () => threadTight(61), gain: 0.12 },
-  { t: DESIGN_T, fx: () => impact(71), gain: 0.5 },          // T：与音乐重拍同时
-  { t: DESIGN_T + 1.0, fx: () => stamp(81), gain: 0.3 },    // T+1.0：沉没成本
-  { t: 84.7, fx: () => pencilScratch(91, 0.55), gain: 0.14 },
-  { t: 86.5, fx: () => pencilScratch(92, 0.6), gain: 0.1 },
-  { t: 88.5, fx: () => paper(22, 0.8), gain: 0.16 },
-  { t: 100.0, fx: () => door(101), gain: 0.14 },
-];
+
 
 function mixSfx(fromReal, toRealT) {
+  const CUES = require(path.join(VIDEO_DIR, 'audio.js'));
   const len = Math.ceil((toRealT - fromReal) * SR);
   const L = new Float32Array(len), R = new Float32Array(len);
   for (const c of CUES) {
@@ -199,4 +183,7 @@ function writeWav(file, [L, R]) {
   fs.writeFileSync(file, Buffer.concat([h, data]));
 }
 
-module.exports = { mixSfx, writeWav, CUES, SR };
+module.exports = {
+  mixSfx, writeWav, SR,
+  synth: { drop, paper, tick, printer, photoDrop, threadTight, impact, stamp, pencilScratch, door },
+};

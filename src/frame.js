@@ -7,7 +7,7 @@ const { W, H, FPS, DESIGN_T, DESIGN_END, toDesign } = require('./config');
 const { makeDesk, makeGrain, makeVignette } = require('./lib/paper');
 const { drawSubtitles } = require('./subtitles');
 const { prog, smooth, noise1, lerp } = require('./lib/util');
-const SCENES = require('./scenes');
+const SCENES = require(require('path').join(require('./config').VIDEO_DIR, 'scenes'));
 const { FONT, C } = require('./lib/style');
 
 const desk = makeDesk();
@@ -24,7 +24,7 @@ function drawFurniture(ctx, d) {
   ctx.globalAlpha = a;
   ctx.font = FONT.type(18);
   ctx.fillStyle = C.lightText;
-  ctx.fillText('HUMAN BEHAVIOR STUDIES  ·  FILE 07', 120, 96);
+  ctx.fillText(require('./config').TL.HEADER, 120, 96);
   ctx.textAlign = 'right';
   ctx.fillText('P. ' + String(page).padStart(2, '0'), W - 120, 96);
   ctx.strokeStyle = 'rgba(200,185,160,0.35)';

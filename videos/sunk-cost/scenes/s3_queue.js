@@ -1,8 +1,8 @@
 // 第三幕 · 时间：座位号变成排队号码 A147。前面还有一长串号码，叫号几乎不动。
-const { W, H } = require('../config');
-const { C, FONT } = require('../lib/style');
-const { pencil, typeText, camera } = require('../lib/draw');
-const { prog, smooth, easeInOut, easeOut, lerp, clamp, rng } = require('../lib/util');
+const { W, H } = require('../../../src/config');
+const { C, FONT } = require('../../../src/lib/style');
+const { pencil, typeText, camera } = require('../../../src/lib/draw');
+const { prog, smooth, easeInOut, easeOut, lerp, clamp, rng } = require('../../../src/lib/util');
 const { SEAT_TARGET } = require('./s2_ticket');
 
 const S = { start: 17.0, end: 26.2 };

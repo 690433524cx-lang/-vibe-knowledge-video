@@ -1,8 +1,8 @@
 // 第二幕 · 钱：杯底的圆形轮廓变成电影票的检票印章；时钟一圈一圈往前走。
-const { W, H } = require('../config');
-const { C, FONT } = require('../lib/style');
-const { pencil, sketchEllipse, ellipsePts, rectPts, typeText, handText, hatch, camera } = require('../lib/draw');
-const { prog, smooth, easeInOut, easeOut, lerp, clamp } = require('../lib/util');
+const { W, H } = require('../../../src/config');
+const { C, FONT } = require('../../../src/lib/style');
+const { pencil, sketchEllipse, ellipsePts, rectPts, typeText, handText, hatch, camera } = require('../../../src/lib/draw');
+const { prog, smooth, easeInOut, easeOut, lerp, clamp } = require('../../../src/lib/util');
 const glass = require('./s1_glass');
 
 const S = { start: 7.0, end: 18.4 };

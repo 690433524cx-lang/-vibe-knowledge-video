@@ -1,10 +1,10 @@
 // 第四幕 · 感情：号码牌下的细线 → 一条长路 → 一张桌子的前沿。
 // 桌上一张旧照片，两把椅子，其中一把被拉开、空着。
-const { W, H } = require('../config');
-const { C, FONT } = require('../lib/style');
-const { pencil, line } = require('../lib/draw');
-const { prog, smooth, easeInOut, easeOut, lerp, clamp } = require('../lib/util');
-const props = require('../lib/props');
+const { W, H } = require('../../../src/config');
+const { C, FONT } = require('../../../src/lib/style');
+const { pencil, line } = require('../../../src/lib/draw');
+const { prog, smooth, easeInOut, easeOut, lerp, clamp } = require('../../../src/lib/util');
+const props = require('../../../src/lib/props');
 
 const S = { start: 24.8, end: 40.7 };
 

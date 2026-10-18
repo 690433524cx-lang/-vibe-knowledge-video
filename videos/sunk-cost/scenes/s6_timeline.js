@@ -1,11 +1,11 @@
 // 第六幕 · 解释：「不」字最上面那一横被拉长成时间轴：过去 / 现在 / 未来。
 // 钱、时间、感情、努力都落在「过去」。「回不来。」时，过去整段变灰、往下沉（沉没）。
 // 然后几根暗红细线从沉下去的旧物里伸出来，把「现在」的指针往回拽。
-const { W, H, DESIGN_T: D } = require('../config');
-const { C, FONT } = require('../lib/style');
-const { pencil, typeText } = require('../lib/draw');
-const { prog, smooth, easeInOut, easeOut, lerp } = require('../lib/util');
-const props = require('../lib/props');
+const { W, H, DESIGN_T: D } = require('../../../src/config');
+const { C, FONT } = require('../../../src/lib/style');
+const { pencil, typeText } = require('../../../src/lib/draw');
+const { prog, smooth, easeInOut, easeOut, lerp } = require('../../../src/lib/util');
+const props = require('../../../src/lib/props');
 const { GLYPH, GLYPH_POS, drawPage } = require('./sx_climax');
 
 const S = { start: D + 2.0, end: 65.6 };

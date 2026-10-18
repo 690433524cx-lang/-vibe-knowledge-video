@@ -2,11 +2,11 @@
 // 「舍不得」像墨迹一样压在纸上，暗红墨点向外洇开。
 // T+0.5 打出 SUNK COST，T+1.0 盖上「沉没成本」。
 const { createCanvas } = require('@napi-rs/canvas');
-const { W, H, DESIGN_T: D } = require('../config');
-const { C, FONT } = require('../lib/style');
-const { pencil, typeText } = require('../lib/draw');
-const { prog, smooth, easeOut, easeIn, lerp, rng } = require('../lib/util');
-const props = require('../lib/props');
+const { W, H, DESIGN_T: D } = require('../../../src/config');
+const { C, FONT } = require('../../../src/lib/style');
+const { pencil, typeText } = require('../../../src/lib/draw');
+const { prog, smooth, easeOut, easeIn, lerp, rng } = require('../../../src/lib/util');
+const props = require('../../../src/lib/props');
 const { PAGE } = require('./s4_table');
 const { LINE_A, LINE_B } = require('./s5_evidence');
 

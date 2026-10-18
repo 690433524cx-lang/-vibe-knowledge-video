@@ -1,9 +1,9 @@
 // 尾声 · 问题：决策卡慢慢长成一扇门。镜头后退，是一间安静、空旷的房间，
 // 远处只有一扇半开的门，门缝里一点很淡的光。问题停在那里，不给答案。
-const { W, H, DESIGN_END } = require('../config');
-const { C } = require('../lib/style');
-const { pencil, rectPts } = require('../lib/draw');
-const { prog, smooth, easeInOut, lerp } = require('../lib/util');
+const { W, H, DESIGN_END } = require('../../../src/config');
+const { C } = require('../../../src/lib/style');
+const { pencil, rectPts } = require('../../../src/lib/draw');
+const { prog, smooth, easeInOut, lerp } = require('../../../src/lib/util');
 const { CARD, camS } = require('./s9_card');
 
 const S = { start: 99.3, end: DESIGN_END + 0.1 };

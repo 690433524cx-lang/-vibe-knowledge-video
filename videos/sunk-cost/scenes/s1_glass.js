@@ -1,9 +1,9 @@
 // 第一幕 · 钩子：黑暗里一只被顶光照亮的玻璃杯。水一直滴进去，又一直从杯底的裂缝漏走。
 // 开场 0.3 秒就把问题抛给观众，镜头一路推向裂缝。
-const { W, H } = require('../config');
-const { C, FONT } = require('../lib/style');
-const { pencil, sketchEllipse, ellipsePts, typeText, camera } = require('../lib/draw');
-const { prog, smooth, easeIn, easeInOut, lerp, clamp, rng } = require('../lib/util');
+const { W, H } = require('../../../src/config');
+const { C, FONT } = require('../../../src/lib/style');
+const { pencil, sketchEllipse, ellipsePts, typeText, camera } = require('../../../src/lib/draw');
+const { prog, smooth, easeIn, easeInOut, lerp, clamp, rng } = require('../../../src/lib/util');
 
 const S = { start: 0, end: 8.9 };
 

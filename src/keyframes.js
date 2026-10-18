@@ -6,7 +6,8 @@ const { execFileSync } = require('child_process');
 const { T, END, FPS } = require('./config');
 const { renderFrame, makeCanvas } = require('./frame');
 
-const outDir = process.argv[2] || 'output/keyframes_full';
+const pos = process.argv.slice(2).filter((a, i, arr) => !a.startsWith('--') && !(arr[i - 1] || '').startsWith('--'));
+const outDir = pos[0] || 'output/keyframes_full';
 fs.mkdirSync(outDir, { recursive: true });
 const last = (Math.round(END * FPS) - 1) / FPS;
 const points = [

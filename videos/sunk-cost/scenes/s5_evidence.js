@@ -1,10 +1,10 @@
 // 第五幕 · 共性：照片的白边长成一张档案页。电影票、取号单、旧照片并排别在纸上，
 // 一根暗红细线把它们串起来。T-1.0 起开始减少信息，最后只剩一根拉紧的线。
-const { W, H, DESIGN_T: D } = require('../config');
-const { C, FONT } = require('../lib/style');
-const { pencil, typeText } = require('../lib/draw');
-const { prog, smooth, easeInOut, easeOut, lerp, clamp, noise1 } = require('../lib/util');
-const props = require('../lib/props');
+const { W, H, DESIGN_T: D } = require('../../../src/config');
+const { C, FONT } = require('../../../src/lib/style');
+const { pencil, typeText } = require('../../../src/lib/draw');
+const { prog, smooth, easeInOut, easeOut, lerp, clamp, noise1 } = require('../../../src/lib/util');
+const props = require('../../../src/lib/props');
 const { PAGE } = require('./s4_table');
 
 const S = { start: 40.15, end: D - 1e-6 };
