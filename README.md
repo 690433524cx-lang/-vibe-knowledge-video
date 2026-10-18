@@ -9,9 +9,11 @@
 
 - [x] STEP 1 音乐分析：**跳过**（《千年之后》音频尚未提供；暂定 T = 50 s，仅用于结构）
 - [x] STEP 2 分镜表：`docs/storyboard.md`
-- [x] STEP 3 前 20 秒样片：`output/sample_0-20s.mp4`，关键帧 `output/keyframes_sample/`
-- [ ] STEP 4 全片（等样片确认）
-- [ ] STEP 5–7 关键帧检查 / 自动检查 / 最终渲染（需要真实音频完成卡点）
+- [x] STEP 3 前 20 秒样片（深色版，已确认）：`output/sample_0-20s.mp4`，关键帧 `output/keyframes_sample/`
+- [x] STEP 4 全片（无音乐版）：`output/full_v1.mp4`
+- [x] STEP 5 关键帧：`output/keyframes_full/`（`00_contact_sheet.jpg` 为总览）
+- [x] STEP 6 自动检查：`docs/review.md`
+- [ ] STEP 7 最终渲染（需要《千年之后》真实音频完成卡点）
 
 ## 使用
 
@@ -19,7 +21,8 @@
 npm install
 npm run fonts        # 下载四套开源字体到 assets/fonts/
 npm run sample       # 渲染 0–20 秒样片
-node src/still.js output/keyframes 2 6 10 15 19   # 导出关键帧
+node src/still.js output/keyframes 2 6 10 15 19   # 导出任意时间点
+node src/keyframes.js output/keyframes_full       # 导出检查用关键帧（随 T 自动计算）
 ```
 
 ## 时间轴参数（拿到《千年之后》后）

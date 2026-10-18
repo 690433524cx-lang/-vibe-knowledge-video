@@ -3,7 +3,7 @@
 // 视觉基调：深夜昏暗档案室。背景是黑棕色桌面，只有主体被一束很弱的暖光照亮。
 // 每个场景通过 light(t) 给出屏幕空间里的光斑（位置、大小、权重），转场时按权重混合。
 const { createCanvas } = require('@napi-rs/canvas');
-const { W, H, FPS, DESIGN_T, toDesign } = require('./config');
+const { W, H, FPS, DESIGN_T, DESIGN_END, toDesign } = require('./config');
 const { makeDesk, makeGrain, makeVignette } = require('./lib/paper');
 const { drawSubtitles } = require('./subtitles');
 const { prog, smooth, noise1, lerp } = require('./lib/util');
@@ -73,10 +73,11 @@ function applyLight(ctx, L) {
   ctx.translate(L.x, L.y);
   ctx.scale(1, L.ry / L.rx);
   const R = L.rx;
-  const outer = Math.min(0.97, 0.9 + (1 - L.i) * 0.1);
+  const dim = Math.max(0, 1 - L.i);
+  const outer = Math.min(0.97, 0.9 + dim * 0.1);
   const g = ctx.createRadialGradient(0, 0, R * 0.12, 0, 0, R);
-  g.addColorStop(0, `rgba(6,4,3,${(1 - L.i) * 0.9})`);
-  g.addColorStop(0.45, `rgba(6,4,3,${0.18 + (1 - L.i) * 0.7})`);
+  g.addColorStop(0, `rgba(6,4,3,${dim * 0.9})`);
+  g.addColorStop(0.45, `rgba(6,4,3,${Math.max(0.04, 0.18 + (1 - L.i) * 0.7)})`);
   g.addColorStop(1, `rgba(6,4,3,${outer})`);
   ctx.fillStyle = g;
   ctx.fillRect(-W * 3, -H * 6, W * 6, H * 12);
@@ -129,6 +130,13 @@ function renderFrame(ctx, tReal, frameIndex) {
 
   drawFurniture(ctx, d);
   drawSubtitles(ctx, d);
+
+  // 片尾：问题停留之后，缓缓沉入黑暗
+  const close = smooth(prog(d, DESIGN_END - 0.9, DESIGN_END - 0.05));
+  if (close > 0) {
+    ctx.fillStyle = `rgba(2,1,1,${close})`;
+    ctx.fillRect(0, 0, W, H);
+  }
 
   ctx.drawImage(vignette, 0, 0);
   ctx.save();

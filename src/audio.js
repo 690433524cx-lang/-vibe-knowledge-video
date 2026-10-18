@@ -69,6 +69,79 @@ function printer(seed = 4, dur = 0.45) {
   return b;
 }
 
+// 5 照片落在桌上：一声很轻的闷响 + 纸边
+function photoDrop(seed = 5) {
+  const b = buf(0.4), r = rng(seed), lp = biquad('lp', 900), bp = biquad('bp', 2500, 1);
+  for (let i = 0; i < b.length; i++) {
+    const t = i / SR;
+    b[i] = Math.sin(2 * Math.PI * 140 * t) * Math.exp(-t * 30) * 0.6 + lp(r() * 2 - 1) * Math.exp(-t * 40) * 0.8 + bp(r() * 2 - 1) * Math.exp(-t * 25) * 0.3;
+  }
+  return b;
+}
+
+// 6 细线拉紧：上滑的共振，带一点摩擦
+function threadTight(seed = 6, dur = 0.7) {
+  const b = buf(dur), r = rng(seed);
+  let ph = 0;
+  for (let i = 0; i < b.length; i++) {
+    const t = i / SR, k = t / dur;
+    const f = 520 + 380 * k * k;
+    ph += (2 * Math.PI * f) / SR;
+    const e = Math.sin(Math.PI * k) * (0.8 + 0.2 * Math.sin(t * 90));
+    b[i] = (Math.sin(ph) * 0.35 + Math.sin(ph * 2.01) * 0.12 + (r() * 2 - 1) * 0.05) * e;
+  }
+  return b;
+}
+
+// 7 高潮低频冲击：只作增强，短、低、克制
+function impact(seed = 7) {
+  const b = buf(1.6), r = rng(seed), lp = biquad('lp', 180), lp2 = biquad('lp', 1200);
+  let ph = 0;
+  for (let i = 0; i < b.length; i++) {
+    const t = i / SR;
+    const f = 34 + 40 * Math.exp(-t * 9);
+    ph += (2 * Math.PI * f) / SR;
+    b[i] = Math.sin(ph) * Math.exp(-t * 2.6) * 0.9 + lp(r() * 2 - 1) * Math.exp(-t * 14) * 1.6 + lp2(r() * 2 - 1) * Math.exp(-t * 60) * 0.25;
+  }
+  return b;
+}
+
+// 8 旧印章：木头闷敲 + 纸面
+function stamp(seed = 8) {
+  const b = buf(0.45), r = rng(seed), bp = biquad('bp', 420, 2), hp = biquad('hp', 1800);
+  for (let i = 0; i < b.length; i++) {
+    const t = i / SR;
+    b[i] = bp(r() * 2 - 1) * Math.exp(-t * 28) * 2.2 + Math.sin(2 * Math.PI * 190 * t) * Math.exp(-t * 35) * 0.5 + hp(r() * 2 - 1) * Math.exp(-t * 70) * 0.2;
+  }
+  return b;
+}
+
+// 9 铅笔划线
+function pencilScratch(seed = 9, dur = 0.5) {
+  const b = buf(dur), r = rng(seed), bp = biquad('bp', 5200, 1.5), hp = biquad('hp', 2500);
+  for (let i = 0; i < b.length; i++) {
+    const t = i / SR, k = t / dur;
+    const e = Math.sin(Math.PI * k) * (0.6 + 0.4 * Math.abs(Math.sin(t * 60)));
+    b[i] = hp(bp(r() * 2 - 1)) * e * 1.1;
+  }
+  return b;
+}
+
+// 10 门轻轻打开：很慢的低吱声
+function door(seed = 10, dur = 1.6) {
+  const b = buf(dur), r = rng(seed), bp = biquad('bp', 700, 4), lp = biquad('lp', 300);
+  let ph = 0;
+  for (let i = 0; i < b.length; i++) {
+    const t = i / SR, k = t / dur;
+    const f = 180 + 60 * Math.sin(k * 3);
+    ph += (2 * Math.PI * f) / SR;
+    const grain = 0.5 + 0.5 * Math.sign(Math.sin(2 * Math.PI * (22 + 10 * k) * t));
+    const e = Math.sin(Math.PI * k);
+    b[i] = (bp(Math.sin(ph) * grain + (r() * 2 - 1) * 0.3) * 0.9 + lp(r() * 2 - 1) * 0.3) * e;
+  }
+  return b;
+}
+
 // 编排（设计时间）。gain 为线性增益。
 const CUES = [
   { t: 2.2, fx: () => drop(11), gain: 0.32 },
@@ -79,8 +152,15 @@ const CUES = [
   { t: 11.6, fx: () => tick(32), gain: 0.14 },
   { t: 13.9, fx: () => tick(33), gain: 0.13 },
   { t: 17.45, fx: () => printer(41), gain: 0.16 },
+  { t: 29.05, fx: () => photoDrop(51), gain: 0.22 },
+  { t: 44.0, fx: () => threadTight(61), gain: 0.12 },
+  { t: DESIGN_T, fx: () => impact(71), gain: 0.5 },          // T：与音乐重拍同时
+  { t: DESIGN_T + 1.0, fx: () => stamp(81), gain: 0.3 },    // T+1.0：沉没成本
+  { t: 84.7, fx: () => pencilScratch(91, 0.55), gain: 0.14 },
+  { t: 86.5, fx: () => pencilScratch(92, 0.6), gain: 0.1 },
+  { t: 88.5, fx: () => paper(22, 0.8), gain: 0.16 },
+  { t: 100.0, fx: () => door(101), gain: 0.14 },
 ];
-void DESIGN_T;
 
 function mixSfx(fromReal, toRealT) {
   const len = Math.ceil((toRealT - fromReal) * SR);

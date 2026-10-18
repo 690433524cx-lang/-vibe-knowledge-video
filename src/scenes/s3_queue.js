@@ -5,9 +5,11 @@ const { pencil, typeText, camera } = require('../lib/draw');
 const { prog, smooth, easeInOut, easeOut, lerp, clamp, rng } = require('../lib/util');
 const { SEAT_TARGET } = require('./s2_ticket');
 
-const S = { start: 17.0, end: 28.5 };
+const S = { start: 17.0, end: 26.2 };
 
 const SLIP = { cx: 960, top: 250, bottom: 770, w: 390 };
+// 25s 起：号码牌与队伍退回黑暗，只留下牌子下方的一根细线（交给第四幕）
+const OUT = (t) => 1 - smooth(prog(t, 25.0, 26.0));
 
 // 镜头：先停在号码上，然后缓慢拉远，露出前面长长的队
 function cam(t) {
@@ -148,19 +150,22 @@ function draw(ctx, t) {
   const c = cam(t);
   ctx.save();
   camera(ctx, c.cx, c.cy, c.s);
-  drawSlip(ctx, t, 1);
+  drawSlip(ctx, t, OUT(t));
   ctx.restore();
 }
 
 // 光斑之外、但仍需隐约可见的东西：叫号屏（自身发光）、远处的号码和空椅子
 function drawOver(ctx, t) {
   const c = cam(t);
+  const out = OUT(t);
+  if (out <= 0) return;
   ctx.save();
+  ctx.globalAlpha = out;
   camera(ctx, c.cx, c.cy, c.s);
   const hk = smooth(prog(t, 18.4, 19.2));
   if (hk > 0) {
     ctx.save();
-    ctx.globalAlpha = hk * 0.85;
+    ctx.globalAlpha = out * hk * 0.85;
     ctx.font = FONT.serif(26);
     ctx.fillStyle = C.dimText;
     ctx.fillText('正在叫号', 200, 250);
@@ -184,17 +189,17 @@ function drawOver(ctx, t) {
     ctx.fillText(fmtWait(wait), 290, 392);
     ctx.restore();
   }
-  ctx.globalAlpha = 0.55;
+  ctx.globalAlpha = out * 0.55;
   drawChairs(ctx, t, 1);
-  ctx.globalAlpha = 1;
-  drawQueue(ctx, t, 0.75);
+  ctx.globalAlpha = out;
+  drawQueue(ctx, t, 0.75 * out);
   ctx.restore();
 }
 
 function light(t) {
   const c = cam(t);
   const x = W / 2 + (SLIP.cx - c.cx) * c.s, y = H / 2 + (510 - c.cy) * c.s;
-  return { x, y, rx: 600, ry: 470, i: 1, w: smooth(prog(t, 16.9, 17.6)) };
+  return { x, y, rx: 600, ry: 470, i: 1, w: smooth(prog(t, 16.9, 17.6)) * (1 - smooth(prog(t, 25.6, 26.6))) };
 }
 
 module.exports = { ...S, draw, drawOver, light, cam, SLIP };

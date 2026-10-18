@@ -14,7 +14,7 @@ const FPS = 30;
 // 设计时间轴里的高潮点（不要改，场景都按它编写）
 const DESIGN_T = 50.0;
 // 设计时间轴总长
-const DESIGN_END = 108.0;
+const DESIGN_END = 109.0;
 // 高潮窗口：T-RIGID … T+RIGID 内保持 1:1
 const RIGID = 2.0;
 
