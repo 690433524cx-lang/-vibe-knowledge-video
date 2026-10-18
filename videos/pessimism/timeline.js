@@ -14,5 +14,6 @@ module.exports = {
   PRE_T_DARK: [-0.7, -0.15],
   PRE_T_DARK_AMOUNT: 0.7,
   HIDE_HEADER: [[0, 999]], // 本片是生活场景短片，不要档案页眉
+  KEYFRAMES_EXTRA: [['msg', 29.0], ['interview', 36.0], ['imagine', 39.25], ['echo', 45.0], ['anchor', 49.8], ['map', 55.6], ['two-things', 62.8], ['archive', 73.2], ['seligman', 76.0], ['style', 82.6], ['exam', 85.2], ['relation', 87.9], ['work', 90.6], ['strike', 94.0], ['questions', 101.8], ['routes', 106.8], ['stand', 109.0], ['window', 113.0]],
   HEADER: '',
 };

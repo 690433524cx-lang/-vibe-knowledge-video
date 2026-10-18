@@ -47,8 +47,7 @@ const SUBS = [
   { t: 68.9, d: 1.1, text: '不是你想到最坏。', y: 965 },
   { t: 70.2, d: 0.8, text: '是你开始把最坏——', y: 965 },
   { t: 71.2, d: 2.0, text: '当成{唯一}。', style: 'quote', y: 975, fi: 0.5 },
-  // Martin Seligman 人物页（右栏，三级）
-  { t: 76.0, d: 2.2, text: '他研究过人如何解释失败。', style: 'small', x: 860, y: 720, align: 'left', size: 40 },
+  // Martin Seligman 人物页：那一句中文写在人物页的排版里（scenes/p9_research.js），这里不重复
   // 第十幕 · 解释风格
   { t: 78.8, d: 0.6, text: '悲观的人。', ...L },
   { t: 79.6, d: 1.1, text: '更容易把一次失败——', ...L },

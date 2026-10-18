@@ -176,4 +176,4 @@ const simon = dossier({
   credit: 'Portrait: Richard Rappaport · CC BY 3.0 · via Wikimedia Commons',
 });
 
-module.exports = { schwartz, simon };
+module.exports = { schwartz, simon, dossier };

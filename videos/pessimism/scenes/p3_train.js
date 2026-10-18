@@ -2,6 +2,7 @@
 //   接上一幕：窗外的灯已经在流动；摄影机从车窗拉开、摇向右侧——他靠窗坐着，看着窗外。
 //   小桌板上的手机亮着：DAY 1。窗外的光一阵阵扫过他的侧脸。
 //   19.6 他慢慢低下头。20.6 切到手机特写（俯拍、手的局部）：行程页被拇指往下推，惯性停在一张返程票上——RETURN。
+//   24.7 返程票的矩形留下来，内容淡去、圆角变大——变成聊天框：「下周有空吗？一起吃个饭」，已发送。
 const { W, H } = require('../../../src/config');
 const { FONT } = require('../../../src/lib/style');
 const { prog, smooth, lerp, rng, noise1, easeInOut, easeOut } = require('../../../src/lib/util');
@@ -9,9 +10,9 @@ const { spring, glide } = require('../../../src/lib/motion');
 const { withCam, toScreen, foreground, smoothPath } = require('../lib');
 const { filtered } = require('../../../src/lib/material');
 const { person } = require('../people');
-const { roundRect } = require('./p1_party');
+const { phoneShell, chat, roundRect, BUBBLE } = require('../phone');
 
-const S = { start: 16.3, end: 25.8 };
+const S = { start: 16.3, end: 26.6 };
 const CUT_T = 20.6;   // 切到手机特写
 
 const WIN = { x0: 120, x1: 1180, y0: 190, y1: 640, r: 46 };
@@ -250,41 +251,12 @@ const CARD = 150;
 // 拇指往下推两次，惯性被摩擦拖住，停在返程票上
 function scrollY(t) { return glide(t, 21.3, 900, 3.4) + glide(t, 22.25, 1300, 3.2); }
 
-function closeUp(ctx, t) {
-  const k = t - CUT_T;
-  ctx.save();
-  // 背景：他的腿（深色布料）、膝上的光
-  const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, '#22252a'); bg.addColorStop(1, '#16181b');
-  ctx.fillStyle = bg;
-  ctx.fillRect(-100, -100, W + 200, H + 200);
-  ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 18;
-  for (const [a, b] of [[200, 900], [1500, 1000], [400, 1080]]) { ctx.beginPath(); ctx.moveTo(a, -50); ctx.quadraticCurveTo(a + 200, 500, b, 1150); ctx.stroke(); }
-  // 手机：极慢推近，几乎不晃（手机是稳的）
-  const push = 1 + 0.03 * prog(t, CUT_T, 25.8);
-  ctx.translate(1080, 560);
-  ctx.scale(push, push);
-  ctx.rotate(-0.1);
-  const pw = 470, ph = 940;
-  // 手：从右下握住手机
-  ctx.fillStyle = '#3d2c22';
-  smoothPath(ctx, [[pw * 0.32, ph * 0.18], [pw * 0.62, ph * 0.26], [pw * 0.9, ph * 0.62], [pw * 0.8, ph * 0.9], [pw * 0.2, ph * 0.72], [pw * 0.32, ph * 0.4]]);
-  ctx.fill();
-  ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.7)'; ctx.shadowBlur = 50; ctx.shadowOffsetX = 20; ctx.shadowOffsetY = 30;
-  ctx.fillStyle = '#0f0f11';
-  roundRect(ctx, -pw / 2, -ph / 2, pw, ph, 58); ctx.fill();
-  ctx.restore();
-  ctx.strokeStyle = 'rgba(200,200,205,0.3)'; ctx.lineWidth = 2;
-  roundRect(ctx, -pw / 2, -ph / 2, pw, ph, 58); ctx.stroke();
-  // 屏幕
-  const sw = pw - 34, sh = ph - 34;
-  ctx.save();
-  roundRect(ctx, -sw / 2, -sh / 2, sw, sh, 44); ctx.clip();
-  ctx.fillStyle = '#1b2026';
-  ctx.fillRect(-sw / 2, -sh / 2, sw, sh);
+// 行程页（含返程票）。m：返程票变成聊天气泡的进度（24.7–25.5）
+function itinerary(ctx, sw, sh, t, m, alpha) {
   const top = -sh / 2 + 150;
   const y0 = top - Math.min(scrollY(t), ITIN.length * CARD - 120);
+  ctx.save();
+  ctx.globalAlpha *= alpha;
   ITIN.forEach(([d, place, wx], i) => {
     const y = y0 + i * CARD;
     if (y < -sh / 2 - CARD || y > sh / 2) return;
@@ -301,12 +273,29 @@ function closeUp(ctx, t) {
     ctx.fillText(wx, sw / 2 - 56, y + 62);
     ctx.textAlign = 'left';
   });
-  // 返程票：列表最后，样子不一样（票据：虚线、缺口）
+  ctx.fillStyle = '#1b2026';
+  ctx.fillRect(-sw / 2, -sh / 2, sw, 120);
+  ctx.fillStyle = 'rgba(240,234,222,0.9)';
+  ctx.font = FONT.body(32);
+  ctx.fillText('行程', -sw / 2 + 50, -sh / 2 + 92);
+  ctx.font = FONT.en(24);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = 'rgba(230,222,206,0.6)';
+  ctx.fillText('7 DAYS', sw / 2 - 50, -sh / 2 + 92);
+  ctx.textAlign = 'left';
+  ctx.restore();
+  // 返程票：矩形保留，内容淡去，圆角变大、变窄、变色——成为一条聊天气泡
   const ty = y0 + ITIN.length * CARD + 10;
+  const r0 = { x: -sw / 2 + 26, y: ty, w: sw - 52, h: 300 };
+  const R = { x: lerp(r0.x, BUBBLE.x, m), y: lerp(r0.y, BUBBLE.y, m), w: lerp(r0.w, BUBBLE.w, m), h: lerp(r0.h, BUBBLE.h, m) };
+  const col = [lerp(217, 86, m), lerp(209, 104, m), lerp(192, 92, m)].map(Math.round);
+  ctx.fillStyle = `rgb(${col.join(',')})`;
+  roundRect(ctx, R.x, R.y, R.w, R.h, lerp(18, 30, m)); ctx.fill();
+  const ca = 1 - smooth(prog(m, 0, 0.45));
+  if (ca <= 0.01) return;
   ctx.save();
+  ctx.globalAlpha *= ca;
   ctx.translate(0, ty);
-  ctx.fillStyle = '#d9d1c0';
-  roundRect(ctx, -sw / 2 + 26, 0, sw - 52, 300, 18); ctx.fill();
   ctx.fillStyle = '#1b2026';
   ctx.beginPath(); ctx.arc(-sw / 2 + 26, 190, 18, 0, Math.PI * 2); ctx.arc(sw / 2 - 26, 190, 18, 0, Math.PI * 2); ctx.fill();
   ctx.strokeStyle = 'rgba(60,50,40,0.4)'; ctx.setLineDash([8, 8]); ctx.lineWidth = 2;
@@ -331,29 +320,18 @@ function closeUp(ctx, t) {
   ctx.font = FONT.en(22);
   ctx.fillText('SEAT  08  F', -sw / 2 + 62, 250);
   ctx.restore();
-  // 顶栏
-  ctx.fillStyle = '#1b2026';
-  ctx.fillRect(-sw / 2, -sh / 2, sw, 120);
-  ctx.fillStyle = 'rgba(240,234,222,0.9)';
-  ctx.font = FONT.body(32);
-  ctx.fillText('行程', -sw / 2 + 50, -sh / 2 + 92);
-  ctx.font = FONT.en(24);
-  ctx.textAlign = 'right';
-  ctx.fillStyle = 'rgba(230,222,206,0.6)';
-  ctx.fillText('7 DAYS', sw / 2 - 50, -sh / 2 + 92);
-  ctx.textAlign = 'left';
-  // 玻璃反光
-  const gl = ctx.createLinearGradient(-sw / 2, -sh / 2, sw / 2, sh / 2);
-  gl.addColorStop(0.2, 'rgba(255,255,255,0)'); gl.addColorStop(0.28, 'rgba(255,255,255,0.06)'); gl.addColorStop(0.36, 'rgba(255,255,255,0)');
-  ctx.fillStyle = gl;
-  ctx.fillRect(-sw / 2, -sh / 2, sw, sh);
-  ctx.restore();
-  // 拇指（在屏幕上推）
-  const push2 = Math.sin(Math.PI * prog(t, 21.0, 21.5)) + Math.sin(Math.PI * prog(t, 21.95, 22.45));
-  ctx.fillStyle = '#4a3528';
-  smoothPath(ctx, [[pw * 0.5, ph * 0.08 - push2 * 60], [pw * 0.22, ph * 0.06 - push2 * 60], [pw * 0.1, ph * 0.12 - push2 * 50], [pw * 0.34, ph * 0.36], [pw * 0.6, ph * 0.3]]);
-  ctx.fill();
-  ctx.restore();
+}
+
+// 手机特写：行程 → 返程票 → （24.7 起）返程票变成聊天气泡 → 25.5 他打出的那句话、已发送
+function closeUp(ctx, t) {
+  const push = 1 + 0.03 * prog(t, CUT_T, S.end);
+  const thumb = Math.sin(Math.PI * prog(t, 21.0, 21.5)) + Math.sin(Math.PI * prog(t, 21.95, 22.45)) + Math.sin(Math.PI * prog(t, 25.6, 25.9)) * 0.6;
+  const m = smooth(prog(t, 24.7, 25.45));
+  const c = smooth(prog(t, 25.3, 25.6));
+  phoneShell(ctx, { bg: 'lap', push, thumb }, (x, sw, sh) => {
+    if (c < 1) itinerary(x, sw, sh, t, m, 1 - smooth(prog(t, 24.6, 25.3)));
+    if (c > 0) chat(x, sw, sh, { alpha: c, text: smooth(prog(t, 25.55, 25.85)), status: smooth(prog(t, 25.95, 26.15)) });
+  });
 }
 
 function draw(ctx, t) {
@@ -374,7 +352,7 @@ function draw(ctx, t) {
     ctx.restore();
   } else {
     ctx.save();
-    ctx.globalAlpha *= 1 - smooth(prog(t, 25.2, 25.8));
+    ctx.globalAlpha *= 1 - smooth(prog(t, 26.38, 26.6));
     closeUp(ctx, t);
     ctx.restore();
   }
@@ -398,7 +376,7 @@ function drawOver(ctx, t) {
 
 // 光：车厢顶灯（冷、弱）；窗外扫过的路灯（暖，一阵一阵扫过他的侧脸）；手机屏幕
 function light(t) {
-  const w = smooth(prog(t, 16.35, 16.9)) * (1 - smooth(prog(t, 25.2, 25.8)));
+  const w = smooth(prog(t, 16.35, 16.9)) * (1 - smooth(prog(t, 26.38, 26.6)));
   if (t >= CUT_T) {
     return [
       { x: 1080, y: 540, rx: 700, ry: 760, i: 1, w, color: [200, 214, 232], core: 0.35 },
