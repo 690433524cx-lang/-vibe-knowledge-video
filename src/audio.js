@@ -209,6 +209,6 @@ function lightsOut(seed = 12) {
 }
 
 module.exports = {
-  mixSfx, writeWav, SR,
+  mixSfx, writeWav, SR, biquad, buf,
   synth: { drop, paper, tick, printer, photoDrop, threadTight, impact, stamp, pencilScratch, door, scrollTicks, lightsOut },
 };

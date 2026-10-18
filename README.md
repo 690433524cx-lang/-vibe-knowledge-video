@@ -3,9 +3,10 @@
 | 视频 | 目录 | 状态 |
 |---|---|---|
 | 《为什么你越舍不得，越容易继续浪费？》沉没成本 | `videos/sunk-cost/` | 无音乐全片 `output/full_v1.mp4` |
+| 《悲观主义》悲观解释风格 | `videos/pessimism/` | 0–20 s 样片 `output/pessimism/sample_0-20s.mp4`，关键帧 `output/pessimism/keyframes_sample/`，分镜 `docs/pessimism/storyboard.md`，自检 `docs/pessimism/review.md`，素材来源 `docs/pessimism/sources.md` |
 | 《你是不是也有选择困难？》选择过载 / 满意解 | `videos/choice/` | 精修版无音乐全片 `output/choice/full_v2.mp4`（114.5 s），关键帧 `output/choice/keyframes_full/`，分镜 `docs/choice/storyboard.md`，自检 `docs/choice/review.md`，素材来源 `docs/choice/sources.md` |
 
-所有命令加 `--video choice` 即可切换到新片（默认 `sunk-cost`）。主重拍参数可用 `MAIN_BEAT_T`（或 `T` / `--T`）。
+所有命令加 `--video choice` / `--video pessimism` 即可切换（默认 `sunk-cost`）。主重拍参数可用 `MAIN_BEAT_T`（或 `T` / `--T`）。
 渲染可加 `--workers 4` 多进程并行。新片使用第二版画面管线（`src/look2.js`、`src/lib/material.js`、`src/lib/motion.js`），上一期不受影响。
 
 ---
