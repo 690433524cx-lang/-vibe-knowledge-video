@@ -1,0 +1,5 @@
+node_modules/
+assets/fonts/*.ttf
+output/*.video.mp4
+output/*.sfx.wav
+output/render.mp4

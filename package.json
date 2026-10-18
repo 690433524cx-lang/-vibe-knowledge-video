@@ -1,0 +1,24 @@
+{
+  "name": "sunk-cost-video",
+  "version": "1.0.0",
+  "description": "《为什么你越舍不得，越容易继续浪费？》动态知识短片",
+  "scripts": {
+    "fonts": "bash scripts/fetch-fonts.sh",
+    "sample": "node src/render.js --from 0 --to 20 --out output/sample_0-20s.mp4",
+    "render": "node src/render.js --out output/final.mp4",
+    "stills": "node src/still.js output/keyframes"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/690433524cx-lang/-vibe-knowledge-video.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/690433524cx-lang/-vibe-knowledge-video/issues"
+  },
+  "homepage": "https://github.com/690433524cx-lang/-vibe-knowledge-video#readme",
+  "dependencies": {
+    "@napi-rs/canvas": "^1.0.11"
+  }
+}
