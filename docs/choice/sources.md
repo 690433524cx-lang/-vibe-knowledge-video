@@ -20,6 +20,15 @@
 - Barry Schwartz 照片：Bill Holsinger-Robinson, CC BY 2.0, via Wikimedia Commons
 - Herbert A. Simon 肖像：Richard Rappaport, CC BY 3.0, via Wikimedia Commons
 
+## 已导入（2026-10-18）
+
+| 人物 | 文件 | 来源 | 署名（印在相片白边上） |
+|---|---|---|---|
+| Barry Schwartz | `assets/portraits/barry_schwartz.jpg`（1206×789） | 用户提供；与 File:Barry Schwartz.jpg（TED 2009）为同一张 | Photo: Bill Holsinger-Robinson · CC BY 2.0 · via Wikimedia Commons |
+| Herbert A. Simon | `assets/portraits/herbert_simon.jpg`（1206×1743） | 用户提供；与 File:Herbert simon red complete.jpg 为同一幅 | Portrait: Richard Rappaport · CC BY 3.0 · via Wikimedia Commons |
+
+两份授权都要求署名，片中已在相片白边上署名；发布时建议在视频简介里也写上这两行。
+
 ## 怎样把照片放进片子
 
 把下载好的原图放到 `assets/portraits/`，文件名固定：

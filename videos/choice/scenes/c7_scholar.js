@@ -138,7 +138,7 @@ function dossier(o) {
     return [
       // 照片：一盏侧灯，从排版那一侧打过来
       { x: side === 'left' ? 470 : W - 470, y: 470, rx: 640, ry: 700, i: 1, w, color: [240, 226, 204], rot: side === 'left' ? 0.2 : -0.2 },
-      { x: side === 'left' ? 1250 : 640, y: 540, rx: 700, ry: 420, i: 0.55, w },
+      { x: side === 'left' ? 1250 : 520, y: 540, rx: 720, ry: 440, i: 0.72, w },
     ];
   };
   const grade = () => ({ warm: 0.05, ambient: 0.1 });
@@ -146,13 +146,13 @@ function dossier(o) {
 }
 
 const schwartz = dossier({
-  start: 64.4, end: 68.2, side: 'left', file: 'barry_schwartz', seed: 31, litSide: 1, focus: [0.5, 0.36], zoom: 1.0,
+  start: 64.4, end: 68.2, side: 'left', file: 'barry_schwartz', seed: 31, litSide: 1, focus: [0.36, 0.34], zoom: 1.05,
   name: 'BARRY SCHWARTZ', role: 'Psychologist', work: 'THE PARADOX OF CHOICE  ·  2004',
   cn: '讨论过：更多选择，可能带来更多焦虑与后悔。',
   credit: 'Photo: Bill Holsinger-Robinson · CC BY 2.0 · via Wikimedia Commons',
 });
 const simon = dossier({
-  start: 88.4, end: 92.5, side: 'right', file: 'herbert_simon', seed: 47, litSide: -1, focus: [0.5, 0.33], zoom: 1.0,
+  start: 88.4, end: 92.5, side: 'right', file: 'herbert_simon', seed: 47, litSide: -1, focus: [0.56, 0.3], zoom: 1.35,
   name: 'HERBERT A. SIMON', role: 'Economist  ·  Decision Scientist', work: 'SATISFICING  ·  1956',
   cn: '满意解：不求最好，找到足够好的就停下。',
   credit: 'Portrait: Richard Rappaport · CC BY 3.0 · via Wikimedia Commons',
