@@ -93,7 +93,7 @@ function drawRoad(ctx, pts, t, progress, width, seed) {
   const p = pts.slice(0, n);
   ctx.save();
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-  ctx.strokeStyle = 'rgba(46,40,34,0.95)';
+  ctx.strokeStyle = 'rgba(92,82,72,0.95)';
   ctx.lineWidth = width;
   ctx.beginPath(); p.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.stroke();
   ctx.restore();
@@ -104,7 +104,7 @@ function drawRoad(ctx, pts, t, progress, width, seed) {
       const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy) || 1;
       return [x - (dy / L) * side * width / 2, y + (dx / L) * side * width / 2];
     });
-    pencil(ctx, e, { seed: seed + side, t, width: 1.4, color: 'rgba(214,198,172,0.5)', passes: 1, pressure: 0.5 });
+    pencil(ctx, e, { seed: seed + side, t, width: 2, color: 'rgba(232,218,192,0.75)', passes: 1, pressure: 0.5 });
   }
 }
 
@@ -116,7 +116,7 @@ function lamps(ctx, t, k) {
     if (a <= 0) continue;
     // 路灯照在路面上的一小块（偏向路的一侧），不是悬浮的光球
     const g = ctx.createRadialGradient(p[0] - 14, p[1], 0, p[0] - 14, p[1], 46);
-    g.addColorStop(0, `rgba(255,214,150,${0.28 * a})`);
+    g.addColorStop(0, `rgba(255,214,150,${0.55 * a})`);
     g.addColorStop(1, 'rgba(255,214,150,0)');
     ctx.fillStyle = g;
     ctx.save(); ctx.translate(p[0] - 14, p[1]); ctx.scale(1, 0.55); ctx.translate(-(p[0] - 14), -p[1]);
@@ -137,7 +137,7 @@ function lamps(ctx, t, k) {
 
 function draw(ctx, t) {
   // 1) 门 → 信
-  const docIn = (i) => spring(t, 20.15 + i * 0.12, 1.5, 0.75);
+  const docIn = (i) => spring(t, 20.1 + i * 0.1, 2.3, 0.78);
   const toTicket = (i) => spring(t, 24.5 + i * 0.1, 1.6, 0.8);
   const kept = corridor.keptDoors(20.3);
   const toRoad = smooth(prog(t, 28.4, 29.4));
@@ -158,8 +158,8 @@ function draw(ctx, t) {
       const paint = (c) => {
         c.translate(x, y);
         c.rotate(L.rot * k);
-        if (k < 0.6) {
-          const col = [44, 33, 25].map((v, j) => Math.round(lerp(v, [228, 220, 202][j], k / 0.6)));
+        if (k < 0.35) {
+          const col = [44, 33, 25].map((v, j) => Math.round(lerp(v, [228, 220, 202][j], k / 0.35)));
           c.fillStyle = `rgb(${col.join(',')})`;
           c.fillRect(-w / 2, -h / 2, w, h);
         } else {
@@ -205,12 +205,24 @@ function draw(ctx, t) {
     ctx.scale(pull, pull);
     ctx.translate(-W / 2, -H / 2);
     ctx.globalAlpha *= toRoad * (1 - smooth(prog(t, 34.6, 35.5)));
-    drawRoad(ctx, STABLE, t, spring(t, 28.6, 0.7, 1.0), 64, 1401);
-    drawRoad(ctx, RISK, t, spring(t, 28.9, 0.6, 1.0), 58, 1403);
+    drawRoad(ctx, STABLE, t, spring(t, 28.6, 0.9, 1.0), 76, 1401);
+    drawRoad(ctx, RISK, t, spring(t, 28.8, 0.8, 1.0), 68, 1403);
+    // 稳定的那条路上，一辆车的车灯慢慢往前开
+    const cp = prog(t, 29.6, 34.6);
+    if (cp > 0 && cp < 1) {
+      const p = STABLE[Math.floor((1 - cp) * (STABLE.length - 1))];
+      for (const dx of [-9, 9]) {
+        const g = ctx.createRadialGradient(p[0] + dx, p[1], 0, p[0] + dx, p[1], 22);
+        g.addColorStop(0, 'rgba(255,240,210,0.95)');
+        g.addColorStop(1, 'rgba(255,240,210,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(p[0] + dx - 22, p[1] - 22, 44, 44);
+      }
+    }
     lamps(ctx, t, prog(t, 29.2, 31.5));
     const la = smooth(prog(t, 30.0, 30.8));
-    inkText(ctx, '稳定', 820, 640, { font: FONT.body(30), color: '#cbbfa8', align: 'right', seed: 1410, wear: 0.2, spacing: 6, alpha: la });
-    inkText(ctx, '冒险', 1250, 760, { font: FONT.body(30), color: '#cbbfa8', seed: 1411, wear: 0.2, spacing: 6, alpha: la });
+    inkText(ctx, '稳定', 812, 640, { font: FONT.body(38), color: '#cbbfa8', align: 'right', seed: 1410, wear: 0.2, spacing: 6, alpha: la });
+    inkText(ctx, '冒险', 1262, 770, { font: FONT.body(38), color: '#cbbfa8', seed: 1411, wear: 0.2, spacing: 6, alpha: la });
     ctx.restore();
     // 左上的留白里：不会后悔的答案。
     const hk = prog(t, 32.4, 33.2);
@@ -236,7 +248,7 @@ function light(t) {
   const road = smooth(prog(t, 28.6, 29.6)) * (1 - smooth(prog(t, 34.6, 35.5)));
   return [
     { x: lerp(760, 1180, pan), y: 560, rx: 760, ry: 560, i: 0.95, w: docs, rot: 0.15 },
-    { x: 980, y: 520, rx: 1000, ry: 640, i: 0.8, w: road, color: [255, 200, 140] },
+    { x: 1080, y: 560, rx: 1050, ry: 680, i: 1, w: road, color: [255, 200, 140] },
     { x: 360, y: 230, rx: 520, ry: 220, i: 0.6, w: road * smooth(prog(t, 32.2, 33)) },
   ];
 }

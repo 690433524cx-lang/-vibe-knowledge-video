@@ -114,7 +114,7 @@ function collectLights(SCENES, d) {
   }
   return {
     lights,
-    ambient: ambW ? amb / ambW : (TL.AMBIENT ?? 0.14),
+    ambient: (ambW ? amb / ambW : (TL.AMBIENT ?? 0.14)) * (TL.AMBIENT_LIFT ?? 1),
     warm: warmW ? warm / warmW : 0.2,
   };
 }
@@ -128,7 +128,9 @@ function applyLights(ctx, { lights, ambient }, d) {
   x.globalCompositeOperation = 'destination-out';
   const breathe = 1 + noise1(d * 0.5, 31) * 0.025;
   for (const l of lights) {
-    const i = Math.min(1, (l.i ?? 1) * (l.w ?? 1) * breathe);
+    // SUBJECT_LIFT：主体整体提亮（光斑更亮、衰减更缓），背景仍然是暗的
+    const lift = TL.SUBJECT_LIFT ?? 1;
+    const i = Math.min(1, (l.i ?? 1) * lift * (l.w ?? 1) * breathe);
     x.save();
     x.translate(l.x, l.y);
     x.rotate(l.rot || 0);
@@ -137,7 +139,7 @@ function applyLights(ctx, { lights, ambient }, d) {
     const core = l.core ?? 0.25; // 光斑核心有多「硬」
     g.addColorStop(0, `rgba(0,0,0,${i})`);
     g.addColorStop(core, `rgba(0,0,0,${i * 0.92})`);
-    g.addColorStop(0.62, `rgba(0,0,0,${i * 0.42})`);
+    g.addColorStop(0.62, `rgba(0,0,0,${i * (0.42 + 0.25 * (lift - 1))})`);
     g.addColorStop(1, 'rgba(0,0,0,0)');
     x.fillStyle = g;
     x.fillRect(-l.rx, -l.rx, l.rx * 2, l.rx * 2);
@@ -170,7 +172,11 @@ function applyLights(ctx, { lights, ambient }, d) {
 
 function preClimaxDark(d) {
   const D = DESIGN_T;
-  return smooth(prog(d, D - 0.6, D - 0.15)) * (1 - smooth(prog(d, D, D + 0.35)));
+  // PRE_T_DARK：[开始, 完全收暗]（相对 T）。默认 T-0.6 → T-0.15；选择困难提前到 T-0.75 → T-0.45，留出 0.45 秒暗场
+  const [a, b] = TL.PRE_T_DARK || [-0.6, -0.15];
+  // 设了 PRE_T_DARK 的片子：T 那一帧收暗层立刻撤掉，让高潮的第一帧就是最亮的
+  if (TL.PRE_T_DARK && d >= D) return 0;
+  return smooth(prog(d, D + a, D + b)) * (1 - smooth(prog(d, D, D + 0.35)));
 }
 function climaxShake(d) {
   const dt = d - DESIGN_T;
@@ -241,7 +247,7 @@ function renderFrameV2(ctx, tReal, frameIndex, SCENES, drawSubtitles) {
   ctx.restore();
 
   if (env.dark > 0) {
-    ctx.fillStyle = `rgba(6,5,4,${env.dark * 0.55})`;
+    ctx.fillStyle = `rgba(6,5,4,${env.dark * (TL.PRE_T_DARK_AMOUNT ?? 0.55)})`;
     ctx.fillRect(0, 0, W, H);
   }
   const cf = TL.CLOSE_FADE ?? 1.2;
@@ -276,7 +282,7 @@ function renderFrameV2(ctx, tReal, frameIndex, SCENES, drawSubtitles) {
   ctx.save();
   const vg = ctx.createRadialGradient(W / 2, H * 0.48, H * 0.32, W / 2, H / 2, H * 1.02);
   vg.addColorStop(0, 'rgba(0,0,0,0)');
-  vg.addColorStop(1, 'rgba(4,3,2,0.5)');
+  vg.addColorStop(1, `rgba(4,3,2,${TL.VIGNETTE ?? 0.5})`);
   ctx.fillStyle = vg;
   ctx.fillRect(0, 0, W, H);
   ctx.restore();

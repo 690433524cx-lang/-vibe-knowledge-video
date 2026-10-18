@@ -93,7 +93,8 @@ const V2 = {
 
 function drawLineV2(ctx, s, a, k) {
   const st = V2[s.style || 'sub'] || V2.sub;
-  const px = s.size || st.px;
+  // SUB_SCALE：普通字幕整体放大（钩子大字不受影响）
+  const px = Math.round((s.size || st.px) * (s.style === 'hook' ? 1 : (require('./config').TL.SUB_SCALE ?? 1)));
   ctx.save();
   ctx.font = st.font(px);
   ctx.letterSpacing = `${st.ls}px`;

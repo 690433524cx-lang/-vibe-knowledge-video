@@ -20,7 +20,19 @@
 - Barry Schwartz 照片：Bill Holsinger-Robinson, CC BY 2.0, via Wikimedia Commons
 - Herbert A. Simon 肖像：Richard Rappaport, CC BY 3.0, via Wikimedia Commons
 
+## 怎样把照片放进片子
+
+把下载好的原图放到 `assets/portraits/`，文件名固定：
+
+| 人物 | 文件名 |
+|---|---|
+| Barry Schwartz | `assets/portraits/barry_schwartz.jpg`（.png / .webp 也可以） |
+| Herbert A. Simon | `assets/portraits/herbert_simon.jpg` |
+
+重新渲染即可，代码会自动：按设定的焦点裁切（默认画面中上部）、转黑白低饱和、加暖调银盐相纸感、做一侧亮一侧暗的侧光、加颗粒与暗角，
+冲印成带白边的相片（约占画面 40%，被画面边缘裁掉一部分），并把署名印在相片白边上。
+裁切焦点可在 `videos/choice/scenes/c7_scholar.js` 里的 `focus` / `zoom` 微调。
+
 ## 如果仍然拿不到原图
 
-人物出现在 T 之后（约 64 s 与 88 s），前 20 秒样片不需要。届时如果素材仍无法取得，就用「剪影 + 档案卡」：
-深色档案卡上一个无脸的头肩剪影、姓名、身份、书名 / 关键词，风格与全片一致，不伪造照片。
+按你的要求不再使用匿名剪影。照片缺失时，相片位显示「PORTRAIT · 授权照片待导入」，排版与光线照常，方便一眼看出缺什么；不伪造人像。

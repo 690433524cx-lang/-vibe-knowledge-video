@@ -38,7 +38,7 @@ const SUBS = [
   { t: 61.9, d: 0.9, text: '可选择太多的时候——', x: 150, y: 905, align: 'left' },
   { t: 63.0, d: 1.3, text: '自由也会变成压力。', x: 150, y: 905, align: 'left' },
   // 第七幕 · Barry Schwartz（右侧栏）
-  { t: 65.3, d: 2.4, text: '更多选择，不一定带来更多自由。', x: 900, y: 860, align: 'left', size: 44 },
+  { t: 65.1, d: 2.6, text: '更多选择，不一定带来更多自由。', x: 860, y: 800, align: 'left', size: 44 },
   // 第八幕 · 放弃线
   { t: 68.4, d: 1.0, text: '因为每多一个选择，', x: 150, y: 905, align: 'left' },
   { t: 69.6, d: 1.5, text: '就多一个必须放弃的可能。', x: 150, y: 905, align: 'left' },
@@ -46,7 +46,7 @@ const SUBS = [
   { t: 72.4, d: 1.8, text: '脑子却还在想——', x: 150, y: 905, align: 'left' },
   // 第九幕 · 后悔版本
   { t: 74.8, d: 0.8, text: '选择越多，', x: 150, y: 905, align: 'left' },
-  { t: 75.8, d: 1.6, text: '能想象的后悔版本也越多。', style: 'quote', x: 960, y: 210 },
+  { t: 75.8, d: 1.6, text: '能想象的后悔版本也越多。', style: 'quote', x: 960, y: 112 },
   { t: 77.6, d: 0.8, text: '所以很多时候，', x: 150, y: 905, align: 'left' },
   { t: 78.6, d: 0.9, text: '你不是在找答案，', x: 150, y: 905, align: 'left' },
   { t: 79.8, d: 1.5, text: '你是在逃避{选错}。', style: 'quote', size: 58, x: 150, y: 905, align: 'left' },
@@ -57,9 +57,9 @@ const SUBS = [
   { t: 84.0, d: 0.7, text: '直到决定本身——', x: 150, y: 905, align: 'left' },
   { t: 84.9, d: 1.4, text: '比结果更累。', style: 'quote', size: 56, x: 150, y: 905, align: 'left' },
   // 第十一幕 · 简化 + Herbert Simon（左侧栏）
-  { t: 87.4, d: 1.3, text: '有一个更现实的思路。', x: 300, y: 905, align: 'left' },
-  { t: 89.0, d: 0.9, text: '不要找最好的，', x: 300, y: 905, align: 'left' },
-  { t: 90.2, d: 1.7, text: '找一个已经足够好的。', style: 'quote', size: 54, x: 300, y: 905, align: 'left' },
+  { t: 87.4, d: 1.3, text: '有一个更现实的思路。', x: 170, y: 905, align: 'left' },
+  { t: 89.0, d: 0.9, text: '不要找最好的，', x: 170, y: 800, align: 'left' },
+  { t: 90.2, d: 1.8, text: '找一个已经足够好的。', style: 'quote', size: 54, x: 170, y: 800, align: 'left' },
   // 第十二幕 · 三个条件
   { t: 92.4, d: 0.9, text: '下次再纠结的时候，', x: 150, y: 965, align: 'left' },
   { t: 93.6, d: 1.1, text: '不要问：哪个最好？', x: 150, y: 965, align: 'left' },
