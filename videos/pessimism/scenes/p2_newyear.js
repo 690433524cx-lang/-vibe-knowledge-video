@@ -1,13 +1,16 @@
-// 第二幕 · 7.2–16.9 秒：年夜饭已经吃完。
-//   转场：上一幕那只杯子的杯口高光（暖白椭圆）放大、变圆、变成暗红，长出剪纸花纹——窗上的圆形窗花。
-//   摄影机从窗花拉开，摇到饭桌：鱼、半盘饺子、碗筷、酒杯；红灯笼还亮着，倒贴的「福」还在。
-//   一把刚有人坐过的椅子被推开，还在轻轻晃，随后停住。窗外很远的地方一朵很淡的烟花。
-//   15.6 起摄影机推近窗户，窗外的灯开始横向流动，交给下一幕的列车车窗。
+// 第二幕 · 7.2–16.9 秒：年夜饭——最热闹的时候，他已经看见了散场。
+//   转场：上一幕杯口的椭圆高光放大、变圆、变红，长出剪纸花纹——窗上的圆形窗花。摄影机从窗花拉开。
+//   8.5–12.5  一家人围着圆桌：爷爷举杯，奶奶低头夹菜，姑姑在笑，叔叔和爷爷碰杯，妈妈给他夹菜，
+//             前排两个人背对镜头在聊天、伸筷子，一个小孩从后面跑过去；菜还冒着热气。
+//   11.0 起   他慢下来，不再动筷子，注意力从人群里抽离。
+//   12.6–14.9 同一个机位：人一个一个淡出，热气也散了。最后只剩空椅子、半盘菜、酒杯、碗筷，一把拉开的椅子还在轻轻晃。
+//   15.6 起   摄影机推近窗户，窗外的灯开始横向流动，交给下一幕的列车车窗。
 const { W, H } = require('../../../src/config');
 const { FONT } = require('../../../src/lib/style');
 const { prog, smooth, lerp, rng, noise1, easeInOut, easeOut } = require('../../../src/lib/util');
 const { spring, pendulum } = require('../../../src/lib/motion');
 const { withCam, toScreen, glassShape, bottle, plate, bowl, foreground } = require('../lib');
+const { person, layer } = require('../people');
 const { filtered } = require('../../../src/lib/material');
 const party = require('./p1_party');
 
@@ -19,16 +22,16 @@ const CUT = { x: 770, y: 365, r: 118 };       // 窗花
 const FU = { x: 1290, y: 330, s: 128 };       // 福
 const LANTERN = { x: 1530, y: 120 };
 const TBL = { cx: 960, cy: 830, rx: 520, ry: 120 };
-const CHAIR = { x: 1490, y: 905 };            // 被推开的那把椅子（脚底）
+const CHAIR = { x: 1575, y: 935 };            // 他的椅子（后腿着地点）：他「走」了以后被拉开、轻轻晃
+const LAMP = { x: 1090, y: 300 };
 
 // 摄影机：先对准窗花（与杯口高光重合），拉开摇到饭桌；15.6 起推近窗户
 function cam(t) {
-  const pull = easeInOut(prog(t, 8.45, 11.6));
-  const s0 = 2.0;
-  let c = { cx: lerp(CUT.x, 1010, pull), cy: lerp(CUT.y, 580, pull), s: lerp(s0, 1.04, pull) };
-  const drift = prog(t, 11.6, 15.6);
-  c.cx += drift * 18; c.s += drift * 0.02;
-  const p = easeInOut(prog(t, 15.4, 16.9));
+  const pull = easeInOut(prog(t, 8.45, 10.3));
+  let c = { cx: lerp(CUT.x, 975, pull), cy: lerp(CUT.y, 615, pull), s: lerp(2.0, 1.13, pull) };
+  // 之后机位几乎不动：热闹和散场必须是同一个画面
+  c.cx += Math.sin(t * 0.35) * 4;
+  const p = easeInOut(prog(t, 15.5, 16.9));
   if (p > 0) c = { cx: lerp(c.cx, (WIN.x0 + WIN.x1) / 2, p), cy: lerp(c.cy, (WIN.y0 + WIN.y1) / 2, p), s: lerp(c.s, 2.25, p) };
   return c;
 }
@@ -259,70 +262,184 @@ function chair(ctx, s, tilt = 0, o = {}) {
   ctx.restore();
 }
 
-function table(ctx, t) {
+// ---------------- 人 ----------------
+const n = (t, sd, f = 1) => noise1(t * f, sd);
+const pulse = (t, t0, dur) => { const k = prog(t, t0, t0 + dur); return k > 0 && k < 1 ? Math.sin(Math.PI * k) : 0; };
+const laugh = (t, t0, dur) => pulse(t, t0, dur) * (0.6 + 0.4 * Math.sin(t * 24));
+// 每个人淡出的时刻（12.6 起一个一个走）；孩子跑过去就不见了
+const GONE = { nearB: 12.6, aunt: 12.95, uncle: 13.3, nearA: 13.6, grandpa: 13.9, mom: 14.2, grandma: 14.5, hero: 14.85 };
+const away = (id, t) => (GONE[id] ? smooth(prog(t, GONE[id], GONE[id] + 0.55)) : 0);
+
+const FAMILY = [
+  // 后排（桌子后面）
+  { id: 'aunt', x: 640, y: 772, u: 272, look: { face: -1, sit: true, top: '#7a3a2e', bottom: '#2a2420', hair: '#1a120e', hairStyle: 'long', skin: '#93705a', h: 0.95, build: 0.95 },
+    pose: (t) => { const L = laugh(t, 9.2, 1.1) + laugh(t, 11.4, 0.9); return { lean: 0.15 - L * 0.1, hd: -0.05 - L * 0.35, arms: { near: [0.7, 1.3], far: [0.4, 1.2] }, holding: 'cup' }; } },
+  { id: 'grandpa', x: 880, y: 765, u: 270, look: { view: 'front', sit: true, top: '#4a3b30', bottom: '#2a2420', hair: '#6a645c', hairStyle: 'grey', skin: '#8a674f', h: 0.98, build: 1.05 },
+    pose: (t) => { const up = pulse(t, 8.8, 1.8); return { hd: 0.1 - up * 0.15, roll: n(t, 7, 0.6) * 0.05, arms: { left: [0.15, -0.6], right: [lerp(0.25, 0.35, up), lerp(-0.7, -2.5, up)] }, holding: 'cup', holdHand: 'right' }; } },
+  { id: 'grandma', x: 1080, y: 768, u: 266, look: { view: 'front', sit: true, top: '#5a2a26', bottom: '#2a2420', hair: '#6a645c', hairStyle: 'grey', skin: '#8f6b55', h: 0.93, build: 1.0 },
+    pose: (t) => { const reach = pulse(t, 9.4, 1.4) + pulse(t, 11.6, 1.2); return { hd: 0.45 + reach * 0.15, roll: -0.04, arms: { left: [0.2, -0.5], right: [0.2 + reach * 0.3, -0.9 - reach * 0.8] } }; } },
+  { id: 'mom', x: 1310, y: 772, u: 270, look: { face: -1, sit: true, top: '#4a4a3a', bottom: '#2a2420', hair: '#140e0b', hairStyle: 'bun', skin: '#91705a', h: 0.95, build: 0.95 },
+    pose: (t) => { const give = pulse(t, 9.7, 1.4); return { lean: 0.15 + give * 0.3, hd: 0.1 + give * 0.15, arms: { near: [0.6 + give * 0.7, 1.0 - give * 0.6], far: [0.4, 1.3] }, holding: 'chopsticks' }; } },
+  // 两侧
+  { id: 'uncle', x: 405, y: 875, u: 300, look: { face: -1, sit: true, top: '#2f3a34', bottom: '#24211e', hair: '#16110e', hairStyle: 'short', skin: '#86624a', h: 1.02, build: 1.12 },
+    pose: (t) => { const toast = pulse(t, 8.8, 1.8); const L = laugh(t, 10.3, 1.1); return { lean: 0.2 - L * 0.1, hd: -0.05 - L * 0.3, arms: { near: [lerp(0.5, 1.3, toast), lerp(1.4, 0.4, toast)], far: [0.4, 1.2] }, holding: 'cup' }; } },
+];
+// 前排：背对镜头（离镜头近，是前景）
+const NEAR = [
+  { id: 'nearA', x: 770, y: 1060, u: 356, look: { view: 'back', sit: true, top: '#5a4a3a', bottom: '#1e1b18', hair: '#120d0a', hairStyle: 'short', h: 1.0, build: 1.05, rim: 0.25 },
+    pose: (t) => { const r = pulse(t, 8.9, 1.2) + pulse(t, 10.6, 1.1); return { sway: n(t, 11, 0.7) * 0.6, roll: n(t, 12, 0.5) * 0.08, arms: { left: [0.15, 0.1], right: [0.3 + r * 0.9, -0.2 - r * 1.5] } }; } },
+  { id: 'nearB', x: 1170, y: 1066, u: 348, look: { view: 'back', sit: true, top: '#3a4448', bottom: '#1e1b18', hair: '#1a120d', hairStyle: 'long', h: 0.95, build: 0.95, rim: 0.25 },
+    pose: (t) => ({ sway: n(t, 13, 0.8) * 0.8, roll: -0.1 + n(t, 14, 0.6) * 0.12, arms: { left: [0.2, -0.3], right: [0.15, 0.1] } }) },
+];
+// 他：右侧，面朝左。先在吃、在笑；11.0 起停下来，注意力从人群里抽离
+function heroPose(t) {
+  const eat = pulse(t, 8.5, 0.9);
+  const L = laugh(t, 9.5, 0.9);
+  const still = easeInOut(prog(t, 11.0, 12.4));
+  return { sit: true, face: 1, lean: lerp(0.22 - L * 0.08, 0.32, still), hd: lerp(0.05 - L * 0.28 + eat * 0.1, 0.32, still),
+    arms: { near: [lerp(0.6 + eat * 0.5, 0.75, still), lerp(1.2 + eat * 1.2, 0.95, still)], far: [0.45, 1.2] },
+    holding: still < 0.5 ? 'chopsticks' : null, top: '#4a5246', bottom: '#24221f', hair: '#120e0b', hairStyle: 'short', skin: '#86624a', rim: 0.38, light: -0.6 };
+}
+// 小孩从后面跑过去（右 → 左）
+function child(ctx, t) {
+  const k = prog(t, 9.0, 11.6);
+  if (k <= 0 || k >= 1) return;
+  const ph = t * 11;
+  person(ctx, lerp(1720, 280, k), 846, 255, { face: 1, h: 0.62, build: 0.9, top: '#9a4a32', bottom: '#2a2420', hair: '#120d0a', hairStyle: 'short', skin: '#9a765e', lean: 0.2,
+    legs: { near: [Math.sin(ph) * 0.6, 0.5 + Math.max(0, Math.cos(ph)) * 0.5], far: [-Math.sin(ph) * 0.6, 0.5 + Math.max(0, -Math.cos(ph)) * 0.5] },
+    arms: { near: [-Math.sin(ph) * 0.6, 0.8], far: [Math.sin(ph) * 0.6, 0.8] }, alpha: smooth(prog(k, 0, 0.08)) * (1 - smooth(prog(k, 0.92, 1))) });
+}
+
+function drawPeople(ctx, t, list, light) {
+  for (const c of list) {
+    const g = away(c.id, t);
+    if (g >= 0.999) continue;
+    const fn = (cx) => person(cx, c.x, c.y - g * 14, c.u, { ...c.look, ...c.pose(t), light });
+    if (g > 0.001) layer(ctx, 1 - g, g * 5, fn); else fn(ctx);
+  }
+}
+
+// 椅子正面的靠背（前排，背对镜头的人坐着的椅子）
+function chairBack(ctx, x, y, s, col = '#2a1e16') {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = col;
+  ctx.fillRect(-120 * s, -250 * s, 18 * s, 250 * s);
+  ctx.fillRect(102 * s, -250 * s, 18 * s, 250 * s);
+  ctx.fillRect(-128 * s, -262 * s, 256 * s, 26 * s);
+  ctx.fillRect(-106 * s, -140 * s, 212 * s, 14 * s);
+  for (const k of [-40, 0, 40]) ctx.fillRect((k - 6) * s, -236 * s, 12 * s, 96 * s);
+  ctx.fillStyle = 'rgba(255,214,170,0.12)';
+  ctx.fillRect(-128 * s, -262 * s, 256 * s, 3 * s);
+  ctx.restore();
+}
+
+function lamp(ctx, t) {
+  ctx.save();
+  ctx.translate(LAMP.x, -300);
+  ctx.strokeStyle = 'rgba(30,26,22,0.9)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, LAMP.y + 300); ctx.stroke();
+  ctx.translate(0, LAMP.y + 300);
+  ctx.beginPath(); ctx.moveTo(-20, 0); ctx.lineTo(20, 0); ctx.quadraticCurveTo(80, 10, 96, 56); ctx.lineTo(-96, 56); ctx.quadraticCurveTo(-80, 10, -20, 0); ctx.closePath();
+  const g = ctx.createLinearGradient(-96, 0, 96, 0);
+  g.addColorStop(0, '#3a2a20'); g.addColorStop(0.45, '#7a5a3a'); g.addColorStop(1, '#2a1e16');
+  ctx.fillStyle = g; ctx.fill();
+  ctx.restore();
+}
+function lampGlow(ctx) {
+  ctx.save();
+  ctx.translate(LAMP.x, LAMP.y + 56);
+  ctx.beginPath(); ctx.ellipse(0, 0, 96, 12, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,226,170,0.95)';
+  ctx.shadowColor = 'rgba(255,190,110,0.9)'; ctx.shadowBlur = 40;
+  ctx.fill();
+  ctx.restore();
+}
+
+function tableTop(ctx, t) {
   const { cx, cy, rx, ry } = TBL;
-  // 远处的两把椅子（靠背露出桌面以上）
-  ctx.save();
-  ctx.translate(cx - 230, cy - 26);
-  chair(ctx, 0.9, 0, { col: '#2e221a' });
-  ctx.restore();
-  ctx.save();
-  ctx.translate(cx + 300, cy - 30);
-  chair(ctx, 0.9, 0, { col: '#2e221a', face: -1 });
-  ctx.restore();
-  // 桌腿 + 桌面边
   ctx.fillStyle = '#1e1712';
   ctx.fillRect(cx - 18, cy + 20, 36, 150);
-  ctx.beginPath(); ctx.ellipse(cx, cy + 16, rx, ry, 0, 0, Math.PI); ctx.fillStyle = '#2b1f17'; ctx.fill();
-  // 桌面
+  ctx.beginPath(); ctx.ellipse(cx, cy + 16, rx, ry, 0, 0, Math.PI); ctx.fillStyle = '#4a1e18'; ctx.fill();
+  // 红色桌布
   ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
   const g = ctx.createLinearGradient(0, cy - ry, 0, cy + ry);
-  g.addColorStop(0, '#5a3f2c'); g.addColorStop(1, '#6b4a32');
+  g.addColorStop(0, '#6a2a22'); g.addColorStop(1, '#7e3428');
   ctx.fillStyle = g;
   ctx.fill();
-  // 玻璃转盘
+  // 桌布垂下来的边
+  ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI); ctx.lineTo(cx - rx, cy + 46); ctx.ellipse(cx, cy + 46, rx, ry, 0, Math.PI, 0, true); ctx.closePath();
+  ctx.fillStyle = '#5a221c'; ctx.fill();
   ctx.beginPath(); ctx.ellipse(cx + 10, cy - 6, rx * 0.56, ry * 0.56, 0, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(200,210,215,0.08)'; ctx.fill();
-  ctx.strokeStyle = 'rgba(230,236,240,0.25)'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = 'rgba(200,210,215,0.07)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(230,236,240,0.22)'; ctx.lineWidth = 2; ctx.stroke();
   const at = (x, y, fn) => { ctx.save(); ctx.translate(x, y); fn(); ctx.restore(); };
-  // 鱼：只剩鱼骨
-  at(cx - 40, cy - 30, () => plate(ctx, 120, 26, { seed: 21, crumbs: 6, food: (c, prx, pry) => {
+  // 吃饭的时候：一整条鱼；散场以后：只剩鱼骨（随着人走慢慢「变」过去）
+  const eaten = smooth(prog(t, 13.0, 14.8));
+  at(cx - 40, cy - 30, () => plate(ctx, 120, 26, { seed: 21, crumbs: Math.round(eaten * 8), food: (c, prx, pry) => {
+    c.save(); c.globalAlpha *= 1 - eaten;
+    c.fillStyle = '#9a6a3c'; c.beginPath(); c.ellipse(0, 0, prx * 0.62, pry * 0.42, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#b0884a'; c.beginPath(); c.moveTo(prx * 0.58, 0); c.lineTo(prx * 0.78, -pry * 0.35); c.lineTo(prx * 0.78, pry * 0.35); c.closePath(); c.fill();
+    c.fillStyle = 'rgba(80,120,60,0.8)'; for (let i = -3; i <= 3; i++) c.fillRect(i * 12, -3, 8, 2);
+    c.restore();
+    c.save(); c.globalAlpha *= eaten;
     c.strokeStyle = 'rgba(230,220,200,0.85)'; c.lineWidth = 2.2;
     c.beginPath(); c.moveTo(-prx * 0.55, 0); c.lineTo(prx * 0.5, -2); c.stroke();
     for (let i = -5; i <= 4; i++) { c.beginPath(); c.moveTo(i * 10, -1); c.lineTo(i * 10 + 6, -pry * 0.45); c.moveTo(i * 10, 0); c.lineTo(i * 10 + 6, pry * 0.45); c.stroke(); }
-    c.fillStyle = '#7a5434'; c.beginPath(); c.ellipse(-prx * 0.62, 0, 14, 8, 0, 0, Math.PI * 2); c.fill();
-    c.fillStyle = 'rgba(120,70,40,0.6)'; c.beginPath(); c.ellipse(0, 4, prx * 0.6, pry * 0.4, 0, 0, Math.PI * 2); c.fill();
+    c.restore();
   } }));
-  // 半盘饺子
-  at(cx + 190, cy - 14, () => plate(ctx, 88, 20, { seed: 22, crumbs: 3, food: (c, prx, pry) => {
-    for (const [dx, dy] of [[-30, -4], [-6, -6], [16, 2], [-20, 6]]) {
-      c.fillStyle = '#e6dcc6'; c.beginPath(); c.ellipse(dx, dy, 16, 8, 0.1, Math.PI, 0); c.fill();
-      c.strokeStyle = 'rgba(150,130,100,0.6)'; c.lineWidth = 1; c.stroke();
-    }
+  // 饺子：先是满满一盘，后来剩一半
+  at(cx + 190, cy - 14, () => plate(ctx, 88, 20, { seed: 22, crumbs: 3, food: (c) => {
+    const pts = [[-30, -4], [-6, -6], [16, 2], [-20, 6], [8, -10], [30, -2], [-40, 4], [22, 9], [-10, 10]];
+    const keep = Math.round(lerp(pts.length, 4, eaten));
+    for (const [dx, dy] of pts.slice(0, keep)) { c.fillStyle = '#e6dcc6'; c.beginPath(); c.ellipse(dx, dy, 16, 8, 0.1, Math.PI, 0); c.fill(); c.strokeStyle = 'rgba(150,130,100,0.6)'; c.lineWidth = 1; c.stroke(); }
   } }));
-  at(cx - 300, cy + 4, () => bowl(ctx, 40, 10, 26, { inner: '#5a3b26' }));
-  at(cx + 360, cy + 24, () => bowl(ctx, 40, 10, 26, { inner: '#d8cfbd' }));
-  at(cx + 30, cy + 70, () => bowl(ctx, 42, 10, 28, { inner: '#d8cfbd' }));
-  // 筷子：横搭在碗上、散在桌上
+  // 一盘青菜、一盘红烧肉
+  at(cx - 250, cy + 30, () => plate(ctx, 64, 15, { seed: 24, crumbs: 0, food: (c) => { c.save(); c.globalAlpha *= lerp(1, 0.35, eaten); c.fillStyle = '#3e5a30'; c.beginPath(); c.ellipse(0, 0, 40, 9, 0, 0, Math.PI * 2); c.fill(); c.restore(); } }));
+  at(cx + 300, cy + 34, () => plate(ctx, 60, 14, { seed: 25, crumbs: 0, food: (c) => { c.save(); c.globalAlpha *= lerp(1, 0.3, eaten); c.fillStyle = '#7a3018'; for (const [dx, dy] of [[-14, 0], [6, -3], [18, 3], [-4, 4]]) { c.beginPath(); c.ellipse(dx, dy, 9, 6, 0, 0, Math.PI * 2); c.fill(); } c.restore(); } }));
+  at(cx - 330, cy - 6, () => bowl(ctx, 36, 9, 22, { inner: '#e0d6c4' }));
+  at(cx + 400, cy + 6, () => bowl(ctx, 36, 9, 22, { inner: '#e0d6c4' }));
+  at(cx + 40, cy + 72, () => bowl(ctx, 40, 10, 26, { inner: '#e0d6c4' }));
+  at(cx - 120, cy + 70, () => bowl(ctx, 38, 9, 24, { inner: '#e0d6c4' }));
   ctx.strokeStyle = '#c9a26a'; ctx.lineWidth = 3.4; ctx.lineCap = 'round';
-  for (const [x0, y0, x1, y1] of [[cx - 350, cy - 26, cx - 250, cy - 12], [cx - 352, cy - 20, cx - 252, cy - 4], [cx + 60, cy + 46, cx + 168, cy + 58], [cx + 300, cy + 54, cx + 410, cy + 40]]) {
+  for (const [x0, y0, x1, y1] of [[cx - 370, cy - 30, cx - 280, cy - 18], [cx + 70, cy + 48, cx + 170, cy + 58], [cx + 350, cy + 50, cx + 450, cy + 38], [cx - 160, cy + 50, cx - 70, cy + 60]]) {
     ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
   }
-  // 小酒杯 + 一瓶酒
-  at(cx - 170, cy + 46, () => glassShape(ctx, 26, 30, { fill: 0.1, liquid: [200, 170, 120] }));
-  at(cx + 250, cy + 70, () => glassShape(ctx, 26, 30, { fill: 0.4, liquid: [200, 170, 120] }));
-  at(cx - 120, cy - 54, () => glassShape(ctx, 24, 28, { fill: 0, liquid: [200, 170, 120] }));
+  at(cx - 190, cy + 40, () => glassShape(ctx, 26, 30, { fill: lerp(0.6, 0.1, eaten), liquid: [200, 170, 120] }));
+  at(cx + 250, cy + 64, () => glassShape(ctx, 26, 30, { fill: lerp(0.6, 0.35, eaten), liquid: [200, 170, 120] }));
+  at(cx - 110, cy - 54, () => glassShape(ctx, 24, 28, { fill: lerp(0.5, 0, eaten), liquid: [200, 170, 120] }));
   at(cx + 110, cy - 40, () => bottle(ctx, 30, 118, { col: [90, 30, 22] }));
-  // 一碟花生 / 一盘凉菜
-  at(cx - 210, cy + 74, () => plate(ctx, 54, 13, { seed: 23, crumbs: 22 }));
 }
 
-// 被推开的椅子：t0 起按阻尼摆晃，10.8 后几乎停住
-function rockingChair(ctx, t) {
-  const tilt = Math.max(0, pendulum(t, 8.4, 0.11, 0.95, 0.75));
+// 热气：几道很淡的、往上飘的气（人走了以后也散了）
+function steam(ctx, t) {
+  const a = 1 - smooth(prog(t, 12.8, 14.6));
+  if (a <= 0.01) return;
+  ctx.save();
+  ctx.lineCap = 'round';
+  for (const [x, y, sd] of [[TBL.cx - 40, TBL.cy - 40, 1], [TBL.cx + 190, TBL.cy - 22, 2], [TBL.cx - 250, TBL.cy + 22, 3], [TBL.cx + 300, TBL.cy + 26, 4]]) {
+    for (let k = 0; k < 3; k++) {
+      const ph = (t * 0.45 + k / 3 + sd * 0.17) % 1;
+      ctx.strokeStyle = `rgba(240,230,215,${0.16 * a * Math.sin(Math.PI * ph)})`;
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      for (let i = 0; i <= 10; i++) {
+        const yy = y - ph * 120 - i * 9;
+        const xx = x + (k - 1) * 16 + Math.sin(i * 0.6 + t * 1.6 + sd) * 7;
+        i ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy);
+      }
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+// 他的椅子：他「走」了以后，椅子是拉开的，还在轻轻晃
+function heroChair(ctx, t) {
+  const tilt = Math.max(0, pendulum(t, GONE.hero + 0.2, 0.09, 0.95, 0.9));
   ctx.save();
   ctx.translate(CHAIR.x, CHAIR.y);
-  chair(ctx, 1.25, tilt, { col: '#3e2d21', face: -1 });
+  chair(ctx, 1.22, tilt, { col: '#3e2d21', face: -1 });
   ctx.restore();
 }
 
@@ -340,12 +457,28 @@ function draw(ctx, t) {
     fu(ctx, t);
     floor(ctx);
     lantern(ctx, t);
-    table(ctx, t);
-    rockingChair(ctx, t);
+    lamp(ctx, t);
+    // 后排的椅背（人走了以后露出来）
+    for (const x of [640, 880, 1080, 1310]) { ctx.save(); ctx.translate(x + 40, 775); chair(ctx, 0.85, 0, { col: '#2e221a', face: x < 960 ? -1 : 1 }); ctx.restore(); }
+    child(ctx, t);
+    drawPeople(ctx, t, FAMILY.filter((f) => f.id !== 'uncle'), -1.7);
+    // 叔叔的椅子（左侧）
+    ctx.save(); ctx.translate(345, 935); chair(ctx, 1.2, 0, { col: '#3a2a1f', face: 1 }); ctx.restore();
+    tableTop(ctx, t);
+    drawPeople(ctx, t, FAMILY.filter((f) => f.id === 'uncle'), -1.0);
+    heroChair(ctx, t);
+    const g = away('hero', t);
+    if (g < 0.999) {
+      const fn = (cx) => person(cx, 1530, 870 - g * 14, 305, heroPose(t));
+      if (g > 0.001) layer(ctx, 1 - g, g * 5, fn); else fn(ctx);
+    }
+    drawPeople(ctx, t, NEAR, -1.6);
+    chairBack(ctx, 770, 1160, 1.02);
+    chairBack(ctx, 1170, 1165, 1.0);
   });
-  // 前景：左下一把离镜头很近的椅背，失焦
-  withCam(ctx, c, 1.4, () => foreground(ctx, 16, (fc) => {
-    fc.save(); fc.translate(260, 1260); chair(fc, 2.4, 0, { col: '#1f1712' }); fc.restore();
+  // 前景：左下一只离镜头很近的酒杯，失焦
+  withCam(ctx, c, 1.4, () => foreground(ctx, 14, (fc) => {
+    fc.save(); fc.translate(150, 1180); glassShape(fc, 120, 150, { fill: 0.5, liquid: [210, 170, 110] }); fc.restore();
   }));
   ctx.restore();
 }
@@ -356,7 +489,11 @@ function drawOver(ctx, t) {
   if (a > 0) {
     ctx.save();
     ctx.globalAlpha *= a;
-    withCam(ctx, c, 1, () => { outsideLights(ctx, t); lanternGlow(ctx, t); });
+    withCam(ctx, c, 1, () => {
+      outsideLights(ctx, t);
+      ctx.save(); ctx.globalAlpha *= 1 - smooth(prog(t, 15.5, 16.1)); lanternGlow(ctx, t); lampGlow(ctx); ctx.restore();
+      steam(ctx, t);
+    });
     ctx.restore();
   }
   // 转场：杯口高光 → 窗花
@@ -380,26 +517,30 @@ function drawOver(ctx, t) {
   }
 }
 
-// 光：桌上方的吊灯（暖）、红灯笼（红）、窗外（冷，很弱）
+// 光：桌上方的吊灯（暖黄，主光）、红灯笼（红）、窗外（冷，很弱）。人走了以后吊灯暗一档、整体略冷
 function light(t) {
   const c = cam(t);
   const w = smooth(prog(t, 8.15, 8.7)) * (1 - smooth(prog(t, 16.4, 16.95)));
+  const empty = smooth(prog(t, 12.8, 15.0));
   const sc = (x, y) => toScreen(c, x, y);
-  const [tx, ty] = sc(TBL.cx, TBL.cy - 20);
+  const [tx, ty] = sc(TBL.cx + 40, TBL.cy - 60);
   const [lx, ly] = sc(LANTERN.x, LANTERN.y + 40);
   const [wx, wy] = sc(CUT.x, CUT.y + 40);
-  const [chx, chy] = sc(CHAIR.x - 60, CHAIR.y - 160);
+  const [hx, hy] = sc(1520, 640);
   const [fx, fy] = sc(FU.x, FU.y);
+  const [gx, gy] = sc(LAMP.x, LAMP.y + 40);
+  const [nx, ny] = sc(970, 900);
   return [
-    { x: tx, y: ty, rx: 760 * c.s, ry: 330 * c.s, i: 1, w, color: [255, 204, 150], core: 0.25 },
-    { x: lx, y: ly, rx: 520 * c.s, ry: 480 * c.s, i: 0.85, w, color: [255, 90, 60] },
+    { x: tx, y: ty, rx: 820 * c.s, ry: 380 * c.s, i: lerp(1, 0.85, empty), w, color: [255, 206, 140], core: 0.25 },
+    { x: gx, y: gy, rx: 300 * c.s, ry: 220 * c.s, i: 0.8, w },
+    { x: lx, y: ly, rx: 540 * c.s, ry: 500 * c.s, i: 0.85, w, color: [255, 90, 60] },
     { x: fx, y: fy, rx: 260 * c.s, ry: 220 * c.s, i: 0.55, w, color: [255, 120, 80] },
     { x: wx, y: wy, rx: 380 * c.s, ry: 330 * c.s, i: 0.55, w, color: [180, 196, 225] },
-    { x: chx, y: chy, rx: 260 * c.s, ry: 300 * c.s, i: 0.6, w, color: [255, 140, 100] },
-    { x: (wx + lx) / 2, y: wy, rx: 620 * c.s, ry: 420 * c.s, i: 0.38, w, color: [255, 170, 120] },
+    { x: hx, y: hy, rx: 300 * c.s, ry: 380 * c.s, i: 0.7, w, color: [255, 190, 130] },
+    { x: nx, y: ny, rx: 700 * c.s, ry: 260 * c.s, i: 0.45, w, color: [255, 170, 110] },
   ];
 }
-function grade(t) { return { warm: 0.4, ambient: 0.1, w: smooth(prog(t, 8.15, 8.7)) }; }
+function grade(t) { return { warm: lerp(0.5, 0.18, smooth(prog(t, 12.8, 15.0))), ambient: 0.11, w: smooth(prog(t, 8.15, 8.7)) }; }
 
 function windowOnScreen(t) {
   const c = cam(t);

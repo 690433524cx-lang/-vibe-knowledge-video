@@ -6,8 +6,9 @@ const { W, H } = require('../../../src/config');
 const { FONT } = require('../../../src/lib/style');
 const { prog, smooth, lerp, rng, noise1, easeInOut, easeOut } = require('../../../src/lib/util');
 const { spring, glide } = require('../../../src/lib/motion');
-const { withCam, toScreen, seated, foreground, smoothPath } = require('../lib');
+const { withCam, toScreen, foreground, smoothPath } = require('../lib');
 const { filtered } = require('../../../src/lib/material');
+const { person } = require('../people');
 const { roundRect } = require('./p1_party');
 
 const S = { start: 16.3, end: 25.8 };
@@ -102,7 +103,7 @@ function reflection(ctx, t) {
   ctx.clip();
   ctx.globalAlpha *= 0.09;
   ctx.translate(900, 700);
-  seated(ctx, 300, { face: -1, lean: 0.12, head: 0.05, arm: 'lap', rim: 0, t });
+  person(ctx, 0, 0, 300, { sit: true, face: -1, lean: 0.2, hd: -0.1, rim: 0 });
   ctx.restore();
 }
 
@@ -204,7 +205,11 @@ function phoneOnTray(ctx, t, over = false) {
     ctx.fillStyle = '#121214';
     roundRect(ctx, -w / 2, -h, w, h, 12); ctx.fill();
   } else {
-    const on = 1;
+    // 18.0 屏幕亮起：DAY 1（先停一下，之后才去看返程票）
+    const on = smooth(prog(t, 17.7, 18.1));
+    ctx.fillStyle = '#0c0d10';
+    roundRect(ctx, -w / 2 + 4, -h + 4, w - 8, h - 8, 9); ctx.fill();
+    ctx.globalAlpha *= on;
     roundRect(ctx, -w / 2 + 4, -h + 4, w - 8, h - 8, 9);
     const g = ctx.createLinearGradient(0, -h, 0, 0);
     g.addColorStop(0, `rgba(70,96,120,${on})`); g.addColorStop(1, `rgba(36,46,60,${on})`);
@@ -222,12 +227,13 @@ function phoneOnTray(ctx, t, over = false) {
 }
 
 // 他：靠窗坐着，侧身朝左看窗外；19.6 慢慢低头看向桌上的手机
-function person(ctx, t) {
+function traveler(ctx, t) {
   const down = easeInOut(prog(t, 19.5, 20.6));
   const look = Math.sin(t * 0.6) * 0.015;
   ctx.save();
   ctx.translate(PERSON.x, PERSON.y);
-  seated(ctx, PERSON.u, { t, lean: lerp(0.14, 0.32, down), head: lerp(-0.08 + look, 0.42, down), arm: 'lap', light: Math.PI + 0.25, rim: 0.42, rimCol: [235, 214, 190] });
+  person(ctx, 0, 0, PERSON.u, { sit: true, face: 1, lean: lerp(0.22, 0.34, down), hd: lerp(-0.12 + look, 0.45, down), arms: { near: [0.55, 1.1], far: [0.5, 1.2] },
+    top: '#4a5246', bottom: '#24221f', hair: '#120e0b', hairStyle: 'short', skin: '#86624a', light: Math.PI + 0.3, rim: 0.42, rimCol: [235, 214, 190] });
   ctx.restore();
 }
 
@@ -361,7 +367,7 @@ function draw(ctx, t) {
       outside(ctx, t);
       seatAhead(ctx);
       ownSeat(ctx);
-      person(ctx, t);
+      traveler(ctx, t);
       tray(ctx, t);
       phoneOnTray(ctx, t);
     });
@@ -412,6 +418,6 @@ function light(t) {
     { x: W / 2, y: 0, rx: 1400, ry: 300, i: 0.35, w, color: [210, 220, 235] },
   ];
 }
-function grade(t) { return { warm: -0.15, ambient: 0.12, w: smooth(prog(t, 16.35, 16.9)) }; }
+function grade(t) { return { warm: -0.3, ambient: 0.12, w: smooth(prog(t, 16.35, 16.9)) }; }
 
 module.exports = { ...S, draw, drawOver, light, grade, cam, CUT_T };
