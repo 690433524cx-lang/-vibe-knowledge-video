@@ -53,8 +53,26 @@ function makePrint(o) {
     const dw = img.width * s, dh = img.height * s;
     const dx = BORDER + iw / 2 - dw * fx, dy = BORDER + ih / 2 - dh * fy;
     x.filter = 'grayscale(1) contrast(1.12) brightness(1.04)';
-    x.drawImage(img, Math.min(BORDER, Math.max(BORDER + iw - dw, dx)), Math.min(BORDER, Math.max(BORDER + ih - dh, dy)), dw, dh);
+    let px = Math.min(BORDER, Math.max(BORDER + iw - dw, dx));
+    let py = Math.min(BORDER, Math.max(BORDER + ih - dh, dy));
+    if (dh < ih) {
+      // 人像缩小、贴底放：上方空出来的部分用原图最上沿的背景拉伸、虚化补齐，让头顶有呼吸
+      py = BORDER + ih - dh;
+      x.save();
+      x.filter = 'grayscale(1) contrast(1.12) brightness(1.04) blur(14px)';
+      x.drawImage(img, 0, 0, img.width, img.height * 0.08, px - 30, BORDER - 30, dw + 60, py - BORDER + 60);
+      x.restore();
+      x.filter = 'grayscale(1) contrast(1.12) brightness(1.04)';
+    }
+    x.drawImage(img, px, py, dw, dh);
     x.filter = 'none';
+    if (dh < ih) {
+      // 接缝处羽化
+      x.save();
+      x.filter = 'blur(10px)';
+      x.drawImage(c, BORDER, py - 6, iw, 24, BORDER, py - 18, iw, 36);
+      x.restore();
+    }
     // 极轻的暖调（像放久了的银盐相纸）
     x.globalCompositeOperation = 'soft-light';
     x.fillStyle = 'rgba(255,214,170,0.22)';
@@ -146,7 +164,7 @@ function dossier(o) {
 }
 
 const schwartz = dossier({
-  start: 64.4, end: 68.2, side: 'left', file: 'barry_schwartz', seed: 31, litSide: 1, focus: [0.36, 0.34], zoom: 1.05,
+  start: 64.4, end: 68.2, side: 'left', file: 'barry_schwartz', seed: 31, litSide: 1, focus: [0.36, 0.34], zoom: 0.86,
   name: 'BARRY SCHWARTZ', role: 'Psychologist', work: 'THE PARADOX OF CHOICE  ·  2004',
   cn: '讨论过：更多选择，可能带来更多焦虑与后悔。',
   credit: 'Photo: Bill Holsinger-Robinson · CC BY 2.0 · via Wikimedia Commons',
