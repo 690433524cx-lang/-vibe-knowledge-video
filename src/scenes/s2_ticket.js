@@ -1,4 +1,4 @@
-// 第二幕 · 钱：杯口变成电影票的检票印章；时钟一圈一圈往前走。
+// 第二幕 · 钱：杯底的圆形轮廓变成电影票的检票印章；时钟一圈一圈往前走。
 const { W, H } = require('../config');
 const { C, FONT } = require('../lib/style');
 const { pencil, sketchEllipse, ellipsePts, rectPts, typeText, handText, hatch, camera } = require('../lib/draw');
@@ -36,7 +36,7 @@ function toScreen(c, x, y) {
 }
 
 function drawTicket(ctx, t, a, fadeOthers) {
-  const inK = smooth(prog(t, 7.3, 8.3));
+  const inK = smooth(prog(t, 8.05, 8.85));
   ctx.save();
   ctx.translate(TK.x + TK.w / 2, TK.y + TK.h / 2);
   ctx.rotate(TK.rot);
@@ -64,7 +64,7 @@ function drawTicket(ctx, t, a, fadeOthers) {
 
   ctx.save();
   ctx.globalAlpha = o;
-  const bp = prog(t, 7.3, 8.5);
+  const bp = prog(t, 7.95, 8.9);
   pencil(ctx, rectPts(TK.x, TK.y, TK.w, TK.h), { seed: 40, t, width: 1.8, progress: bp });
   pencil(ctx, rectPts(TK.x + 14, TK.y + 14, TK.stubX - TK.x - 28, TK.h - 28), { seed: 41, t, width: 1.0, color: C.graphiteSoft, progress: bp });
   // 撕线
@@ -111,18 +111,18 @@ function drawTicket(ctx, t, a, fadeOthers) {
   ctx.restore();
 }
 
-// 检票印章：由杯口变形而来
+// 检票印章：由杯底的圆形轮廓变形而来
 function drawStamp(ctx, t, c) {
-  const k = easeInOut(prog(t, 7.2, 8.7));
-  if (t < 7.2) return;
+  const k = easeInOut(prog(t, 7.3, 8.5));
+  if (t < 7.3) return;
   const fade = 1 - smooth(prog(t, 16.4, 17.2));
   const [sx, sy] = toScreen(c, STAMP.x, STAMP.y);
-  const rim = glass.rimScreen(Math.min(t, 8.6));
+  const rim = glass.baseScreen(Math.min(t, 8.6));
   const x = lerp(rim.x, sx, k), y = lerp(rim.y, sy, k);
   const rx = lerp(rim.rx, STAMP.r * c.s, k), ry = lerp(rim.ry, STAMP.r * c.s, k);
   ctx.save();
-  // 颜色：铅笔灰 → 暗红
-  const col = k < 0.5 ? C.graphite : C.redSoft;
+  // 颜色：亮铅笔线 → 暗红
+  const col = k < 0.5 ? C.light : C.redSoft;
   ctx.globalAlpha = fade;
   sketchEllipse(ctx, x, y, rx, ry, { seed: 20, t, width: lerp(2.3, 3.2, k), color: col, alpha: k < 0.5 ? 1 - k * 0.6 : 0.4 + (k - 0.5) * 1.2 });
   // 内圈与印文
@@ -180,10 +180,10 @@ function drawClock(ctx, t, a) {
   if (t > 9.6) {
     const kk = prog(t, since, since + 0.25);
     ctx.globalAlpha = a;
-    const tw = typeText(ctx, String(shown), x - 20, y + r + 70, { font: FONT.type(54), color: C.ink, progress: kk, seed: shown, align: 'right' });
+    typeText(ctx, String(shown), x - 20, y + r + 70, { font: FONT.type(54), color: C.sub, progress: kk, seed: shown, align: 'right' });
     ctx.globalAlpha = a * smooth(kk);
     ctx.font = FONT.serif(30);
-    ctx.fillStyle = C.brown;
+    ctx.fillStyle = C.lightText;
     ctx.fillText('分钟', x - 10, y + r + 68);
   }
   ctx.restore();
@@ -202,9 +202,9 @@ function draw(ctx, t) {
   if (t > 15.2) {
     ctx.save();
     ctx.globalAlpha = fadeOthers;
-    pencil(ctx, [[505, 718], [470, 700], [452, 668], [448, 644]], { seed: 80, t, width: 1.8, color: C.redSoft, progress: prog(t, 15.2, 15.6) });
-    pencil(ctx, [[440, 656], [448, 642], [458, 655]], { seed: 81, t, width: 1.8, color: C.redSoft, progress: prog(t, 15.5, 15.7) });
-    handText(ctx, '已经花掉的钱。', 518, 738, { font: FONT.hand(46), color: C.red, progress: prog(t, 15.5, 16.4), rot: -0.02 });
+    pencil(ctx, [[505, 718], [470, 700], [452, 668], [448, 644]], { seed: 80, t, width: 1.8, color: C.subRed, progress: prog(t, 15.2, 15.6) });
+    pencil(ctx, [[440, 656], [448, 642], [458, 655]], { seed: 81, t, width: 1.8, color: C.subRed, progress: prog(t, 15.5, 15.7) });
+    handText(ctx, '已经花掉的钱。', 518, 738, { font: FONT.hand(46), color: C.subRed, progress: prog(t, 15.5, 16.4), rot: -0.02 });
     ctx.restore();
   }
   ctx.restore();
@@ -239,4 +239,15 @@ function drawSeatMorph(ctx, t, c) {
   ctx.restore();
 }
 
-module.exports = { ...S, draw, SEAT_TARGET };
+function light(t) {
+  const c = cam(t);
+  const [x, y] = toScreen(c, 1000, 520);
+  // 座位号飞向中央时，光也跟着收拢到中央
+  const k = easeInOut(prog(t, 16.3, 17.3));
+  return {
+    x: lerp(x, 960, k), y: lerp(y, 540, k), rx: lerp(980, 560, k), ry: lerp(470, 440, k), i: 1,
+    w: smooth(prog(t, 7.4, 8.6)) * (1 - smooth(prog(t, 17.0, 17.6))),
+  };
+}
+
+module.exports = { ...S, draw, light, SEAT_TARGET };

@@ -80,6 +80,35 @@ function makePaper(seed = 7, scale = 1.12) {
   return c;
 }
 
+// 深色档案室桌面：黑棕底、极淡木纹与斑驳。只有被灯照到的地方才看得见纹理。
+function makeDesk(seed = 17, scale = 1.12) {
+  const w = Math.round(W * scale), h = Math.round(H * scale);
+  const c = createCanvas(w, h);
+  const x = c.getContext('2d');
+  const r = rng(seed);
+  x.fillStyle = '#2a2019';
+  x.fillRect(0, 0, w, h);
+  blotch(x, w, h, 6, seed + 1, 0.35, [12, 9, 7]);
+  blotch(x, w, h, 16, seed + 2, 0.18, [70, 54, 40]);
+  blotch(x, w, h, 50, seed + 3, 0.10, [10, 8, 6]);
+  // 横向木纹
+  for (let i = 0; i < 420; i++) {
+    const y0 = r() * h, len = 200 + r() * 900, x0 = r() * w - 200;
+    x.strokeStyle = r() < 0.6 ? `rgba(10,7,5,${0.06 + r() * 0.08})` : `rgba(110,86,62,${0.03 + r() * 0.05})`;
+    x.lineWidth = 0.8 + r() * 2.2;
+    x.beginPath();
+    x.moveTo(x0, y0);
+    x.bezierCurveTo(x0 + len * 0.3, y0 + (r() - 0.5) * 8, x0 + len * 0.7, y0 + (r() - 0.5) * 8, x0 + len, y0 + (r() - 0.5) * 6);
+    x.stroke();
+  }
+  for (let i = 0; i < 1800; i++) {
+    x.fillStyle = r() < 0.5 ? `rgba(0,0,0,${0.1 + r() * 0.2})` : `rgba(140,115,85,${0.04 + r() * 0.08})`;
+    const s = 0.6 + r() * 1.4;
+    x.fillRect(r() * w, r() * h, s, s);
+  }
+  return c;
+}
+
 function makeGrain(count = 6, seed = 99) {
   const frames = [];
   const gw = W / 2, gh = H / 2;
@@ -103,11 +132,11 @@ function makeVignette() {
   const c = createCanvas(W, H);
   const x = c.getContext('2d');
   const g = x.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 1.05);
-  g.addColorStop(0, 'rgba(40,28,15,0)');
-  g.addColorStop(1, 'rgba(40,28,15,0.42)');
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(1, 'rgba(0,0,0,0.55)');
   x.fillStyle = g;
   x.fillRect(0, 0, W, H);
   return c;
 }
 
-module.exports = { makePaper, makeGrain, makeVignette };
+module.exports = { makeDesk, makePaper, makeGrain, makeVignette };

@@ -51,7 +51,7 @@ function drawQueue(ctx, t, a) {
     ctx.globalAlpha = a * appear * lerp(0.78, 0.06, ff);
     ctx.filter = `blur(${lerp(0.4, 4, ff).toFixed(1)}px)`;
     ctx.font = FONT.type(128 * s);
-    ctx.fillStyle = C.ink;
+    ctx.fillStyle = C.lightText;
     ctx.textAlign = 'center';
     ctx.fillText('A' + (146 - i), x, y);
     ctx.restore();
@@ -63,13 +63,13 @@ function drawChairs(ctx, t, a) {
   const p = prog(t, 18.6, 20.0);
   for (let i = 0; i < 4; i++) {
     const x = 170 + i * 128, y = 640;
-    const o = { seed: 200 + i, t, width: 1.8, color: C.graphite, alpha: a, progress: clamp(p * 1.6 - i * 0.15) };
+    const o = { seed: 200 + i, t, width: 1.8, color: C.lightSoft, alpha: a, progress: clamp(p * 1.6 - i * 0.15) };
     pencil(ctx, [[x, y], [x, y + 120]], o);
     pencil(ctx, [[x + 76, y + 60], [x + 76, y + 120]], { ...o, width: 1.2 });
     pencil(ctx, [[x, y + 60], [x + 80, y + 60], [x + 80, y + 120]], o);
     pencil(ctx, [[x + 4, y + 2], [x + 4, y + 58]], { ...o, width: 1 });
   }
-  pencil(ctx, [[130, 762], [700, 762]], { seed: 210, t, width: 1.2, color: C.graphiteSoft, alpha: a * 0.7, progress: p });
+  pencil(ctx, [[130, 762], [700, 762]], { seed: 210, t, width: 1.2, color: C.lightSoft, alpha: a * 0.7, progress: p });
 }
 
 function fmtWait(sec) {
@@ -148,38 +148,53 @@ function draw(ctx, t) {
   const c = cam(t);
   ctx.save();
   camera(ctx, c.cx, c.cy, c.s);
-  const a = 1; // 第四幕转场时由后续元素接管
-
-  // 叫号屏 & 等待计时（左上）
-  const hk = smooth(prog(t, 18.4, 19.2));
-  if (hk > 0) {
-    ctx.save();
-    ctx.globalAlpha = a * hk;
-    ctx.font = FONT.serif(26);
-    ctx.fillStyle = C.brown;
-    ctx.fillText('正在叫号', 200, 250);
-    ctx.font = FONT.type(64);
-    ctx.fillStyle = C.ink;
-    ctx.fillText(t < 23.6 ? 'A124' : 'A125', 200, 320);
-    if (t >= 23.6) {
-      // 叫号跳了一下：一条暗红小划线
-      pencil(ctx, [[196, 334], [356, 334]], { seed: 220, t, width: 2, color: C.redSoft, progress: prog(t, 23.6, 23.9) });
-    }
-    ctx.font = FONT.serif(24);
-    ctx.fillStyle = C.brown;
-    ctx.fillText('已等待', 200, 390);
-    // 等待计时：从 40 分钟开始走，越走越慢
-    const wait = 40 * 60 + 12 + (t - 18.4) * 9;
-    ctx.font = FONT.type(32);
-    ctx.fillStyle = C.ink;
-    ctx.fillText(fmtWait(wait), 290, 392);
-    ctx.restore();
-  }
-
-  drawChairs(ctx, t, a);
-  drawQueue(ctx, t, a);
-  drawSlip(ctx, t, a);
+  drawSlip(ctx, t, 1);
   ctx.restore();
 }
 
-module.exports = { ...S, draw, cam, SLIP };
+// 光斑之外、但仍需隐约可见的东西：叫号屏（自身发光）、远处的号码和空椅子
+function drawOver(ctx, t) {
+  const c = cam(t);
+  ctx.save();
+  camera(ctx, c.cx, c.cy, c.s);
+  const hk = smooth(prog(t, 18.4, 19.2));
+  if (hk > 0) {
+    ctx.save();
+    ctx.globalAlpha = hk * 0.85;
+    ctx.font = FONT.serif(26);
+    ctx.fillStyle = C.dimText;
+    ctx.fillText('正在叫号', 200, 250);
+    ctx.font = FONT.type(64);
+    ctx.fillStyle = C.lightText;
+    ctx.shadowColor = 'rgba(255,200,140,0.35)';
+    ctx.shadowBlur = 14;
+    ctx.fillText(t < 23.6 ? 'A124' : 'A125', 200, 320);
+    ctx.shadowBlur = 0;
+    if (t >= 23.6) {
+      // 叫号跳了一下：一条暗红小划线
+      pencil(ctx, [[196, 334], [356, 334]], { seed: 220, t, width: 2, color: C.subRed, progress: prog(t, 23.6, 23.9) });
+    }
+    ctx.font = FONT.serif(24);
+    ctx.fillStyle = C.dimText;
+    ctx.fillText('已等待', 200, 390);
+    // 等待计时：从 40 分钟开始走
+    const wait = 40 * 60 + 12 + (t - 18.4) * 9;
+    ctx.font = FONT.type(32);
+    ctx.fillStyle = C.lightText;
+    ctx.fillText(fmtWait(wait), 290, 392);
+    ctx.restore();
+  }
+  ctx.globalAlpha = 0.55;
+  drawChairs(ctx, t, 1);
+  ctx.globalAlpha = 1;
+  drawQueue(ctx, t, 0.75);
+  ctx.restore();
+}
+
+function light(t) {
+  const c = cam(t);
+  const x = W / 2 + (SLIP.cx - c.cx) * c.s, y = H / 2 + (510 - c.cy) * c.s;
+  return { x, y, rx: 600, ry: 470, i: 1, w: smooth(prog(t, 16.9, 17.6)) };
+}
+
+module.exports = { ...S, draw, drawOver, light, cam, SLIP };

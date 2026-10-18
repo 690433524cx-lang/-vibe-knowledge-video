@@ -6,16 +6,18 @@
 //   emph   — 下方安全区，略放大（只给少数关键句）
 //   hand   — 手写体，像在档案上随手写下
 //   anchor — 毛笔楷「舍不得」的第一次轻声出现（不放大）
+// 文本中用 {…} 包住的部分以暗红强调；y / fi 可单独覆盖位置与淡入时长
 //   center — 画面中央，大号宋体（只给「回不来。」）
 const { W } = require('./config');
 const { FONT, C } = require('./lib/style');
 const { prog, smooth, easeOut } = require('./lib/util');
 
 const SUBS = [
-  // 第一幕 · 钩子
-  { t: 1.0, d: 1.7, text: '你有没有发现——' },
-  { t: 3.1, d: 2.2, text: '有些东西，明明已经不值得了。' },
-  { t: 5.8, d: 1.8, text: '你还是舍不得停。' },
+  // 第一幕 · 钩子：开场 0.3 秒直接抛出问题（两行同屏，第二行更大、更重）
+  { t: 0.3, d: 4.2, text: '明知道已经不值得了——', y: 900, fi: 0.9 },
+  { t: 1.7, d: 2.8, text: '你为什么还是{舍不得}停？', style: 'emph', y: 990, fi: 0.7 },
+  { t: 5.0, d: 1.1, text: '钱是这样。' },
+  { t: 6.5, d: 1.3, text: '时间也是这样。' },
   // 第二幕 · 钱
   { t: 9.2, d: 1.7, text: '电影不好看。' },
   { t: 11.4, d: 1.7, text: '可票都买了。' },
@@ -68,37 +70,62 @@ const SUBS = [
 
 const BASE_Y = 968;
 
+// 解析 {…} 强调片段
+function segments(text) {
+  const out = [];
+  const re = /\{([^}]*)\}/g;
+  let last = 0, m;
+  while ((m = re.exec(text))) {
+    if (m.index > last) out.push([text.slice(last, m.index), false]);
+    out.push([m[1], true]);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push([text.slice(last), false]);
+  return out;
+}
+
+function fillSegments(ctx, segs, cx, y, base, accent) {
+  const widths = segs.map(([s]) => ctx.measureText(s).width);
+  let x = cx - widths.reduce((a, b) => a + b, 0) / 2;
+  ctx.textAlign = 'left';
+  segs.forEach(([s, red], i) => {
+    ctx.fillStyle = red ? accent : base;
+    ctx.fillText(s, x, y);
+    x += widths[i];
+  });
+}
+
 function drawLine(ctx, s, a, k) {
   const style = s.style || 'sub';
   ctx.save();
-  ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   const rise = (1 - easeOut(k)) * 8;
+  const segs = segments(s.text);
   if (style === 'center') {
     ctx.font = FONT.serifBlack(96);
     ctx.globalAlpha = a;
-    ctx.fillStyle = C.ink;
-    ctx.fillText(s.text, W / 2, 575 + rise);
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 24;
+    fillSegments(ctx, segs, W / 2, (s.y ?? 575) + rise, C.sub, C.subRed);
   } else {
-    let font = FONT.serif(52), color = C.ink, y = BASE_Y;
-    if (style === 'emph') font = FONT.serif(62);
-    if (style === 'hand') { font = FONT.hand(72); color = C.red; }
-    if (style === 'anchor') { font = FONT.brush(84); y = BASE_Y + 6; }
+    let font = FONT.serif(52), color = C.sub, y = s.y ?? BASE_Y;
+    if (style === 'emph') font = FONT.serif(66);
+    if (style === 'hand') { font = FONT.hand(72); color = C.subRed; }
+    if (style === 'anchor') { font = FONT.brush(84); y += 6; }
     ctx.font = font;
-    // 纸色柔光，保证压在图形上时仍然清楚
-    ctx.shadowColor = 'rgba(234,224,200,0.95)';
+    // 深色柔影，保证压在亮处时仍然清楚
+    ctx.shadowColor = 'rgba(0,0,0,0.85)';
     ctx.shadowBlur = 18;
     ctx.globalAlpha = a;
-    ctx.fillStyle = color;
     if (style === 'hand') {
       const w = ctx.measureText(s.text).width;
       ctx.beginPath();
       ctx.rect(W / 2 - w / 2 - 10, y - 120, (w + 20) * Math.min(1, k * 1.6), 180);
       ctx.clip();
     }
-    ctx.fillText(s.text, W / 2, y + rise);
+    fillSegments(ctx, segs, W / 2, y + rise, color, C.subRed);
     ctx.shadowBlur = 0;
-    ctx.fillText(s.text, W / 2, y + rise);
+    fillSegments(ctx, segs, W / 2, y + rise, color, C.subRed);
   }
   ctx.restore();
 }
@@ -106,10 +133,10 @@ function drawLine(ctx, s, a, k) {
 // t 为设计时间
 function drawSubtitles(ctx, t) {
   for (const s of SUBS) {
-    const fi = 0.28, fo = 0.3;
+    const fi = s.fi ?? 0.28, fo = 0.3;
     if (t < s.t || t > s.t + s.d + fo) continue;
     const a = smooth(prog(t, s.t, s.t + fi)) * (1 - smooth(prog(t, s.t + s.d, s.t + s.d + fo)));
-    drawLine(ctx, s, a, prog(t, s.t, s.t + 0.6));
+    drawLine(ctx, s, a, prog(t, s.t, s.t + Math.max(0.6, fi)));
   }
 }
 

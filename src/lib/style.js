@@ -33,6 +33,13 @@ const C = {
   red: '#7d231c',        // 暗红（仅用于核心词、批注、印章、关键线）
   redSoft: 'rgba(125,35,28,0.75)',
   water: 'rgba(96,112,118,0.22)',
+  // 深色环境用
+  sub: '#e6dac3',            // 字幕：浅米白
+  subRed: '#b5493d',         // 字幕中的暗红强调（深底上略提亮）
+  light: 'rgba(226,212,188,0.78)',     // 深底上的亮铅笔线
+  lightSoft: 'rgba(214,198,172,0.38)',
+  lightText: '#cbbfa8',      // 深底上的说明文字（暖灰白）
+  dimText: '#8d8070',
 };
 
 module.exports = { FONT, C };
