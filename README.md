@@ -1,4 +1,15 @@
-# 为什么你越舍不得，越容易继续浪费？
+# 动态知识短片（代码逐帧绘制）
+
+| 视频 | 目录 | 状态 |
+|---|---|---|
+| 《为什么你越舍不得，越容易继续浪费？》沉没成本 | `videos/sunk-cost/` | 无音乐全片 `output/full_v1.mp4` |
+| 《你是不是也有选择困难？》选择过载 / 满意解 | `videos/choice/` | 0–20 秒样片 `output/choice/sample_0-20s.mp4`，分镜 `docs/choice/storyboard.md`，素材来源 `docs/choice/sources.md` |
+
+所有命令加 `--video choice` 即可切换到新片（默认 `sunk-cost`）。主重拍参数可用 `MAIN_BEAT_T`（或 `T` / `--T`）。
+
+---
+
+## 《为什么你越舍不得，越容易继续浪费？》
 
 动态知识短片 · 沉没成本 SUNK COST · 1920×1080 / 30fps / H.264
 

@@ -122,7 +122,8 @@ function renderFrame(ctx, tReal, frameIndex) {
   }
 
   // 片头从黑暗中亮起
-  const open = 1 - smooth(prog(d, 0, 0.9));
+  const OPEN = require('./config').TL.OPEN_FADE ?? 0.9;
+  const open = OPEN > 0 ? 1 - smooth(prog(d, 0, OPEN)) : 0;
   if (open > 0) {
     ctx.fillStyle = `rgba(3,2,1,${open * 0.85})`;
     ctx.fillRect(0, 0, W, H);

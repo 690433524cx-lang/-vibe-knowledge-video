@@ -167,4 +167,91 @@ function card(ctx, w, h, o = {}) {
   }
 }
 
-module.exports = { paper, photo, ticket, slip, clock, pencilIcon, card, rng };
+// 一扇门：以门底中心为原点。open 0..1 为门缝宽度，side = 1 门缝在右、-1 在左。
+function door(ctx, w, h, o = {}) {
+  const { open = 0, side = 1, glow = 1, t = 0, seed = 1, frame = true, alpha = 1, boil = true } = o;
+  ctx.save();
+  ctx.globalAlpha *= alpha;
+  const left = -w / 2, top = -h;
+  const gap = w * 0.3 * open;
+  const gx = side > 0 ? w / 2 - gap : left;
+  if (open > 0.001 && glow > 0) {
+    // 洒在地上的光
+    const sx = side > 0 ? 1 : -1;
+    const g = ctx.createLinearGradient(0, 0, 0, h * 0.9);
+    g.addColorStop(0, `rgba(255,214,150,${0.26 * glow})`);
+    g.addColorStop(1, 'rgba(255,214,150,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(gx, 0); ctx.lineTo(gx + gap, 0);
+    ctx.lineTo(gx + gap + sx * w * 0.9 + (sx > 0 ? w * 0.5 : 0), h * 0.9); ctx.lineTo(gx + sx * w * 0.5 + (sx > 0 ? 0 : -w * 0.4), h * 0.9);
+    ctx.closePath();
+    ctx.fill();
+    // 门缝
+    const lg = ctx.createLinearGradient(gx, 0, gx + gap, 0);
+    lg.addColorStop(0, `rgba(255,236,196,${0.95 * glow})`);
+    lg.addColorStop(1, `rgba(255,214,150,${0.8 * glow})`);
+    ctx.save();
+    ctx.fillStyle = lg;
+    ctx.shadowColor = `rgba(255,210,140,${0.6 * glow})`;
+    ctx.shadowBlur = Math.max(6, w * 0.15);
+    ctx.fillRect(gx, top, gap, h);
+    ctx.restore();
+  }
+  // 门板
+  const px = side > 0 ? left : left + gap;
+  ctx.save();
+  ctx.fillStyle = '#2c2119';
+  ctx.shadowColor = 'rgba(0,0,0,0.5)';
+  ctx.shadowBlur = 14;
+  ctx.fillRect(px, top, w - gap, h);
+  ctx.restore();
+  const pw = w - gap;
+  const lo = { t, width: Math.max(0.8, w * 0.006), color: C.lightSoft, passes: 1, boil };
+  pencil(ctx, rectPts(px + pw * 0.14, top + h * 0.07, pw * 0.72, h * 0.36), { ...lo, seed: seed * 3 });
+  pencil(ctx, rectPts(px + pw * 0.14, top + h * 0.5, pw * 0.72, h * 0.42), { ...lo, seed: seed * 3 + 1 });
+  ctx.fillStyle = 'rgba(230,214,186,0.8)';
+  ctx.beginPath();
+  ctx.arc(side > 0 ? px + pw - pw * 0.1 : px + pw * 0.1, top + h * 0.52, Math.max(1.5, w * 0.02), 0, Math.PI * 2);
+  ctx.fill();
+  if (frame) {
+    const f = Math.max(4, w * 0.05);
+    pencil(ctx, [[left - f, 0], [left - f, top - f], [w / 2 + f, top - f], [w / 2 + f, 0]],
+      { t, seed: seed * 3 + 2, width: Math.max(1, w * 0.009), color: C.light, passes: 1, boil });
+  }
+  ctx.restore();
+}
+
+// 极简背影：头、肩、两条腿。没有脸。以脚底为原点。
+function figure(ctx, h, o = {}) {
+  const { t = 0, walk = 0, alpha = 1 } = o;
+  const sw = Math.sin(t * 6.2) * 0.22 * walk;
+  ctx.save();
+  ctx.globalAlpha *= alpha;
+  ctx.fillStyle = '#120d0a';
+  for (const s of [-1, 1]) {
+    ctx.save();
+    ctx.translate(s * h * 0.06, -h * 0.44);
+    ctx.rotate(s * sw);
+    ctx.fillRect(-h * 0.045, 0, h * 0.09, h * 0.44);
+    ctx.restore();
+  }
+  ctx.beginPath();
+  ctx.moveTo(-h * 0.16, -h * 0.78);
+  ctx.quadraticCurveTo(0, -h * 0.84, h * 0.16, -h * 0.78);
+  ctx.lineTo(h * 0.13, -h * 0.42);
+  ctx.lineTo(-h * 0.13, -h * 0.42);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0, -h * 0.9, h * 0.095, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,214,160,0.35)';
+  ctx.lineWidth = Math.max(1, h * 0.012);
+  ctx.beginPath();
+  ctx.moveTo(-h * 0.15, -h * 0.79); ctx.quadraticCurveTo(0, -h * 0.85, h * 0.15, -h * 0.79);
+  ctx.stroke();
+  ctx.restore();
+}
+
+module.exports = { paper, photo, ticket, slip, clock, pencilIcon, card, door, figure, rng };

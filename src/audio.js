@@ -183,7 +183,22 @@ function writeWav(file, [L, R]) {
   fs.writeFileSync(file, Buffer.concat([h, data]));
 }
 
+// 11 菜单滚动：一串越来越密、又慢下来的轻微划动声
+function scrollTicks(seed = 11, dur = 1.5) {
+  const b = buf(dur + 0.1), r = rng(seed), bp = biquad('bp', 2800, 2.5);
+  let ph = 0;
+  for (let i = 0; i < b.length; i++) {
+    const t = i / SR, k = Math.min(1, t / dur);
+    const rate = 6 + 34 * Math.sin(Math.PI * k);
+    const prev = ph;
+    ph += rate / SR;
+    const click = Math.floor(ph) !== Math.floor(prev) ? 1 : 0;
+    b[i] = bp((r() * 2 - 1) * 0.15 + click * 3) * Math.sin(Math.PI * k);
+  }
+  return b;
+}
+
 module.exports = {
   mixSfx, writeWav, SR,
-  synth: { drop, paper, tick, printer, photoDrop, threadTight, impact, stamp, pencilScratch, door },
+  synth: { drop, paper, tick, printer, photoDrop, threadTight, impact, stamp, pencilScratch, door, scrollTicks },
 };
