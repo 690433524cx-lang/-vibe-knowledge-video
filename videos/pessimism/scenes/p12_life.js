@@ -1,29 +1,28 @@
-// 第十二 / 十三幕 · 85.8–91.6 秒：生活例子二、三。
-//   关系（手机侧光）：夜里，手机的光照着他的侧脸。聊天停在对方最后一句「嗯」，之后再没有消息。
-//     87.7 一句话像打字一样出现：不会有人喜欢我。——然后一点点变淡、散开：这是解释，不是事实。
-//   工作（较远的办公室）：夜里大半个楼层都暗了，只剩一个工位亮着；屏幕上一份文件，一道红色的错误标记。
-//     他停在那里不动。90.4 空荡荡的办公室上方浮出：我什么都做不好。
-//     91.2 起红色错误标记被拉长，交给下一幕成为红铅笔线。
+// 生活例子二、三（留存优化版）：现实很小，悲观的解释越来越大。
+//   关系 86.0–90.95：夜里，手机的光照着他的侧脸。聊天停在对方最后一句「嗯」，之后再没有消息——现实只是一次没有结果。
+//     87.4 起一句话从手机旁边很小地出现：不会有人喜欢我——越来越大，占满他身后的黑暗。（标注：普遍的）
+//   工作 90.8–97.6：夜里大半个楼层都暗了，只剩一个工位亮着；屏幕上一道普通的红色错误标记——现实只是一次失误。
+//     92.4 起：我什么都做不好——从工位上方很小地浮起，越来越大，压在整个办公室上空。（标注：和自己有关的）
+//     94.0 起前两句也以很大的、很淡的样子回到画面后面：一件小事，被解释成了整个人生。
 const { W, H } = require('../../../src/config');
 const { FONT } = require('../../../src/lib/style');
 const { prog, smooth, lerp, rng, noise1, easeInOut } = require('../../../src/lib/util');
 const { withCam, toScreen, smoothPath } = require('../lib');
 const { person } = require('../people');
 const { roundRect } = require('../phone');
-const { BADGE } = require('./p10_explain');
 
 // ================= 关系 =================
-const REL = { start: 85.75, end: 88.9 };
+const REL = { start: 85.95, end: 90.95 };
 const PH = { x: 1300, y: 560, w: 250, h: 500, rot: 0.16 };   // 手机（画面坐标）
 const FACE = { x: 760, y: 1240, u: 1050 };                   // 一个很近的侧影（只看到头和肩）
 
 function relDraw(ctx, t) {
-  const a = smooth(prog(t, 85.8, 86.1)) * (1 - smooth(prog(t, 88.55, 88.9)));
+  const a = smooth(prog(t, 86.0, 86.3)) * (1 - smooth(prog(t, 90.65, 90.95)));
   ctx.save();
   ctx.globalAlpha *= a;
   ctx.fillStyle = '#15171b';
   ctx.fillRect(0, 0, W, H);
-  const push = 1 + 0.03 * prog(t, 85.8, 88.9);
+  const push = 1 + 0.03 * prog(t, 86.0, 90.9);
   ctx.translate(W / 2, H / 2); ctx.scale(push, push); ctx.translate(-W / 2, -H / 2);
   person(ctx, FACE.x, FACE.y, FACE.u, { sit: true, face: -1, lean: 0.12, hd: 0.32 + Math.sin(t * 0.7) * 0.01, arms: { near: [0.2, 0.3], far: [0.2, 0.3] },
     top: '#2c333c', bottom: '#202226', hair: '#0f0c0a', hairStyle: 'short', skin: '#6e5242', light: 0, rim: 0.7, rimCol: [200, 218, 246] });
@@ -40,10 +39,10 @@ function relDraw(ctx, t) {
   ctx.restore();
 }
 function relOver(ctx, t) {
-  const a = smooth(prog(t, 85.8, 86.1)) * (1 - smooth(prog(t, 88.55, 88.9)));
+  const a = smooth(prog(t, 86.0, 86.3)) * (1 - smooth(prog(t, 90.65, 90.95)));
   ctx.save();
   ctx.globalAlpha *= a;
-  const push = 1 + 0.03 * prog(t, 85.8, 88.9);
+  const push = 1 + 0.03 * prog(t, 86.0, 90.9);
   ctx.translate(W / 2, H / 2); ctx.scale(push, push); ctx.translate(-W / 2, -H / 2);
   // 发光的屏幕：对方最后一句「嗯」，之后什么都没有
   ctx.save();
@@ -60,28 +59,30 @@ function relOver(ctx, t) {
   ctx.fillStyle = '#2a3038'; ctx.font = FONT.body(24); ctx.fillText('嗯', -PH.w / 2 + 42, -PH.h / 2 + 274);
   ctx.fillStyle = 'rgba(40,46,56,0.45)'; ctx.font = FONT.body(14); ctx.fillText('三天前', -PH.w / 2 + 22, -PH.h / 2 + 312);
   ctx.restore();
-  // 上一幕飞来的红点：落在手机角上，很快熄掉
-  const d = 1 - smooth(prog(t, 86.15, 86.6));
-  if (d > 0) { ctx.fillStyle = `rgba(184,53,42,${d})`; ctx.beginPath(); ctx.arc(BADGE[0], BADGE[1], 9, 0, Math.PI * 2); ctx.fill(); }
-  // 念头：打出来，然后变淡、散开
-  const k = prog(t, 87.7, 88.15);
-  if (k > 0) {
-    const fade = smooth(prog(t, 88.2, 88.85));
-    const str = '不会有人喜欢我';
-    const shown = [...str].slice(0, Math.ceil(k * str.length)).join('');
-    ctx.save();
-    ctx.globalAlpha *= 0.92 * (1 - fade * 0.85);
-    ctx.filter = fade > 0.02 ? `blur(${(fade * 7).toFixed(1)}px)` : 'none';
-    ctx.font = FONT.hand(80);
-    ctx.fillStyle = '#dfe6f0';
-    ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 12;
-    ctx.fillText(shown, 260 - fade * 30, 300 - fade * 20);
-    ctx.restore();
-  }
   ctx.restore();
+  // 念头：从手机旁边很小地出现，越来越大，占满他身后的黑暗
+  growThought(ctx, '不会有人喜欢我', t, 87.4, 90.3, { x0: PH.x - 120, y0: PH.y - 300, x1: 760, y1: 330, s0: 34, s1: 150, color: '#dfe6f0', tag: '普遍的', fade: [90.65, 90.95] });
+}
+// 越长越大的念头（屏幕坐标）
+function growThought(ctx, str, t, t0, t1, o) {
+  const k = smooth(prog(t, t0, t1));
+  const a = smooth(prog(t, t0, t0 + 0.5)) * (1 - smooth(prog(t, o.fade[0], o.fade[1])));
+  if (a <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = a * lerp(0.55, 0.92, k) * (o.alpha ?? 1);
+  ctx.font = FONT.hand(lerp(o.s0, o.s1, k));
+  ctx.textAlign = 'center';
+  ctx.fillStyle = o.color;
+  ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 16;
+  ctx.fillText(str, lerp(o.x0, o.x1, k), lerp(o.y0, o.y1, k));
+  ctx.restore();
+  if (o.tag) {
+    const ta = smooth(prog(t, t1 - 0.4, t1)) * (1 - smooth(prog(t, o.fade[0], o.fade[1])));
+    if (ta > 0) { ctx.save(); ctx.globalAlpha = ta * 0.72; ctx.font = FONT.body(30); ctx.letterSpacing = '8px'; ctx.textAlign = 'center'; ctx.fillStyle = o.color; ctx.fillText('— ' + o.tag, o.x1, o.y1 + o.s1 * 0.62); ctx.restore(); }
+  }
 }
 function relLight(t) {
-  const w = smooth(prog(t, 85.8, 86.1)) * (1 - smooth(prog(t, 88.55, 88.9)));
+  const w = smooth(prog(t, 86.0, 86.3)) * (1 - smooth(prog(t, 90.65, 90.95)));
   return [
     { x: PH.x - 60, y: PH.y - 40, rx: 640, ry: 620, i: 1, w, color: [200, 216, 244], core: 0.25 },
     { x: 860, y: 520, rx: 420, ry: 460, i: 0.45, w, color: [190, 206, 236] },
@@ -90,10 +91,10 @@ function relLight(t) {
 const relation = { ...REL, draw: relDraw, drawOver: relOver, light: relLight, grade: () => ({ warm: -0.5, ambient: 0.07 }) };
 
 // ================= 工作 =================
-const WRK = { start: 88.55, end: 91.75 };
+const WRK = { start: 90.75, end: 97.65 };
 const DESK = { x: 640, y: 690 };
-const ERR_T = 89.2;
-const cam = (t) => ({ cx: 980 - (t - 88.6) * 6, cy: 540, s: 1.0 + (t - 88.6) * 0.008 });
+const ERR_T = 91.5;
+const cam = (t) => ({ cx: 980 - (t - 90.8) * 5, cy: 540, s: 1.0 + (t - 90.8) * 0.006 });
 
 function office(ctx, t) {
   ctx.fillStyle = '#1e2124';
@@ -148,47 +149,32 @@ function screen(ctx, t) {
   if (blink > 0) { ctx.fillStyle = `rgba(200,40,30,${0.9 * blink})`; ctx.fillRect(x - 96, y - 78, 120, 8); }
 }
 function thought(ctx, t) {
-  const a = smooth(prog(t, 90.4, 90.9)) * (1 - smooth(prog(t, 91.3, 91.7)));
-  if (a <= 0) return;
-  ctx.save();
-  ctx.globalAlpha = a * 0.85;
-  ctx.font = FONT.hand(78);
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#d6dce4';
-  ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 14;
-  ctx.fillText('我什么都做不好', 1180, 330);
-  ctx.restore();
+  const c = cam(t);
+  const [dx, dy] = toScreen(c, DESK.x, DESK.y - 200);
+  const fade = [97.3, 97.65];
+  // 前两句以很大、很淡的样子回到画面后面：一件小事，被解释成了整个人生
+  growThought(ctx, '我就是不行', t, 94.0, 95.4, { x0: 430, y0: 200, x1: 430, y1: 200, s0: 110, s1: 120, color: '#c8d0dc', alpha: 0.32, fade });
+  growThought(ctx, '不会有人喜欢我', t, 94.3, 95.7, { x0: 1460, y0: 300, x1: 1460, y1: 300, s0: 100, s1: 110, color: '#c8d0dc', alpha: 0.3, fade });
+  growThought(ctx, '我什么都做不好', t, 92.4, 95.4, { x0: dx, y0: dy, x1: 1100, y1: 600, s0: 30, s1: 160, color: '#d6dce4', tag: '和自己有关的', fade });
 }
 function wrkDraw(ctx, t) {
   const c = cam(t);
   ctx.save();
-  ctx.globalAlpha *= smooth(prog(t, 88.6, 88.95)) * (1 - smooth(prog(t, 91.3, 91.7)));
+  ctx.globalAlpha *= smooth(prog(t, 90.8, 91.1)) * (1 - smooth(prog(t, 97.3, 97.65)));
   withCam(ctx, c, 1, () => { office(ctx, t); workstation(ctx, t); });
   ctx.restore();
 }
 function wrkOver(ctx, t) {
   const c = cam(t);
   ctx.save();
-  ctx.globalAlpha *= smooth(prog(t, 88.6, 88.95)) * (1 - smooth(prog(t, 91.3, 91.7)));
+  ctx.globalAlpha *= smooth(prog(t, 90.8, 91.1)) * (1 - smooth(prog(t, 97.3, 97.65)));
   withCam(ctx, c, 1, () => screen(ctx, t));
-  thought(ctx, t);
   ctx.restore();
-  // 红色错误标记被拉长、移到下一幕第一道红铅笔线的位置
-  const k = smooth(prog(t, 91.15, 91.7));
-  if (k > 0) {
-    const [sx, sy] = toScreen(c, DESK.x - 36, DESK.y - 74);
-    const x0 = lerp(sx - 60, STRIKE[0][0], k), x1 = lerp(sx + 60, STRIKE[0][1], k), y = lerp(sy, STRIKE[0][2], k);
-    ctx.save();
-    ctx.globalAlpha = 1 - smooth(prog(t, 91.6, 91.75));
-    ctx.fillStyle = '#b8352a';
-    ctx.fillRect(x0, y - lerp(4, 3, k), x1 - x0, lerp(8, 6, k));
-    ctx.restore();
-  }
+  thought(ctx, t);
 }
-const STRIKE = [[500, 1060, 420]];   // 下一幕第一道红线（画面坐标：x0, x1, y），与 p14 一致
 function wrkLight(t) {
   const c = cam(t);
-  const w = smooth(prog(t, 88.6, 88.95)) * (1 - smooth(prog(t, 91.3, 91.7)));
+  const w = smooth(prog(t, 90.8, 91.1)) * (1 - smooth(prog(t, 97.3, 97.65)));
   const [x, y] = toScreen(c, DESK.x - 20, DESK.y - 80);
   return [
     { x, y, rx: 300 * c.s, ry: 260 * c.s, i: 0.95, w, color: [214, 224, 244], core: 0.25 },
@@ -198,4 +184,4 @@ function wrkLight(t) {
 }
 const work = { ...WRK, draw: wrkDraw, drawOver: wrkOver, light: wrkLight, grade: () => ({ warm: -0.35, ambient: 0.13 }) };
 
-module.exports = { relation, work, STRIKE };
+module.exports = { relation, work };

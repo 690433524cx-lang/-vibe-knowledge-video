@@ -4,10 +4,12 @@
 //   57.0 他画出一条绕开的路线；58.2 那座桥真的断了（地图上那一小块暗下去）——悲观有时候确实有用。
 //   59.4 起镜头移到下一个十字路口：前面的路其实是正常的、空的。可是铅笔开始自己在路上画：
 //        断桥、暴雨、失败、拒绝、结束……越画越快、越画越重。左边是「看见风险」，右边是「相信失败一定会发生」。
-//   T-1.2  地图上浮起越来越多的词（不超过 12 个，仍然可读）；T-0.7 有重量地向中央聚拢，手退进黑暗；
-//   T-0.3  只剩「失败 失去 拒绝 结束」；T-0.15 全部静止。T 那一帧交给「最坏」。
+//   T 之前的浮词、清空和静止见 scenes/p7b_tprep.js（按新的 MAIN_BEAT_T）。
 const { createCanvas } = require('@napi-rs/canvas');
-const { W, H, DESIGN_T: D } = require('../../../src/config');
+const { W, H } = require('../../../src/config');
+// 本场景按旧时间轴编写（旧的 MAIN_BEAT_T = 66.5），由 scenes/index.js 用 remap 放到新时间轴上；
+// T 之前浮起的词改由 scenes/p7b_tprep.js 按新的 MAIN_BEAT_T 画。
+const D = 66.5;
 const { FONT, C } = require('../../../src/lib/style');
 const { prog, smooth, lerp, rng, noise1, easeInOut, easeIn } = require('../../../src/lib/util');
 const { spring } = require('../../../src/lib/motion');
@@ -92,9 +94,10 @@ const BASE = (() => {
 
 // ---------------- 摄影机（俯拍，缓慢） ----------------
 function cam(t) {
-  const a = { cx: 960, cy: 560, s: 0.62 };
-  const b = { cx: 960 + 240, cy: 560 + 120, s: 0.82 };    // 能同时看到左边圈过的风险和右边的十字路口
-  const c = { cx: 960 + CROSS[0] - 40, cy: 540 + CROSS[1] - 20, s: 1.12 };
+  // 地图只是桌上的一个物体：镜头始终留着桌面、台灯和周围的暗
+  const a = { cx: 860, cy: 500, s: 0.42 };
+  const b = { cx: 960 + 160, cy: 560 + 100, s: 0.5 };     // 能同时看到左边圈过的风险和右边的十字路口
+  const c = { cx: 960 + CROSS[0] - 60, cy: 540 + CROSS[1] - 20, s: 0.64 };
   const k1 = easeInOut(prog(t, 51.6, 58.8)) * 0.15;
   const k2 = easeInOut(prog(t, 59.2, 61.0));
   const k3 = easeInOut(prog(t, 63.9, D - 1.25));
@@ -258,39 +261,54 @@ function marks(ctx, t) {
   }
 }
 
-// ---------------- T 之前：浮起来的词 ----------------
-const WORDS = ['失败', '失去', '结束', '拒绝', '来不及', '不会成功', '失败', '拒绝', '来不及', '结束', '失去', '不会成功'];
-const KEEP = { 0: [-270, -70], 1: [270, -70], 3: [-270, 95], 2: [270, 95] };    // 最后留下的四个（相对画面中心）
-const R2 = rng(777);
-const FLOAT = WORDS.map((w, i) => ({ w, x: 260 + R2() * 1400, y: 300 + R2() * 520, at: D - 1.2 + i * 0.045, size: 46 + R2() * 26, rot: (R2() - 0.5) * 0.2 }));
-function floatWords(ctx, t) {
-  const tt = Math.min(t, D - 0.15);                 // T-0.15 起全部静止
-  for (let i = 0; i < FLOAT.length; i++) {
-    const f = FLOAT[i];
-    const a = smooth(prog(tt, f.at, f.at + 0.22));
-    if (a <= 0.01) continue;
-    const keep = KEEP[i];
-    const gone = keep ? 0 : smooth(prog(tt, D - 0.42, D - 0.3));
-    if (gone >= 0.999) continue;
-    // 先轻轻往上浮，T-0.7 起有重量地向中央聚拢
-    const rise = (tt - f.at) * 30;
-    const pull = easeIn(prog(tt, D - 0.7, D - 0.3));
-    const target = keep ? [960 + keep[0], 500 + keep[1]] : [960 + (f.x - 960) * 0.35, 500 + (f.y - 520) * 0.35];
-    const x = lerp(f.x, target[0], pull), y = lerp(f.y - rise, target[1], pull);
-    const size = lerp(f.size, keep ? 76 : f.size * 0.8, pull);
-    ctx.save();
-    ctx.globalAlpha = a * (1 - gone);
-    ctx.font = FONT.hand(size);
-    ctx.textAlign = 'center';
-    // 起初像铅笔写在纸上（深色），四周暗下去以后变成浅色
-    const lit = smooth(prog(tt, D - 0.85, D - 0.45));
-    const cc = [lerp(44, keep ? 228 : 214, lit), lerp(36, keep ? 214 : 200, lit), lerp(30, keep ? 196 : 180, lit)].map(Math.round);
-    ctx.fillStyle = `rgba(${cc.join(',')},${keep ? 1 : 0.88})`;
-    ctx.shadowColor = `rgba(0,0,0,${0.7 * lit})`; ctx.shadowBlur = 16;
-    ctx.translate(x, y); ctx.rotate(f.rot * (1 - pull));
-    ctx.fillText(f.w, 0, 0);
-    ctx.restore();
-  }
+// ---------------- 深夜的桌面：地图只是其中一样东西 ----------------
+const LAMP_HEAD = [-260, -330];   // 台灯灯罩（世界坐标，在地图左上角外侧）
+function desk(ctx, t) {
+  // 木桌面（比地图大得多），远处是房间的暗
+  const g = ctx.createLinearGradient(-1400, -900, 3300, 2000);
+  g.addColorStop(0, '#2e2219'); g.addColorStop(1, '#241a13');
+  ctx.fillStyle = g;
+  ctx.fillRect(-1600, -1000, 5200, 3300);
+  ctx.strokeStyle = 'rgba(0,0,0,0.14)'; ctx.lineWidth = 3;
+  for (let i = -24; i < 60; i++) { const y = i * 55; ctx.beginPath(); ctx.moveTo(-1600, y); ctx.bezierCurveTo(0, y + 14, 1800, y - 12, 3600, y + 8); ctx.stroke(); }
+  // 台灯：底座、两节灯臂、灯罩（灯罩朝向地图）
+  ctx.save();
+  ctx.fillStyle = '#16120f';
+  ctx.beginPath(); ctx.ellipse(-620, 140, 120, 80, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#1e1a16'; ctx.lineWidth = 22; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-620, 140); ctx.lineTo(-560, -240); ctx.lineTo(LAMP_HEAD[0] - 60, LAMP_HEAD[1] - 30); ctx.stroke();
+  ctx.translate(LAMP_HEAD[0], LAMP_HEAD[1]); ctx.rotate(0.7);
+  ctx.fillStyle = '#3a3229';
+  ctx.beginPath(); ctx.moveTo(-70, -40); ctx.lineTo(70, -40); ctx.lineTo(110, 70); ctx.lineTo(-110, 70); ctx.closePath(); ctx.fill();
+  ctx.restore();
+  // 一只马克杯、一部扣着的手机、一个旧笔记本
+  ctx.save();
+  ctx.translate(2560, 160);
+  ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.ellipse(20, 20, 118, 112, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#4a4440'; ctx.beginPath(); ctx.arc(0, 0, 104, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#2a1a12'; ctx.beginPath(); ctx.arc(0, 0, 84, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#4a4440'; ctx.lineWidth = 26; ctx.beginPath(); ctx.arc(118, 0, 40, -1.2, 1.2); ctx.stroke();
+  ctx.restore();
+  ctx.save(); ctx.translate(2520, 980); ctx.rotate(0.3);
+  ctx.fillStyle = '#121214'; ctx.fillRect(-90, -170, 180, 340);
+  ctx.strokeStyle = 'rgba(200,200,205,0.18)'; ctx.lineWidth = 3; ctx.strokeRect(-90, -170, 180, 340);
+  ctx.restore();
+  ctx.save(); ctx.translate(-700, 1080); ctx.rotate(-0.15);
+  ctx.fillStyle = '#3a2c22'; ctx.fillRect(-300, -210, 600, 420);
+  ctx.fillStyle = '#b8a888'; ctx.fillRect(-290, -200, 580, 400);
+  ctx.fillStyle = 'rgba(60,50,40,0.35)'; for (let i = 0; i < 9; i++) ctx.fillRect(-250, -160 + i * 40, 480, 3);
+  ctx.restore();
+}
+function lampGlow(ctx) {
+  ctx.save();
+  ctx.translate(LAMP_HEAD[0], LAMP_HEAD[1]); ctx.rotate(0.7);
+  ctx.globalCompositeOperation = 'screen';
+  ctx.fillStyle = 'rgba(255,226,176,0.85)';
+  ctx.beginPath(); ctx.ellipse(0, 70, 110, 22, 0, 0, Math.PI * 2); ctx.fill();
+  const g = ctx.createRadialGradient(0, 80, 0, 0, 80, 260);
+  g.addColorStop(0, 'rgba(255,214,150,0.3)'); g.addColorStop(1, 'rgba(255,214,150,0)');
+  ctx.fillStyle = g; ctx.fillRect(-260, -180, 520, 520);
+  ctx.restore();
 }
 
 function draw(ctx, t) {
@@ -298,10 +316,10 @@ function draw(ctx, t) {
   const a = smooth(prog(t, 51.45, 51.95));
   ctx.save();
   ctx.globalAlpha *= a;
-  // 桌面
-  ctx.fillStyle = '#2a2018';
+  ctx.fillStyle = '#1c1611';
   ctx.fillRect(0, 0, W, H);
   withCam(ctx, c, 1, () => {
+    desk(ctx, t);
     ctx.save();
     ctx.translate(ORIGIN[0], ORIGIN[1]);
     ctx.rotate(MAP.rot);
@@ -321,7 +339,10 @@ function draw(ctx, t) {
   ctx.restore();
 }
 
-function drawOver(ctx, t) { if (t < D) floatWords(ctx, t); }
+function drawOver(ctx, t) {
+  const c = cam(t);
+  withCam(ctx, c, 1, () => lampGlow(ctx));
+}
 
 // 光：台灯从左上照下来；T 之前灯光一起收暗（引擎再整体压暗）
 function light(t) {
@@ -330,11 +351,15 @@ function light(t) {
   const dim = 1 - 0.55 * smooth(prog(t, D - 0.9, D - 0.3));
   const p = penAt(t);
   const [px, py] = toScreen(c, ...M(p));
+  // 一盏台灯：光圈只落在地图中间那一块，四周的桌面和房间沉在暗里（但不死黑）
+  const [lx, ly] = toScreen(c, ...M([CROSS[0] * prog(t, 59.2, 64.0) * 0.8, 40 + CROSS[1] * prog(t, 59.2, 64.0) * 0.5]));
+  const [gx, gy] = toScreen(c, LAMP_HEAD[0], LAMP_HEAD[1]);
   return [
-    { x: W * 0.42, y: H * 0.42, rx: 1150, ry: 760, i: 0.95 * dim, w, color: [255, 214, 160], core: 0.3, rot: -0.2 },
-    { x: px, y: py, rx: 420, ry: 340, i: 0.55 * dim, w, color: [255, 214, 160] },
+    { x: lx, y: ly, rx: 1250 * c.s, ry: 860 * c.s, i: 0.86 * dim, w, color: [255, 206, 146], core: 0.22, rot: -0.2 },
+    { x: px, y: py, rx: 520 * c.s, ry: 420 * c.s, i: 0.45 * dim, w, color: [255, 210, 150] },
+    { x: gx, y: gy, rx: 380 * c.s, ry: 320 * c.s, i: 0.6 * dim, w, color: [255, 210, 150] },
   ];
 }
-function grade(t) { return { warm: 0.3, ambient: lerp(0.12, 0.06, smooth(prog(t, D - 0.9, D - 0.3))) }; }
+function grade(t) { return { warm: 0.34, ambient: lerp(0.085, 0.06, smooth(prog(t, D - 0.9, D - 0.3))) }; }
 
-module.exports = { ...S, draw, drawOver, light, grade, BASE, MAP, ORIGIN, ROUTE_A, ROUTE_B, START, DEST, BRIDGE, CLOUD, CONES, M, hand, marks, along };
+module.exports = { ...S, draw, drawOver, light, grade, BASE, MAP, ORIGIN, ROUTE_A, ROUTE_B, START, DEST, BRIDGE, CLOUD, CONES, M, hand, marks, along, desk, lampGlow, LAMP_HEAD };

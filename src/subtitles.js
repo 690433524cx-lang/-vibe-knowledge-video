@@ -14,7 +14,9 @@ for (let i = 0; i < SUBS.length; i++) {
   const a = SUBS[i];
   for (let j = i + 1; j < SUBS.length; j++) {
     const b = SUBS[j];
-    if (Math.abs((a.y ?? 968) - (b.y ?? 968)) < 60 && b.t < a.t + a.d + 0.32) a.d = Math.max(0.6, b.t - a.t - 0.32);
+    // 固定字幕系统里所有字幕同一位置：前一句淡出（0.22 s）以后下一句才出现
+    const gap = require('./config').TL.SUB_FIXED ? 0.22 : 0.32;
+    if ((require('./config').TL.SUB_FIXED || Math.abs((a.y ?? 968) - (b.y ?? 968)) < 60) && b.t < a.t + a.d + gap) a.d = Math.max(0.6, b.t - a.t - gap);
   }
 }
 
@@ -126,8 +128,60 @@ function drawLineV2(ctx, s, a, k) {
   ctx.restore();
 }
 
+// ---------------- 固定字幕系统（TL.SUB_FIXED，《悲观主义》起）----------------
+// 只有两级：叙述（A）与金句（B），位置固定在下方安全区、水平居中；锚词（C）在场景里画，不走字幕。
+// 淡入 0.25 s、上移 6 px、停留、淡出 0.22 s；不模糊、不缩放、不逐字。
+// 一句最多两行（文本里用 \n 断行），第二行压在固定基线上，第一行往上叠；底下一层很淡的暗色柔底。
+const FIXED = {
+  baseline: 958,                // 字幕中心约在画面底部往上 12%
+  a: { px: 66, ls: 4, color: '#efe7d6' },
+  b: { px: 74, ls: 5, color: '#f3ead8' },
+};
+function drawLineFixed(ctx, s, a, k) {
+  const st = s.style === 'quote' || s.style === 'hook' ? FIXED.b : FIXED.a;
+  const lines = s.text.split('\n');
+  const px = st.px, lh = Math.round(px * 1.42);
+  const rise = (1 - easeOut(k)) * 6;
+  ctx.save();
+  ctx.font = FONT.body(px);
+  ctx.letterSpacing = `${st.ls}px`;
+  ctx.textBaseline = 'alphabetic';
+  const widths = lines.map((l) => segments(l).reduce((w, [t]) => w + ctx.measureText(t).width, 0));
+  const maxW = Math.max(...widths);
+  // 很淡的暗色柔底：只为在亮背景上也读得清
+  const top = FIXED.baseline - px * 0.95 - (lines.length - 1) * lh;
+  ctx.globalAlpha = a * 0.42;
+  ctx.filter = 'blur(18px)';
+  ctx.fillStyle = 'rgba(8,7,6,1)';
+  ctx.fillRect(W / 2 - maxW / 2 - 40, top - 18 + rise, maxW + 80, (lines.length - 1) * lh + px * 1.3 + 36);
+  ctx.filter = 'none';
+  ctx.globalAlpha = a;
+  ctx.shadowColor = 'rgba(0,0,0,0.75)';
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetY = 2;
+  lines.forEach((l, i) => {
+    const y = FIXED.baseline - (lines.length - 1 - i) * lh + rise;
+    let x = W / 2 - widths[i] / 2;
+    for (const [t, red] of segments(l)) {
+      ctx.fillStyle = red ? C.subRed : st.color;
+      ctx.fillText(t, x, y);
+      x += ctx.measureText(t).width;
+    }
+  });
+  ctx.restore();
+}
+
 // t 为设计时间
 function drawSubtitles(ctx, t) {
+  if (require('./config').TL.SUB_FIXED) {
+    for (const s of SUBS) {
+      const fi = 0.25, fo = 0.22;
+      if (t < s.t || t > s.t + s.d + fo) continue;
+      const a = smooth(prog(t, s.t, s.t + fi)) * (1 - smooth(prog(t, s.t + s.d, s.t + s.d + fo)));
+      drawLineFixed(ctx, s, a, prog(t, s.t, s.t + 0.3));
+    }
+    return;
+  }
   if (require('./config').TL.LOOK === 'v2') {
     for (const s of SUBS) {
       const fi = s.fi ?? 0.35, fo = s.fo ?? 0.35;

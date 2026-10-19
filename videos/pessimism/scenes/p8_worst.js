@@ -1,7 +1,7 @@
 // 核心高潮 · MAIN_BEAT_T：四个小词一下子消失，画面中央只剩两个巨大的暗红汉字——最坏。
 // 旧印刷的压痕、墙面一样粗的纸、极轻微的墨迹扩散、一次短促的震动（引擎负责）。没有爆炸、粒子、3D、故障。
 // T+1.2 起字幕：真正危险的。/ 不是你想到最坏。/ 是你开始把最坏—— / 当成唯一。
-// T+5.7 起「最坏」缩小，落到下一页研究档案上，成为一个被红铅笔圈住的关键词（scenes/p9_research.js 接手）。
+// 四句字幕都读完以后（T+10.6）「最坏」缩小、淡去，交给 Martin Seligman 的人物页。
 const { createCanvas } = require('@napi-rs/canvas');
 const { W, H, DESIGN_T: D } = require('../../../src/config');
 const { FONT } = require('../../../src/lib/style');
@@ -9,10 +9,8 @@ const { prog, smooth, easeOut, lerp, rng } = require('../../../src/lib/util');
 const { spring } = require('../../../src/lib/motion');
 const { sheetTexture } = require('../../../src/lib/material');
 
-const S = { start: D, end: D + 6.9 };
-const SHRINK_T = D + 5.7;
-// 交给研究档案页：关键词在画面上的位置与大小（与 p9_research.js 一致）
-const KEY = { x: 1185, y: 452, scale: 0.105 };
+const S = { start: D, end: D + 11.5 };
+const SHRINK_T = D + 10.6;       // 「当成唯一。」读完以后
 
 // 铅字：离屏生成一次。墨不均、边缘略发灰、纸纤维从笔画里透出来、干擦的横丝
 const TYPE = (() => {
@@ -63,11 +61,13 @@ function draw(ctx, t) {
   ctx.drawImage(PAPER.canvas, W / 2 - PAPER.canvas.width / 2, H / 2 - PAPER.canvas.height / 2);
   ctx.restore();
   ctx.restore();
-  if (t > SHRINK_T + 1.15) return;       // 之后由档案页上的小关键词接手
+  const fade = smooth(prog(t, SHRINK_T + 0.15, SHRINK_T + 0.7));
+  if (fade >= 1) return;
   const press = spring(dt, 0, 5.6, 0.92);
-  const sc = lerp(1, KEY.scale, shrink) * lerp(1.01, 1, Math.min(1, press)) * lerp(push, 1, shrink);
-  const cx = lerp(960, KEY.x, shrink), cy = lerp(490, KEY.y, shrink);
+  const sc = lerp(1, 0.45, shrink) * lerp(1.01, 1, Math.min(1, press)) * lerp(push, 1, shrink);
+  const cx = 960, cy = 490;
   ctx.save();
+  ctx.globalAlpha *= 1 - fade;
   ctx.translate(cx, cy);
   ctx.scale(sc, sc);
   // 压痕：纸被压下去的阴影
@@ -95,4 +95,4 @@ function light(t) {
 }
 function grade() { return { warm: 0.12, ambient: 0.08 }; }
 
-module.exports = { ...S, draw, light, grade, KEY, SHRINK_T };
+module.exports = { ...S, draw, light, grade, SHRINK_T };

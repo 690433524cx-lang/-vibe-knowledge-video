@@ -4,6 +4,7 @@
 //   窗外的城市成为主光）→ 111.2 走到窗边 → 站定。窗外的城市仍然亮着。
 //   字幕：你可以知道。/ 快乐会结束。/ 但不用在快乐开始的时候—— / 就提前难过。（停到结尾）
 //   最后黑场之前，右下角极小的「悲观主义」，像一本书最后一页的章节名。
+//   （留存优化版：按旧时间轴编写，由 scenes/index.js 用 remap 放到 107.6–117.9）
 const { W, H, DESIGN_END } = require('../../../src/config');
 const { FONT } = require('../../../src/lib/style');
 const { prog, smooth, lerp, easeInOut } = require('../../../src/lib/util');
@@ -100,7 +101,7 @@ function drawOver(ctx, t) {
   withCam(ctx, c, 1, () => { party.cityLights(ctx, t); lampGlow(ctx, t); });
   ctx.restore();
   // 尾题：像一本书最后一页的章节名
-  const a = smooth(prog(t, 113.0, 113.35)) * (1 - smooth(prog(t, DESIGN_END - 0.35, DESIGN_END - 0.05)));
+  const a = smooth(prog(t, DESIGN_END - 1.05, DESIGN_END - 0.75)) * (1 - smooth(prog(t, DESIGN_END - 0.3, DESIGN_END - 0.02)));
   if (a > 0) {
     ctx.save();
     ctx.globalAlpha = a * 0.7;

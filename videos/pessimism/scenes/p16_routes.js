@@ -17,7 +17,7 @@ const ROUTES = [
   { pts: RETURN, t0: 106.0, t1: 107.0, col: 'rgba(70,100,72,0.9)', w: 4.5, label: '返回', at: [300, -640], dash: true },
 ];
 
-function cam(t) { const k = easeInOut(prog(t, 102.7, 108.4)); return { cx: 960, cy: 545, s: lerp(0.64, 0.6, k) }; }
+function cam(t) { const k = easeInOut(prog(t, 102.7, 108.4)); return { cx: 900, cy: 520, s: lerp(0.47, 0.44, k) }; }
 
 function penAt(t) {
   for (const r of ROUTES) if (t >= r.t0 - 0.25 && t <= r.t1 + 0.1) return map.along(r.pts, prog(t, r.t0, r.t1));
@@ -29,9 +29,10 @@ function draw(ctx, t) {
   const c = cam(t);
   ctx.save();
   ctx.globalAlpha *= smooth(prog(t, 102.65, 103.1)) * (1 - smooth(prog(t, 108.0, 108.45)));
-  ctx.fillStyle = '#2a2018';
+  ctx.fillStyle = '#1c1611';
   ctx.fillRect(0, 0, W, H);
   withCam(ctx, c, 1, () => {
+    map.desk(ctx, t);
     ctx.save();
     ctx.translate(map.ORIGIN[0], map.ORIGIN[1]);
     ctx.rotate(map.MAP.rot);
@@ -66,12 +67,23 @@ function draw(ctx, t) {
   ctx.restore();
 }
 
+function drawOver(ctx, t) {
+  ctx.save();
+  ctx.globalAlpha *= smooth(prog(t, 102.65, 103.1)) * (1 - smooth(prog(t, 108.0, 108.45)));
+  withCam(ctx, cam(t), 1, () => map.lampGlow(ctx));
+  ctx.restore();
+}
+// 光：台灯的光圈落在地图上，四周的桌面沉在暗里；比第一次看地图时更亮、更暖一点
 function light(t) {
+  const c = cam(t);
   const w = smooth(prog(t, 102.65, 103.1)) * (1 - smooth(prog(t, 108.0, 108.45)));
+  const [lx, ly] = toScreen(c, 960, 560);
+  const [gx, gy] = toScreen(c, map.LAMP_HEAD[0], map.LAMP_HEAD[1]);
   return [
-    { x: W * 0.45, y: H * 0.45, rx: 1300, ry: 820, i: 1, w, color: [255, 216, 168], core: 0.35, rot: -0.2 },
+    { x: lx, y: ly, rx: 1800 * c.s, ry: 1150 * c.s, i: 0.95, w, color: [255, 214, 162], core: 0.3, rot: -0.2 },
+    { x: gx, y: gy, rx: 380 * c.s, ry: 320 * c.s, i: 0.6, w, color: [255, 210, 150] },
   ];
 }
-function grade() { return { warm: 0.3, ambient: 0.14 }; }
+function grade() { return { warm: 0.32, ambient: 0.12 }; }
 
-module.exports = { ...S, draw, light, grade };
+module.exports = { ...S, draw, drawOver, light, grade };

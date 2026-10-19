@@ -1,5 +1,5 @@
 // 第一幕 · 0–8.4 秒：聚会正热闹的时候，他已经看见了散场。
-//   0.0–1.5  片名「悲观主义」在热闹的聚会上出现，一秒多就退开。
+//   （留存优化版：本场景按旧时间轴编写，由 scenes/index.js 用 remap 压缩到新时间轴 0–6.4 s；片名改成 2–4 s 的小章节标题）
 //   0.0–2.5  真的很热闹：门口有人在穿外套，两个人站着聊天、举杯大笑，沙发上他和朋友碰杯，
 //            有人弯腰从桌上拿零食，有人坐在扶手上喝东西，前景有人走过镜头。
 //   2.5–5.2  别人还在聊天；他安静下来，低头。镜头慢慢靠近他。「快乐刚开始。」「你已经在想它什么时候结束。」
@@ -416,14 +416,14 @@ function heroPose(t) {
 }
 
 // 其他人（在脑内的未来里一下子不见了）
-function drawCast(ctx, t, which) {
+function drawCast(ctx, t, which, blur = 0) {
   const gone = future(t);
   for (const c of CAST) {
     if (which && !which.includes(c.id)) continue;
     const a = 1 - gone;
     if (a <= 0.01) continue;
     const draw = (cx) => person(cx, c.x, c.y, c.u, { ...c.look, ...c.pose(t), light: -2.3 });
-    if (a < 0.99) layer(ctx, a, gone * 6, draw); else draw(ctx);
+    if (a < 0.99 || blur > 0.2) layer(ctx, a, Math.max(gone * 6, blur), draw); else draw(ctx);
   }
 }
 function drawHero(ctx, t) { person(ctx, HERO.x, HERO.y, HERO.u, { ...heroPose(t), light: -2.4 }); }
@@ -435,13 +435,14 @@ function drawRoom(ctx, t, o = {}) {
   doorway(ctx, t);
   floor(ctx);
   spill(ctx, t);
-  if (o.people !== false) drawCast(ctx, t, ['coat', 'talkA', 'talkB']);
+  const cb = o.castBlur ?? 0;    // 「提前难过」那一镜：他还在，周围的人虚掉
+  if (o.people !== false) drawCast(ctx, t, ['coat', 'talkA', 'talkB'], cb);
   sofa(ctx);
-  if (o.people !== false) drawCast(ctx, t, ['friend', 'arm']);
-  if (o.hero !== false) drawHero(ctx, t);
+  if (o.people !== false) drawCast(ctx, t, ['friend', 'arm'], cb);
+  if (o.hero !== false) drawHero(ctx, o.heroT ?? t);
   if (o.lamp !== false) lamp(ctx, t);
   table(ctx, t, { mess: o.mess ?? future(t) });
-  if (o.people !== false) drawCast(ctx, t, ['snack']);
+  if (o.people !== false && !(o.exclude || []).includes('snack')) drawCast(ctx, t, ['snack'], cb);
 }
 
 // 灯串：沿着墙顶挂的一串小灯泡（聚会的灯，脑内的未来里熄灭）
@@ -468,38 +469,6 @@ function stringGlow(ctx, t) {
     ctx.fillStyle = g;
     ctx.fillRect(x - 30, y - 22, 60, 60);
   });
-  ctx.restore();
-}
-
-// ---------------- 片名 ----------------
-function title(ctx, t) {
-  const a = smooth(prog(t, 0.0, 0.3)) * (1 - smooth(prog(t, 1.15, 1.55)));
-  if (a <= 0.003) return;
-  ctx.save();
-  // 片名下面压一层暗，人群仍然在后面动
-  const g = ctx.createRadialGradient(W / 2, H * 0.47, 80, W / 2, H * 0.47, 900);
-  g.addColorStop(0, `rgba(10,8,6,${0.55 * a})`);
-  g.addColorStop(1, `rgba(10,8,6,${0.25 * a})`);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, H);
-  const k = prog(t, 0.0, 1.55);
-  ctx.globalAlpha = a;
-  ctx.font = FONT.serifBlack(176);
-  ctx.letterSpacing = `${lerp(52, 60, k)}px`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.shadowColor = 'rgba(0,0,0,0.6)';
-  ctx.shadowBlur = 30;
-  const blur = (1 - smooth(prog(t, 0.0, 0.35))) * 6;
-  if (blur > 0.3) ctx.filter = `blur(${blur.toFixed(1)}px)`;
-  ctx.fillStyle = '#efe5d0';
-  ctx.fillText('悲观主义', W / 2 + 30, H * 0.47);
-  ctx.filter = 'none';
-  ctx.shadowBlur = 0;
-  ctx.font = FONT.en(26);
-  ctx.letterSpacing = '18px';
-  ctx.fillStyle = 'rgba(232,222,204,0.7)';
-  ctx.fillText('PESSIMISM', W / 2 + 9, H * 0.47 + 132);
   ctx.restore();
 }
 
@@ -533,7 +502,6 @@ function drawOver(ctx, t) {
     stringGlow(ctx, t);
   });
   ctx.restore();
-  title(ctx, t);
 }
 
 // 光：吊灯（主光）、灯串（聚会的暖光）、楼道、窗外；脑内的未来里只剩一盏变冷的吊灯
