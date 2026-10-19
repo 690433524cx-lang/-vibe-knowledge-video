@@ -1,17 +1,19 @@
-// 方法 · 97.3–103.9 秒：三个问题不写成一张学习笔记，而是一条一条出现在真实的物体上。
-//   97.3  纸：台灯下的一张纸，手写「最坏会发生什么？」
-//   99.0  窗：起雾的玻璃上，像用手指写出来——「它真的一定会发生吗？」字迹里透出窗外的城市
-//   100.6 手机：备忘录里打出——「如果发生了，我能做什么？」
-//   102.2 地图：「除了最坏，还有没有别的可能？」（在 scenes/p16_routes.js 里，写在地图边上）
-// 贯穿这四个镜头的「最坏的未来」：画面四周很淡的几层词和暗（失败 / 拒绝 / 结束 / 来不及……），
-// 每出现一个问题，就少一层，画面也亮一点。
+// 方法（最终精修版）· 96.4–107.4 秒：三个问题不写成教程卡片，而是出现在真实的地方。
+//   q1   96.4–98.75   深夜的桌子，回到那张地图的十字路口——他自己画上去的断桥、暴雨、失败、拒绝还在。
+//                     铅笔在地图边上写下「它真的一定会发生吗？」；写完以后，那几个自己画上去的灾难淡下去。
+//   q2   98.65–100.95 同一张桌子，台灯下的一张黄色便利贴：他亲手写「如果发生，我能做什么？」
+//   q3   100.85–107.4 起雾的窗：玻璃上被手指擦出「除了最坏，还有没有别的可能？」，字迹里透出外面的城市；
+//                     之后雾慢慢散开，外面的灯越来越清楚（空间重新打开）。
+//                     「你可以想到最坏。」「但别把最坏——当成未来唯一的版本。」在这扇窗前读完。
+// 贯穿三个镜头的「最坏的未来」：画面四周很淡的几层词和暗（失败 / 拒绝 / 结束……），每写完一个问题就少一层，画面也亮一点。
+const { createCanvas } = require('@napi-rs/canvas');
 const { W, H } = require('../../../src/config');
 const { FONT } = require('../../../src/lib/style');
-const { prog, smooth, lerp, rng, noise1 } = require('../../../src/lib/util');
-const { sheet } = require('../../../src/lib/material');
-const { phoneShell, roundRect } = require('../phone');
+const { prog, smooth, lerp, rng, noise1, easeInOut } = require('../../../src/lib/util');
+const { withCam, toScreen } = require('../lib');
+const map = require('./p7_map');
 
-const Q_DONE = [98.4, 100.0, 101.6, 103.2];       // 每个问题写完的时刻（第四个在地图上）
+const Q_DONE = [97.6, 99.9, 102.0];       // 每个问题写完的时刻
 
 // 手写出来（从左到右露出）
 function written(ctx, s, x, y, font, color, k, align = 'left') {
@@ -25,44 +27,140 @@ function written(ctx, s, x, y, font, color, k, align = 'left') {
   ctx.fillText(s, left, y);
   ctx.restore();
 }
+// 正在写的那一个字的位置（笔尖跟着字走）
+function writingTip(ctx, s, x, y, font, k, align = 'left') {
+  ctx.save(); ctx.font = font;
+  const w = ctx.measureText(s).width;
+  ctx.restore();
+  const left = align === 'center' ? x - w / 2 : x;
+  return [left + w * Math.min(1, k), y - 10 + Math.sin(k * 60) * 8];
+}
 
-// ---------------- 纸 ----------------
-const paper = {
-  start: 97.25, end: 99.15,
+// ---------------- Q1 · 地图 ----------------
+const Q1 = { start: 96.4, end: 98.8 };
+const q1Fade = (t) => smooth(prog(t, 96.4, 96.55)) * (1 - smooth(prog(t, 98.6, 98.8)));
+const q1Cam = (t) => { const k = easeInOut(prog(t, 96.4, 98.8)); return { cx: lerp(1480, 1440, k), cy: lerp(760, 740, k), s: lerp(0.6, 0.64, k) }; };
+const Q1_POS = [map.CROSS[0] - 30, map.CROSS[1] - 300];       // 地图坐标：十字路口上方的空白
+const Q1_FONT = FONT.hand(84);
+const q1k = (t) => prog(t, 96.7, 97.6);
+const calm = (t) => smooth(prog(t, 97.6, 98.4));               // 写完以后，自己画上去的灾难淡下去
+const q1 = {
+  ...Q1,
   draw(ctx, t) {
-    const a = smooth(prog(t, 97.3, 97.55)) * (1 - smooth(prog(t, 98.85, 99.15)));
+    const c = q1Cam(t);
     ctx.save();
-    ctx.globalAlpha *= a;
-    ctx.fillStyle = '#251c15'; ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = 'rgba(0,0,0,0.14)'; ctx.lineWidth = 3;
-    for (let i = 0; i < 30; i++) { const y = i * 40; ctx.beginPath(); ctx.moveTo(0, y); ctx.bezierCurveTo(600, y + 10, 1300, y - 8, W, y + 6); ctx.stroke(); }
-    const push = 1 + 0.03 * prog(t, 97.3, 99.1);
-    ctx.translate(W / 2, H / 2); ctx.scale(push, push); ctx.translate(-W / 2, -H / 2);
-    ctx.save(); ctx.translate(980, 600); ctx.rotate(-0.03);
-    sheet(ctx, 1120, 760, { seed: 1501, tone: 'bone', light: -2.3, lift: 0.1, shade: 0.45 });
-    ctx.restore();
-    // 一支铅笔放在纸边
-    ctx.save(); ctx.translate(1500, 820); ctx.rotate(-0.5);
-    ctx.fillStyle = '#c9a24a'; ctx.fillRect(-160, -9, 300, 18);
-    ctx.fillStyle = '#dcc49a'; ctx.beginPath(); ctx.moveTo(140, -9); ctx.lineTo(186, 0); ctx.lineTo(140, 9); ctx.closePath(); ctx.fill();
-    ctx.restore();
-    written(ctx, '最坏会发生什么？', 980, 560, FONT.hand(118), 'rgba(40,32,28,0.95)', prog(t, 97.5, 98.4), 'center');
+    ctx.globalAlpha *= q1Fade(t);
+    ctx.fillStyle = '#1c1611'; ctx.fillRect(0, 0, W, H);
+    withCam(ctx, c, 1, () => {
+      map.desk(ctx, t);
+      ctx.save();
+      ctx.translate(map.ORIGIN[0], map.ORIGIN[1]);
+      ctx.rotate(map.MAP.rot);
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = 50; ctx.shadowOffsetX = 24; ctx.shadowOffsetY = 30;
+      ctx.fillStyle = '#d6c9ab'; ctx.fillRect(-map.MAP.w / 2, -map.MAP.h / 2, map.MAP.w, map.MAP.h);
+      ctx.restore();
+      ctx.drawImage(map.BASE.canvas, -map.MAP.w / 2 - map.BASE.pad, -map.MAP.h / 2 - map.BASE.pad);
+      ctx.save();
+      ctx.globalAlpha *= lerp(1, 0.28, calm(t));
+      map.marks(ctx, 63.25);
+      ctx.restore();
+      written(ctx, '它真的一定会发生吗？', Q1_POS[0], Q1_POS[1], Q1_FONT, 'rgba(40,32,28,0.94)', q1k(t), 'center');
+      ctx.restore();
+      const tip = writingTip(ctx, '它真的一定会发生吗？', Q1_POS[0], Q1_POS[1], Q1_FONT, q1k(t), 'center');
+      map.hand(ctx, map.M(tip), t, smooth(prog(t, 96.45, 96.7)) * (1 - smooth(prog(t, 97.7, 98.2))));
+    });
     ctx.restore();
   },
-  light: (t) => [{ x: 960, y: 520, rx: 900, ry: 600, i: 0.95, w: smooth(prog(t, 97.3, 97.55)) * (1 - smooth(prog(t, 98.85, 99.15))), color: [255, 214, 166], core: 0.3 }],
-  grade: () => ({ warm: 0.28, ambient: 0.09 }),
+  drawOver(ctx, t) {
+    ctx.save();
+    ctx.globalAlpha *= q1Fade(t);
+    withCam(ctx, q1Cam(t), 1, () => map.lampGlow(ctx));
+    ctx.restore();
+  },
+  light(t) {
+    const c = q1Cam(t), w = q1Fade(t);
+    const [lx, ly] = toScreen(c, ...map.M([map.CROSS[0] - 60, map.CROSS[1] - 120]));
+    return [
+      { x: lx, y: ly, rx: 1500 * c.s, ry: 1000 * c.s, i: lerp(0.86, 0.95, calm(t)), w, color: [255, 210, 150], core: 0.25, rot: -0.2 },
+      { x: W / 2, y: H / 2, rx: 1400, ry: 800, i: 0.2, w, color: [255, 214, 170] },
+    ];
+  },
+  grade: () => ({ warm: 0.34, ambient: 0.09 }),
 };
 
-// ---------------- 窗 ----------------
-const { createCanvas } = require('@napi-rs/canvas');
-const FOGL = createCanvas(W, H);
-const FOG = (() => { const r = rng(1502); return Array.from({ length: 70 }, () => ({ x: r(), y: r(), s: 0.8 + r() * 2.2, w: r() < 0.6, a: 0.25 + r() * 0.5 })); })();
-const windowShot = {
-  start: 98.85, end: 100.75,
+// ---------------- Q2 · 便利贴 ----------------
+const Q2 = { start: 98.65, end: 101.0 };
+const q2Fade = (t) => smooth(prog(t, 98.65, 98.8)) * (1 - smooth(prog(t, 100.8, 101.0)));
+const NOTE = { x: -760, y: 560, w: 470, h: 450, rot: -0.05 };   // 桌上的世界坐标：地图左边、台灯下
+const q2Cam = (t) => { const k = easeInOut(prog(t, 98.65, 101.0)); return { cx: lerp(-640, -660, k), cy: lerp(470, 500, k), s: lerp(1.0, 1.05, k) }; };
+const Q2_FONT = FONT.hand(70);
+const Q2_LINES = [['如果发生，', 98.9, 99.35], ['我能做什么？', 99.35, 99.9]];
+const q2 = {
+  ...Q2,
   draw(ctx, t) {
-    const a = smooth(prog(t, 98.9, 99.15)) * (1 - smooth(prog(t, 100.45, 100.75)));
+    const c = q2Cam(t);
     ctx.save();
-    ctx.globalAlpha *= a;
+    ctx.globalAlpha *= q2Fade(t);
+    ctx.fillStyle = '#1c1611'; ctx.fillRect(0, 0, W, H);
+    withCam(ctx, c, 1, () => {
+      map.desk(ctx, t);
+      // 地图的一角
+      ctx.save();
+      ctx.translate(map.ORIGIN[0], map.ORIGIN[1]); ctx.rotate(map.MAP.rot);
+      ctx.drawImage(map.BASE.canvas, -map.MAP.w / 2 - map.BASE.pad, -map.MAP.h / 2 - map.BASE.pad);
+      ctx.restore();
+      // 便利贴：略卷的一角、很淡的影子
+      ctx.save();
+      ctx.translate(NOTE.x, NOTE.y); ctx.rotate(NOTE.rot);
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(-NOTE.w / 2 + 14, -NOTE.h / 2 + 18, NOTE.w, NOTE.h);
+      const g = ctx.createLinearGradient(0, -NOTE.h / 2, 0, NOTE.h / 2);
+      g.addColorStop(0, '#e6cd6c'); g.addColorStop(1, '#dcc05a');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.moveTo(-NOTE.w / 2, -NOTE.h / 2); ctx.lineTo(NOTE.w / 2, -NOTE.h / 2); ctx.lineTo(NOTE.w / 2, NOTE.h / 2 - 40); ctx.quadraticCurveTo(NOTE.w / 2 - 10, NOTE.h / 2 - 6, NOTE.w / 2 - 50, NOTE.h / 2); ctx.lineTo(-NOTE.w / 2, NOTE.h / 2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(160,130,40,0.25)'; ctx.fillRect(-NOTE.w / 2, -NOTE.h / 2, NOTE.w, 46);
+      Q2_LINES.forEach(([l, t0, t1], i) => written(ctx, l, -NOTE.w / 2 + 44, -40 + i * 100, Q2_FONT, 'rgba(36,30,40,0.94)', prog(t, t0, t1)));
+      ctx.restore();
+      // 他的手：拿着铅笔，笔尖跟着字走
+      const cur = Q2_LINES.find(([, t0, t1]) => t >= t0 - 0.05 && t <= t1) || Q2_LINES[t < 99.0 ? 0 : 1];
+      const i = Q2_LINES.indexOf(cur);
+      const [lx, ly] = writingTip(ctx, cur[0], -NOTE.w / 2 + 44, -40 + i * 100, Q2_FONT, prog(t, cur[1], cur[2]));
+      const cs = Math.cos(NOTE.rot), sn = Math.sin(NOTE.rot);
+      map.hand(ctx, [NOTE.x + lx * cs - ly * sn, NOTE.y + lx * sn + ly * cs], t, smooth(prog(t, 98.7, 98.9)) * (1 - smooth(prog(t, 100.05, 100.5))));
+    });
+    ctx.restore();
+  },
+  drawOver(ctx, t) {
+    ctx.save();
+    ctx.globalAlpha *= q2Fade(t);
+    withCam(ctx, q2Cam(t), 1, () => map.lampGlow(ctx));
+    ctx.restore();
+  },
+  light(t) {
+    const c = q2Cam(t), w = q2Fade(t);
+    const [nx, ny] = toScreen(c, NOTE.x + 40, NOTE.y - 40);
+    const [gx, gy] = toScreen(c, map.LAMP_HEAD[0], map.LAMP_HEAD[1]);
+    return [
+      { x: nx, y: ny, rx: 900 * c.s, ry: 700 * c.s, i: 0.95, w, color: [255, 214, 160], core: 0.3 },
+      { x: gx, y: gy, rx: 380 * c.s, ry: 320 * c.s, i: 0.6, w, color: [255, 210, 150] },
+    ];
+  },
+  grade: () => ({ warm: 0.3, ambient: 0.1 }),
+};
+
+// ---------------- Q3 · 起雾的窗 ----------------
+const FOGL = createCanvas(W, H);
+const FOG = (() => { const r = rng(1502); return Array.from({ length: 90 }, () => ({ x: r(), y: r(), s: 0.8 + r() * 2.4, w: r() < 0.6, a: 0.25 + r() * 0.5 })); })();
+const Q3 = { start: 100.85, end: 107.45 };
+const q3Fade = (t) => smooth(prog(t, 100.85, 101.0)) * (1 - smooth(prog(t, 107.25, 107.45)));
+const clear = (t) => easeInOut(prog(t, 102.6, 106.8));       // 雾慢慢散开
+const Q3_LINES = [['除了最坏，', 101.0, 101.4, 450], ['还有没有别的可能？', 101.4, 102.0, 600]];
+const q3 = {
+  ...Q3,
+  draw(ctx, t) {
+    ctx.save();
+    ctx.globalAlpha *= q3Fade(t);
     // 窗外：夜里的城市
     const g = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, '#141b26'); g.addColorStop(1, '#262c36');
@@ -72,84 +170,52 @@ const windowShot = {
     ctx.restore();
   },
   drawOver(ctx, t) {
-    const a = smooth(prog(t, 98.9, 99.15)) * (1 - smooth(prog(t, 100.45, 100.75)));
+    const a = q3Fade(t), cl = clear(t);
     ctx.save();
     ctx.globalAlpha *= a;
-    for (const p of FOG) { ctx.fillStyle = p.w ? `rgba(255,204,140,${p.a})` : `rgba(186,202,230,${p.a * 0.8})`; ctx.beginPath(); ctx.arc(p.x * W, 420 + p.y * 600, p.s, 0, Math.PI * 2); ctx.fill(); }
-    // 起雾的玻璃：一层灰白的雾（单独一层），字的地方被手指擦开，透出后面的城市
+    const push = 1 + 0.03 * prog(t, 100.9, 107.4);
+    ctx.translate(W / 2, H / 2); ctx.scale(push, push); ctx.translate(-W / 2, -H / 2);
+    for (const p of FOG) { ctx.fillStyle = p.w ? `rgba(255,204,140,${p.a * lerp(0.8, 1, cl)})` : `rgba(186,202,230,${p.a * 0.8})`; ctx.beginPath(); ctx.arc(p.x * W, 420 + p.y * 600, p.s * lerp(1, 1.3, cl), 0, Math.PI * 2); ctx.fill(); }
+    // 起雾的玻璃：一层灰白的雾（单独一层），字的地方被手指擦开；之后雾整体变薄
     const fx = FOGL.getContext('2d');
     fx.setTransform(1, 0, 0, 1, 0, 0);
     fx.globalCompositeOperation = 'source-over';
     fx.clearRect(0, 0, W, H);
-    fx.fillStyle = 'rgba(196,204,214,0.52)';
+    fx.fillStyle = `rgba(200,208,218,${lerp(0.7, 0.2, cl)})`;
     fx.fillRect(0, 0, W, H);
     fx.globalCompositeOperation = 'destination-out';
-    written(fx, '它真的一定会发生吗？', W / 2, 560, FONT.hand(118), 'rgba(0,0,0,0.95)', prog(t, 99.2, 100.0), 'center');
+    for (const [l, t0, t1, y] of Q3_LINES) written(fx, l, W / 2, y, FONT.hand(118), 'rgba(0,0,0,0.95)', prog(t, t0, t1), 'center');
     ctx.drawImage(FOGL, 0, 0);
-    // 字迹边缘的水汽：一道很细的亮边
-    ctx.save(); ctx.translate(-2, -2);
-    written(ctx, '它真的一定会发生吗？', W / 2, 560, FONT.hand(118), 'rgba(236,242,248,0.4)', prog(t, 99.2, 100.0), 'center');
+    // 字迹边缘的水汽：一道很细的亮边（雾散开以后也跟着淡）
+    ctx.save(); ctx.translate(-2, -2); ctx.globalAlpha *= lerp(1, 0.3, cl);
+    for (const [l, t0, t1, y] of Q3_LINES) written(ctx, l, W / 2, y, FONT.hand(118), 'rgba(236,242,248,0.4)', prog(t, t0, t1), 'center');
     ctx.restore();
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.globalCompositeOperation = 'source-over';
     // 窗框
     ctx.fillStyle = '#2a2e33';
-    ctx.fillRect(0, 0, W, 50); ctx.fillRect(0, H - 60, W, 60); ctx.fillRect(W / 2 - 14 + 620, 0, 28, H);
+    ctx.fillRect(-40, -40, W + 80, 90); ctx.fillRect(-40, H - 60, W + 80, 100); ctx.fillRect(W / 2 - 14 + 620, -40, 28, H + 80);
     ctx.restore();
   },
-  light: (t) => [{ x: W / 2, y: 520, rx: 1200, ry: 700, i: 0.6, w: smooth(prog(t, 98.9, 99.15)) * (1 - smooth(prog(t, 100.45, 100.75))), color: [180, 196, 226], core: 0.3 }],
-  grade: () => ({ warm: -0.35, ambient: 0.14 }),
-};
-
-// ---------------- 手机 ----------------
-const phoneShot = {
-  start: 100.45, end: 102.45,
-  draw(ctx, t) {
-    const a = smooth(prog(t, 100.5, 100.75)) * (1 - smooth(prog(t, 102.15, 102.45)));
-    ctx.save();
-    ctx.globalAlpha *= a;
-    phoneShell(ctx, { bg: 'bed', push: 1 + 0.02 * prog(t, 100.5, 102.4) }, (x, sw, sh) => {
-      x.fillStyle = '#e8e2d4';
-      x.fillRect(-sw / 2, -sh / 2, sw, sh);
-      x.fillStyle = '#2a2420';
-      x.font = FONT.body(30); x.fillText('备忘录', -sw / 2 + 44, -sh / 2 + 92);
-      x.fillStyle = 'rgba(42,36,32,0.12)'; x.fillRect(-sw / 2, -sh / 2 + 124, sw, 1);
-      const str = '如果发生了，\n我能做什么？';
-      const k = prog(t, 100.8, 101.6);
-      const shown = [...str].slice(0, Math.ceil(k * str.length)).join('');
-      x.fillStyle = '#2a2420';
-      x.font = FONT.body(46);
-      shown.split('\n').forEach((l, i) => x.fillText(l, -sw / 2 + 44, -sh / 2 + 230 + i * 70));
-      const lines = shown.split('\n');
-      if (Math.floor(t * 2.4) % 2 === 0) { x.fillStyle = '#c9732a'; x.fillRect(-sw / 2 + 44 + x.measureText(lines[lines.length - 1]).width + 4, -sh / 2 + 192 + (lines.length - 1) * 70, 3, 50); }
-    });
-    ctx.restore();
-  },
-  light: (t) => [{ x: 1080, y: 540, rx: 720, ry: 780, i: 0.95, w: smooth(prog(t, 100.5, 100.75)) * (1 - smooth(prog(t, 102.15, 102.45))), color: [236, 228, 214], core: 0.35 }],
-  grade: () => ({ warm: 0.05, ambient: 0.1 }),
+  light: (t) => [{ x: W / 2, y: 520, rx: 1200, ry: 700, i: lerp(0.6, 0.75, clear(t)), w: q3Fade(t), color: [180, 196, 226], core: 0.3 }],
+  grade: (t) => ({ warm: -0.35, ambient: lerp(0.14, 0.16, clear(t)) }),
 };
 
 // ---------------- 「最坏的未来」：每个问题少一层 ----------------
 const LAYERS = [
-  [['失败', 210, 230], ['结束', 1720, 860]],
-  [['拒绝', 1640, 210], ['来不及', 280, 880]],
-  [['一个人', 120, 560], ['不会成功', 1600, 540]],
-  [['失去', 960, 140], ['被讨厌', 980, 1000]],
+  [['失败', 210, 230], ['结束', 1720, 820]],
+  [['拒绝', 1640, 210], ['来不及', 280, 800]],
+  [['一个人', 140, 520], ['失去', 1660, 520]],
 ];
 const worst = {
-  start: 97.3, end: 103.9,
+  start: 96.4, end: 104.0,
   draw: () => {},
   drawOver(ctx, t) {
-    const base = smooth(prog(t, 97.3, 97.6)) * (1 - smooth(prog(t, 103.5, 103.9)));
+    const base = smooth(prog(t, 96.4, 96.7)) * (1 - smooth(prog(t, 103.4, 104.0)));
     LAYERS.forEach((layer, i) => {
-      const left = 1 - smooth(prog(t, Q_DONE[i], Q_DONE[i] + 0.5));
-      const a = base * left;
+      const a = base * (1 - smooth(prog(t, Q_DONE[i], Q_DONE[i] + 0.5)));
       if (a <= 0.01) return;
-      // 一层暗
       const g = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 1.0);
       g.addColorStop(0, 'rgba(6,5,4,0)'); g.addColorStop(1, `rgba(6,5,4,${0.2 * a})`);
       ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      // 一层词
       ctx.save();
       ctx.filter = 'blur(2px)';
       ctx.font = FONT.hand(64);
@@ -164,4 +230,4 @@ const worst = {
   },
 };
 
-module.exports = { paper, windowShot, phoneShot, worst, Q_DONE, written };
+module.exports = { q1, q2, q3, worst, Q_DONE, written };

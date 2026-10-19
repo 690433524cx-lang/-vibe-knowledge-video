@@ -1,5 +1,8 @@
 # 学者人物素材来源 · Martin Seligman
 
+> **最终精修版：人物页已整体删除，不再使用任何照片，也不再寻找。** 学术来源只剩画面角落的一行小注 `Martin Seligman · Explanatory Style`。下面的检索记录仅作存档。
+
+
 检索方式：网络搜索 Wikimedia Commons 与相关页面（2026-10-18）。
 
 **当前运行环境无法访问 commons.wikimedia.org / upload.wikimedia.org**（网络策略对这两个域名返回 403，网页抓取工具也无法解析该域名），

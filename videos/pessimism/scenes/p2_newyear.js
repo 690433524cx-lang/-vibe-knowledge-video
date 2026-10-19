@@ -268,7 +268,10 @@ const pulse = (t, t0, dur) => { const k = prog(t, t0, t0 + dur); return k > 0 &&
 const laugh = (t, t0, dur) => pulse(t, t0, dur) * (0.6 + 0.4 * Math.sin(t * 24));
 // 每个人淡出的时刻（12.6 起一个一个走）；孩子跑过去就不见了
 const GONE = { nearB: 12.6, aunt: 12.95, uncle: 13.3, nearA: 13.6, grandpa: 13.9, mom: 14.2, grandma: 14.5, hero: 14.85 };
-const away = (id, t) => (GONE[id] ? smooth(prog(t, GONE[id], GONE[id] + 0.55)) : 0);
+// 覆盖（「提前痛一次」那一镜用）：只让某一个人淡出 / 回来，孩子不跑
+let OV = null;
+function setOverride(o) { OV = o; }
+const away = (id, t) => (OV ? OV.away(id) : (GONE[id] ? smooth(prog(t, GONE[id], GONE[id] + 0.55)) : 0));
 
 const FAMILY = [
   // 后排（桌子后面）
@@ -302,6 +305,7 @@ function heroPose(t) {
 }
 // 小孩从后面跑过去（右 → 左）
 function child(ctx, t) {
+  if (OV && OV.noChild) return;
   const k = prog(t, 9.0, 11.6);
   if (k <= 0 || k >= 1) return;
   const ph = t * 11;
@@ -548,4 +552,4 @@ function windowOnScreen(t) {
   return { x0, y0, x1, y1 };
 }
 
-module.exports = { ...S, draw, drawOver, light, grade, cam, windowOnScreen, papercut };
+module.exports = { ...S, draw, drawOver, light, grade, cam, windowOnScreen, papercut, setOverride };

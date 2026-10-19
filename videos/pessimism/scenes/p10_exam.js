@@ -79,9 +79,6 @@ function thought(ctx, t) {
   ctx.fillText('我就是不行', (WIN.x0 + WIN.x1) / 2, lerp(330, 540, k));
   ctx.filter = 'none';
   ctx.restore();
-  // 一个很小的标注：长期的
-  const ta = smooth(prog(t, 85.0, 85.4)) * (1 - smooth(prog(t, 85.95, 86.25)));
-  if (ta > 0) { ctx.save(); ctx.globalAlpha = ta * 0.75; ctx.font = FONT.body(30); ctx.letterSpacing = '8px'; ctx.fillStyle = '#c8d2dc'; ctx.fillText('— 长期的', WIN.x1 - 250, WIN.y1 - 40); ctx.restore(); }
 }
 
 function draw(ctx, t) {

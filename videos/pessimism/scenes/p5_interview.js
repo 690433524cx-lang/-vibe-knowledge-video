@@ -1,8 +1,9 @@
 // 第五幕 · 33.3–41.8 秒：面试还没开始。
 //   上一幕的光标变成一道竖直的门缝：面试室的门关着，只有门缝里透出冷白光，在地上拉出一道光。
 //   他坐在门外的长椅上，手里攥着简历。墙上的钟。
-//   39.0–40.6 三次极短的「脑内预演」：面试官摇头 / 邮件 REJECTED / 他一个人走出走廊。
-//   都是灰白、颗粒更重、边缘晕开的幻象；每次之后都回到同一个静止的走廊——他还坐在那里。
+//   39.0–40.6 三次极短的「脑内预演」（每次约 0.45 s）：面试官轻轻摇头 / 邮件 REJECTED / 夜路上一个人走回家。
+//   低饱和、轻微模糊、出现时有一点点残影；没有白闪、没有故障效果。最后一个之后一下子全部撤掉，
+//   回到同一个静止的走廊——他还坐在那里，事情其实还没发生。
 const { createCanvas } = require('@napi-rs/canvas');
 const { W, H } = require('../../../src/config');
 const { FONT } = require('../../../src/lib/style');
@@ -119,15 +120,6 @@ function resume(ctx, t) {
 // ---------------- 脑内的预演（灰白幻象） ----------------
 const FL = createCanvas(W, H);
 const FX = FL.getContext('2d');
-const GRAIN = (() => {
-  const c = createCanvas(W / 2, H / 2);
-  const x = c.getContext('2d');
-  const img = x.createImageData(W / 2, H / 2);
-  const r = rng(505);
-  for (let i = 0; i < img.data.length; i += 4) { const v = 128 + (r() + r() - 1) * 120; img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255; }
-  x.putImageData(img, 0, 0);
-  return c;
-})();
 
 function fantasy(ctx, k, t) {
   const x = FX;
@@ -142,7 +134,7 @@ function fantasy(ctx, k, t) {
     g.addColorStop(0, '#b4b6b2'); g.addColorStop(0.6, '#5a5c5a'); g.addColorStop(1, '#1a1b1c');
     x.fillStyle = g; x.fillRect(0, 0, W, H);
     const sil = { top: '#1c1d1e', bottom: '#151515', hair: '#121212', skin: '#222324', rim: 0.25, rimCol: [230, 230, 230] };
-    person(x, 960, 800, 540, { view: 'front', sit: true, ...sil, hairStyle: 'short', roll: Math.sin(t * 22) * 0.14, hd: 0.05, arms: { left: [0.1, -0.9], right: [0.1, -0.9] } });
+    person(x, 960, 800, 540, { view: 'front', sit: true, ...sil, hairStyle: 'short', roll: Math.sin((t - 39.0) * 14) * 0.11, hd: 0.08, arms: { left: [0.1, -0.9], right: [0.1, -0.9] } });
     person(x, 500, 820, 470, { view: 'front', sit: true, ...sil, hairStyle: 'long', hd: 0.3 });
     x.fillStyle = '#1e1f20'; x.fillRect(150, 790, 1620, 360);
     x.fillStyle = '#d8d9d6'; x.fillRect(820, 772, 160, 18);
@@ -159,28 +151,53 @@ function fantasy(ctx, k, t) {
     x.save(); x.rotate(-0.08); x.fillText('REJECTED', 60, 210); x.restore();
     x.restore();
   } else {
-    // 他一个人走出走廊
+    // 夜里的路：一排路灯，路往远处收；他一个人背对镜头往回走，影子拖在身后
     const g = x.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#2a2b2c'); g.addColorStop(1, '#141515');
+    g.addColorStop(0, '#1c2430'); g.addColorStop(0.55, '#2a3038'); g.addColorStop(1, '#1a1c20');
     x.fillStyle = g; x.fillRect(0, 0, W, H);
-    x.strokeStyle = 'rgba(160,160,160,0.25)'; x.lineWidth = 2;
-    for (const [a, b] of [[0, 0], [W, 0], [0, H], [W, H]]) { x.beginPath(); x.moveTo(a, b); x.lineTo(960, 470); x.stroke(); }
-    x.fillStyle = 'rgba(200,200,200,0.5)'; x.fillRect(930, 410, 60, 110);
+    // 远处的楼（立在地平线上）
+    x.fillStyle = '#141a22';
+    for (let i = 0; i < 12; i++) { const top = 300 + ((i * 37) % 120); x.fillRect(i * 170 - 30, top, 150, 522 - top); }
+    x.fillStyle = 'rgba(255,214,150,0.35)';
+    for (let i = 0; i < 40; i++) x.fillRect(((i * 97) % 1900) + 10, 340 + ((i * 53) % 160), 6, 8);
+    // 路面
+    x.fillStyle = '#23262a';
+    x.fillRect(0, 520, W, H - 520);
+    x.fillStyle = '#2b2e33';
+    x.beginPath(); x.moveTo(900, 520); x.lineTo(1020, 520); x.lineTo(1760, H); x.lineTo(160, H); x.closePath(); x.fill();
+    x.strokeStyle = 'rgba(200,196,180,0.3)'; x.lineWidth = 4; x.setLineDash([40, 50]);
+    x.beginPath(); x.moveTo(960, 525); x.lineTo(960, H); x.stroke(); x.setLineDash([]);
+    // 路灯：沿着右边的路沿往远处变小，每盏下面一小圈暖光
+    for (let i = 0; i < 5; i++) {
+      const k = Math.pow(0.6, i), lx = 1020 + 640 * k, by = 520 + 520 * k, h = 640 * k;
+      const pg = x.createRadialGradient(lx - 90 * k, by, 0, lx - 90 * k, by, 230 * k);
+      pg.addColorStop(0, 'rgba(255,206,140,0.4)'); pg.addColorStop(1, 'rgba(255,206,140,0)');
+      x.fillStyle = pg; x.beginPath(); x.ellipse(lx - 90 * k, by, 230 * k, 50 * k, 0, 0, Math.PI * 2); x.fill();
+      x.strokeStyle = '#0f1114'; x.lineWidth = Math.max(2, 12 * k);
+      x.beginPath(); x.moveTo(lx, by); x.lineTo(lx, by - h); x.lineTo(lx - 90 * k, by - h); x.stroke();
+      x.fillStyle = 'rgba(255,226,180,0.9)'; x.beginPath(); x.ellipse(lx - 90 * k, by - h + 6 * k, 20 * k, 7 * k, 0, 0, Math.PI * 2); x.fill();
+    }
     const step = prog(t, 40.1, 40.6);
-    person(x, 1000, lerp(940, 860, step), lerp(430, 380, step), { view: 'back', top: '#2a2a2a', bottom: '#1c1c1c', hair: '#101010', hairStyle: 'short', step: Math.sin(t * 9), rim: 0, arms: { left: [0.1, 0.1], right: [0.12, 0.15] } });
+    const px = 930, py = lerp(800, 780, step), pu = lerp(150, 142, step);
+    x.fillStyle = 'rgba(0,0,0,0.4)';
+    x.beginPath(); x.ellipse(px - 10, py + 2, 60, 9, -0.05, 0, Math.PI * 2); x.fill();
+    person(x, px, py, pu, { view: 'back', top: '#3a4248', bottom: '#1c1e20', hair: '#101010', hairStyle: 'short', step: Math.sin(t * 8), rim: 0.35, rimCol: [255, 210, 160], arms: { left: [0.08, 0.1], right: [0.1, 0.12] } });
   }
-  // 灰白、颗粒更重、边缘晕开
+  // 低饱和、轻微模糊；刚出现的一瞬间有一点残影（同一画面错开一点、很淡，很快消失）
+  const [f0, f1] = FLASHES[k];
+  const ghost = 1 - smooth(prog(t, f0, f0 + 0.22));
   ctx.save();
-  ctx.filter = 'grayscale(1) contrast(1.2) blur(1.2px)';
-  ctx.drawImage(FL, (Math.random() - 0.5) * 0, 0);
+  ctx.filter = 'saturate(0.3) contrast(1.04) blur(2px)';
+  ctx.drawImage(FL, 0, 0);
+  if (ghost > 0.02) {
+    const ga = ctx.globalAlpha;
+    ctx.globalAlpha = ga * 0.28 * ghost;
+    ctx.drawImage(FL, 22 * ghost + 6, 4 * ghost);
+    ctx.globalAlpha = ga;
+  }
   ctx.filter = 'none';
-  ctx.globalCompositeOperation = 'overlay';
-  ctx.globalAlpha = 0.5;
-  ctx.drawImage(GRAIN, (k * 173) % 200 - 100, (k * 97) % 120 - 60, W + 200, H + 120);
-  ctx.globalCompositeOperation = 'source-over';
-  ctx.globalAlpha = 1;
-  const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.25, W / 2, H / 2, H * 0.85);
-  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.85)');
+  const vg = ctx.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.9);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.6)');
   ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
   ctx.restore();
 }
@@ -207,9 +224,9 @@ function drawOver(ctx, t) {
   ctx.restore();
   FLASHES.forEach(([t0, t1], k) => {
     if (t < t0 || t > t1) return;
-    const fa = smooth(prog(t, t0, t0 + 0.06)) * (1 - smooth(prog(t, t1 - 0.08, t1)));
+    const fa = smooth(prog(t, t0, t0 + 0.07)) * (1 - smooth(prog(t, t1 - (k === 2 ? 0.04 : 0.08), t1)));
     ctx.save();
-    ctx.globalAlpha = fa * (0.9 + 0.1 * Math.sin(t * 90));
+    ctx.globalAlpha = fa;
     fantasy(ctx, k, t);
     ctx.restore();
   });

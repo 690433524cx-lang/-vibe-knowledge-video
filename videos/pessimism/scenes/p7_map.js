@@ -3,7 +3,7 @@
 //   53.6 起铅笔把近路上的风险一个个圈出来：天气（暴雨）、施工、桥上的裂缝；
 //   57.0 他画出一条绕开的路线；58.2 那座桥真的断了（地图上那一小块暗下去）——悲观有时候确实有用。
 //   59.4 起镜头移到下一个十字路口：前面的路其实是正常的、空的。可是铅笔开始自己在路上画：
-//        断桥、暴雨、失败、拒绝、结束……越画越快、越画越重。左边是「看见风险」，右边是「相信失败一定会发生」。
+//        断桥、暴雨、失败、拒绝……越画越快、越画越重。
 //   T 之前的浮词、清空和静止见 scenes/p7b_tprep.js（按新的 MAIN_BEAT_T）。
 const { createCanvas } = require('@napi-rs/canvas');
 const { W, H } = require('../../../src/config');
@@ -232,7 +232,7 @@ function marks(ctx, t) {
   pencil(ctx, [[CROSS[0] + 60, CROSS[1] - 26], [CROSS[0] + 120, CROSS[1] - 26]], { ...heavy(60.2, 60.5), seed: 11 });
   // 暴雨
   for (let i = 0; i < 9; i++) pencil(ctx, [[CROSS[0] + 60 + i * 18, CROSS[1] - 160], [CROSS[0] + 40 + i * 18, CROSS[1] - 90]], { ...heavy(60.5 + i * 0.04, 60.62 + i * 0.04), seed: 20 + i, passes: 1 });
-  // 字：失败 / 拒绝 / 结束（手写，越写越重）
+  // 字：断桥 / 暴雨 / 失败 / 拒绝（手写，越写越重）
   const word = (s, x, y, t0, size, rot) => {
     const k = prog(t, t0, t0 + 0.35);
     if (k <= 0) return;
@@ -245,9 +245,10 @@ function marks(ctx, t) {
     ctx.fillText(s, 0, 0);
     ctx.restore();
   };
-  word('失败', CROSS[0] - 260, CROSS[1] + 90, 61.6, 74, -0.08);
-  word('拒绝', CROSS[0] + 120, CROSS[1] + 110, 62.2, 80, 0.06);
-  word('结束', CROSS[0] - 70, CROSS[1] + 200, 62.8, 92, -0.04);
+  word('断桥', CROSS[0] - 250, CROSS[1] - 60, 60.35, 64, -0.06);
+  word('暴雨', CROSS[0] + 250, CROSS[1] - 120, 60.9, 64, 0.05);
+  word('失败', CROSS[0] - 260, CROSS[1] + 100, 61.6, 80, -0.08);
+  word('拒绝', CROSS[0] + 110, CROSS[1] + 130, 62.2, 86, 0.06);
   // 乱涂：越来越密的螺旋线
   const sk = prog(t, 63.3, 65.0);
   if (sk > 0) {
@@ -362,4 +363,4 @@ function light(t) {
 }
 function grade(t) { return { warm: 0.34, ambient: lerp(0.085, 0.06, smooth(prog(t, D - 0.9, D - 0.3))) }; }
 
-module.exports = { ...S, draw, drawOver, light, grade, BASE, MAP, ORIGIN, ROUTE_A, ROUTE_B, START, DEST, BRIDGE, CLOUD, CONES, M, hand, marks, along, desk, lampGlow, LAMP_HEAD };
+module.exports = { ...S, draw, drawOver, light, grade, cam, BASE, MAP, ORIGIN, ROUTE_A, ROUTE_B, START, DEST, BRIDGE, CLOUD, CONES, CROSS, M, hand, marks, along, desk, lampGlow, LAMP_HEAD };

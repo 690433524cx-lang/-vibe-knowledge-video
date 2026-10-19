@@ -115,7 +115,10 @@ function switchClick(seed = 23) {
 const smoothstep = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
 const party = (seed, dur, env, extra = {}) => walla(seed, dur, { voices: 6, laughs: [[0.3, 6, 210], [1.0, 5, 260, 0.8], [2.6, 4, 190, 0.7], [5.0, 4, 220, 0.8]], env, ...extra });
 
-// 时间都是新时间轴（留存优化版）。没有任何背景音乐、持续的旋律或 pad：只有环境声和少量音效。
+// 给一段声音乘上包络（降低、淡入淡出）
+function shaped(b, env) { for (let i = 0; i < b.length; i++) b[i] *= env(i / SR); return b; }
+
+// 时间都是新时间轴（最终精修版）。没有任何背景音乐、持续的旋律或 pad：只有环境声和少量音效。
 const CUES = [
   // 聚会：人声一直在；3.6–4.9 他脑内的散场里人声被抽空，4.9 回到现实
   { t: 0.0, gain: 0.15, fx: () => party(101, 6.8, (t) => (1 - smoothstep(3.55, 3.8, t) * 0.97 + smoothstep(4.85, 5.0, t) * 0.97) * (1 - smoothstep(5.6, 6.6, t))) },
@@ -132,37 +135,46 @@ const CUES = [
   { t: 19.12, fx: () => whoosh(401), gain: 0.07, pan: 0.2 },
   { t: 20.6, fx: () => photoDrop(402), gain: 0.06, pan: 0.3 },
   { t: 22.6, fx: () => tick(403), gain: 0.05, pan: 0.3 },
-  // 面试：走廊的空气声；第二个幻象是一封邮件——一声手机提示
-  { t: 24.1, fx: () => air(501, 4.5), gain: 0.08 },
-  { t: 27.35, fx: () => tick(510), gain: 0.06 },
-  // 蜡烛：远处闷住的聚会声（快乐在别处继续）
-  { t: 28.6, gain: 0.05, fx: () => party(520, 7.2, (t) => smoothstep(0, 0.8, t) * (1 - smoothstep(6.4, 7.2, t)), { lpHz: 420 }) },
-  // 人群里的提前难过：笑声还在，37.0 起周围的声音降下去
-  { t: 35.6, gain: 0.15, fx: () => party(530, 5.0, (t) => smoothstep(0, 0.2, t) * (1 - smoothstep(1.4, 2.4, t) * 0.88) * (1 - smoothstep(4.4, 4.9, t))) },
-  // 地图上的铅笔
-  { t: 52.2, fx: () => pencilScratch(701, 0.5), gain: 0.08 },
-  { t: 53.0, fx: () => pencilScratch(702, 0.5), gain: 0.08 },
-  { t: 53.8, fx: () => pencilScratch(703, 0.5), gain: 0.08 },
-  { t: 54.2, fx: () => pencilScratch(704, 1.2), gain: 0.07 },
-  { t: 55.2, fx: () => paper(705, 0.4), gain: 0.07 },
-  ...[57.9, 58.5, 59.1].map((t, i) => ({ t, fx: () => pencilScratch(706 + i, 0.4), gain: 0.07 })),
-  ...Array.from({ length: 14 }, (_, i) => ({ t: 59.4 + 3.4 * (1 - Math.pow(1 - i / 14, 1.6)), fx: () => pencilScratch(710 + i, 0.32), gain: 0.06 + i * 0.004 })),
-  // T：低频冲击 + 铅字压在纸上（与《千年之后》的重拍同时；T-0.55 起完全安静）
+  // 面试：走廊的空气声；第二个幻象是一封邮件——一声手机提示；第三个幻象之后一下子安静
+  { t: 24.1, fx: () => air(501, 3.85), gain: 0.08 },
+  { t: 26.25, fx: () => tick(510), gain: 0.06 },
+  // 不敢快乐太久：笑声、碰杯都还在；30.6 起周围的声音降下去（人还在笑，只是听不清了）
+  { t: 27.85, gain: 0.15, fx: () => party(530, 6.2, (t) => smoothstep(0, 0.15, t) * (1 - smoothstep(2.75, 3.95, t) * 0.65) * (1 - smoothstep(5.8, 6.2, t))) },
+  { t: 28.35, fx: () => clink(531), gain: 0.05, pan: 0.15 },
+  // 列车上的提前难过：快乐还在（列车、窗外）；35.2 起声音变弱
+  { t: 33.8, gain: 0.12, fx: () => shaped(trainAmb(540, 4.1), (t) => 1 - smoothstep(1.4, 2.4, t) * 0.75) },
+  // 地图上的铅笔：圈出风险、画绕行路线、真的断桥；之后他自己画上去的灾难越画越快
+  { t: 44.18, fx: () => pencilScratch(701, 0.45), gain: 0.08 },
+  { t: 44.97, fx: () => pencilScratch(702, 0.45), gain: 0.08 },
+  { t: 45.76, fx: () => pencilScratch(703, 0.45), gain: 0.08 },
+  { t: 46.9, fx: () => pencilScratch(704, 1.0), gain: 0.07 },
+  { t: 47.76, fx: () => paper(705, 0.4), gain: 0.07 },
+  ...[48.9, 49.2, 49.9, 50.3].map((t, i) => ({ t, fx: () => pencilScratch(706 + i, 0.35), gain: 0.07 })),
+  ...Array.from({ length: 12 }, (_, i) => ({ t: 51.0 + 4.0 * (1 - Math.pow(1 - i / 12, 1.6)), fx: () => pencilScratch(720 + i, 0.3), gain: 0.06 + i * 0.004 })),
+  // T：低频冲击 + 铅字压在纸上（T-0.3 起完全安静）
   { t: T, fx: () => impact(801), gain: 0.45 },
   { t: T, fx: () => stamp(802), gain: 0.3 },
-  // 人物页
-  { t: 75.95, fx: () => paper(901, 0.6), gain: 0.06 },
-  // 方法：纸上写字、手机打字、地图上写字
-  { t: 97.5, fx: () => pencilScratch(1501, 0.9), gain: 0.06 },
-  ...[100.85, 101.0, 101.15, 101.3, 101.45, 101.6].map((t, i) => ({ t, fx: () => tick(1510 + i), gain: 0.03 })),
-  { t: 102.4, fx: () => pencilScratch(1520, 0.8), gain: 0.06 },
-  // 有用的悲观：画路线
-  { t: 102.75, fx: () => pencilScratch(1601, 0.35), gain: 0.07 },
-  ...[104.2, 105.1, 106.1].map((t, i) => ({ t, fx: () => pencilScratch(1610 + i, 0.9), gain: 0.05 })),
-  // 结尾：起身、收杯子、关灯
-  { t: 108.3, fx: () => chairKnock(1701), gain: 0.05, pan: 0.2 },
-  ...[109.72, 109.9, 110.08].map((t, i) => ({ t, fx: () => clink(1710 + i), gain: 0.035, pan: 0.15 })),
-  { t: 110.8, fx: () => switchClick(1720), gain: 0.08, pan: 0.3 },
+  // 解释风格：夜里房间的空气、纸团轻轻一响
+  { t: 66.9, fx: () => air(901, 5.6), gain: 0.05 },
+  { t: 67.3, fx: () => paper(902, 0.3), gain: 0.04 },
+  // 工作：一声很轻的提示
+  { t: 79.6, fx: () => tick(951), gain: 0.04 },
+  // 先离开的人：屋里的聚会还在继续
+  { t: 82.75, gain: 0.12, fx: () => party(1301, 5.9, (t) => smoothstep(0, 0.15, t) * (1 - smoothstep(5.5, 5.9, t))) },
+  { t: 83.4, fx: () => clink(1302), gain: 0.045, pan: 0.3 },
+  // 年夜饭：一家人还在说话；奶奶淡下去的时候，声音也低下去，她回来，声音也回来
+  { t: 88.5, gain: 0.12, fx: () => walla(1401, 8.15, { voices: 7, f0: 330, lpHz: 1400, laughs: [[1.0, 4, 300, 0.7], [5.5, 4, 230, 0.6]], env: (t) => smoothstep(0, 0.2, t) * (1 - smoothstep(3.1, 4.0, t) * 0.7 + smoothstep(6.1, 7.0, t) * 0.7) * (1 - smoothstep(7.8, 8.15, t)) }) },
+  { t: 89.2, fx: () => farCrackers(1402, 2.2), gain: 0.05, pan: -0.3 },
+  // 方法：地图边写字、便利贴上写字、玻璃上手指擦过
+  { t: 96.7, fx: () => pencilScratch(1501, 0.9), gain: 0.06 },
+  { t: 98.9, fx: () => pencilScratch(1502, 1.0), gain: 0.06 },
+  { t: 100.85, fx: () => air(1503, 6.6), gain: 0.05 },
+  { t: 101.0, fx: () => whoosh(1504), gain: 0.03 },
+  // 结尾：散场以后的房间；起身、拿起一只杯子、打开小台灯
+  { t: 107.4, fx: () => air(1701, 12.1), gain: 0.06 },
+  { t: 108.0, fx: () => chairKnock(1702), gain: 0.045, pan: 0.2 },
+  { t: 109.95, fx: () => clink(1710), gain: 0.03, pan: 0.15 },
+  { t: 116.3, fx: () => switchClick(1720), gain: 0.08, pan: -0.15 },
 ];
 
 module.exports = CUES;

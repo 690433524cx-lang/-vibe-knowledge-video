@@ -2,7 +2,7 @@
 // 文本中用 {…} 包住的部分以暗红强调；y / fi 可单独覆盖位置与淡入时长。
 const path = require('path');
 const { VIDEO_DIR } = require('./config');
-const { W } = require('./config');
+const { W, H } = require('./config');
 const { FONT, C } = require('./lib/style');
 const { prog, smooth, easeOut } = require('./lib/util');
 
@@ -129,38 +129,42 @@ function drawLineV2(ctx, s, a, k) {
 }
 
 // ---------------- 固定字幕系统（TL.SUB_FIXED，《悲观主义》起）----------------
-// 只有两级：叙述（A）与金句（B），位置固定在下方安全区、水平居中；锚词（C）在场景里画，不走字幕。
-// 淡入 0.25 s、上移 6 px、停留、淡出 0.22 s；不模糊、不缩放、不逐字。
-// 一句最多两行（文本里用 \n 断行），第二行压在固定基线上，第一行往上叠；底下一层很淡的暗色柔底。
+// 两级：叙述（A）与金句（B），位置固定在下方安全区、水平居中；锚词（C）在场景里画，不走字幕。
+// 最终精修版：字幕块的中心固定在画面高度约 84%（FIXED.center），两行时上下对称地展开；字号比上一版大约 12%。
+// 淡入 0.25 s、上移 6 px、稳定停留、淡出 0.22 s；不模糊、不缩放、不弹跳、不逐字。
+// 底下一层很淡的暗色柔底，只为在亮背景上也读得清。'end'：片尾最后一句，小一号、暖白。
 const FIXED = {
-  baseline: 958,                // 字幕中心约在画面底部往上 12%
-  a: { px: 66, ls: 4, color: '#efe7d6' },
-  b: { px: 74, ls: 5, color: '#f3ead8' },
+  center: 0.84,                 // 字幕块中心在画面高度的比例
+  a: { px: 74, ls: 4, color: '#efe7d6' },
+  b: { px: 82, ls: 5, color: '#f3ead8' },
+  end: { px: 62, ls: 12, color: '#f2e5cc' },
 };
 function drawLineFixed(ctx, s, a, k) {
-  const st = s.style === 'quote' || s.style === 'hook' ? FIXED.b : FIXED.a;
+  const st = s.style === 'quote' || s.style === 'hook' ? FIXED.b : (FIXED[s.style] || FIXED.a);
   const lines = s.text.split('\n');
-  const px = st.px, lh = Math.round(px * 1.42);
+  const px = st.px, lh = Math.round(px * 1.38);
   const rise = (1 - easeOut(k)) * 6;
+  // 第 i 行的基线：整块文字以 FIXED.center 为中心（汉字的视觉中心约在基线上方 0.36 em）
+  const cy = H * FIXED.center;
+  const base = (i) => cy + px * 0.36 + (i - (lines.length - 1) / 2) * lh;
   ctx.save();
   ctx.font = FONT.body(px);
   ctx.letterSpacing = `${st.ls}px`;
   ctx.textBaseline = 'alphabetic';
   const widths = lines.map((l) => segments(l).reduce((w, [t]) => w + ctx.measureText(t).width, 0));
   const maxW = Math.max(...widths);
-  // 很淡的暗色柔底：只为在亮背景上也读得清
-  const top = FIXED.baseline - px * 0.95 - (lines.length - 1) * lh;
+  const top = base(0) - px * 0.95, bottom = base(lines.length - 1) + px * 0.3;
   ctx.globalAlpha = a * 0.42;
   ctx.filter = 'blur(18px)';
   ctx.fillStyle = 'rgba(8,7,6,1)';
-  ctx.fillRect(W / 2 - maxW / 2 - 40, top - 18 + rise, maxW + 80, (lines.length - 1) * lh + px * 1.3 + 36);
+  ctx.fillRect(W / 2 - maxW / 2 - 40, top - 18 + rise, maxW + 80, bottom - top + 36);
   ctx.filter = 'none';
   ctx.globalAlpha = a;
   ctx.shadowColor = 'rgba(0,0,0,0.75)';
   ctx.shadowBlur = 10;
   ctx.shadowOffsetY = 2;
   lines.forEach((l, i) => {
-    const y = FIXED.baseline - (lines.length - 1 - i) * lh + rise;
+    const y = base(i) + rise;
     let x = W / 2 - widths[i] / 2;
     for (const [t, red] of segments(l)) {
       ctx.fillStyle = red ? C.subRed : st.color;
@@ -175,7 +179,7 @@ function drawLineFixed(ctx, s, a, k) {
 function drawSubtitles(ctx, t) {
   if (require('./config').TL.SUB_FIXED) {
     for (const s of SUBS) {
-      const fi = 0.25, fo = 0.22;
+      const fi = s.fi ?? 0.25, fo = s.fo ?? 0.22;
       if (t < s.t || t > s.t + s.d + fo) continue;
       const a = smooth(prog(t, s.t, s.t + fi)) * (1 - smooth(prog(t, s.t + s.d, s.t + s.d + fo)));
       drawLineFixed(ctx, s, a, prog(t, s.t, s.t + 0.3));

@@ -1,7 +1,7 @@
 // 核心高潮 · MAIN_BEAT_T：四个小词一下子消失，画面中央只剩两个巨大的暗红汉字——最坏。
 // 旧印刷的压痕、墙面一样粗的纸、极轻微的墨迹扩散、一次短促的震动（引擎负责）。没有爆炸、粒子、3D、故障。
-// T+1.2 起字幕：真正危险的。/ 不是你想到最坏。/ 是你开始把最坏—— / 当成唯一。
-// 四句字幕都读完以后（T+10.6）「最坏」缩小、淡去，交给 Martin Seligman 的人物页。
+// T+0.9 起字幕：真正危险的。/ 不是你想到最坏。/ 是你开始把最坏—— / 当成唯一。
+// 四句字幕都读完以后（T+9.65）「最坏」缩小、淡去，交给「解释风格」那一镜。
 const { createCanvas } = require('@napi-rs/canvas');
 const { W, H, DESIGN_T: D } = require('../../../src/config');
 const { FONT } = require('../../../src/lib/style');
@@ -9,8 +9,8 @@ const { prog, smooth, easeOut, lerp, rng } = require('../../../src/lib/util');
 const { spring } = require('../../../src/lib/motion');
 const { sheetTexture } = require('../../../src/lib/material');
 
-const S = { start: D, end: D + 11.5 };
-const SHRINK_T = D + 10.6;       // 「当成唯一。」读完以后
+const S = { start: D, end: D + 10.45 };
+const SHRINK_T = D + 9.65;       // 「当成唯一。」读完以后
 
 // 铅字：离屏生成一次。墨不均、边缘略发灰、纸纤维从笔画里透出来、干擦的横丝
 const TYPE = (() => {

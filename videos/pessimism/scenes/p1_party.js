@@ -344,7 +344,7 @@ function table(ctx, t, o = {}) {
     at(820, 846, () => napkin(ctx, 20, 8));
     at(1290, 846, () => napkin(ctx, 18, 9));
     at(990, 846, () => glassShape(ctx, 46, 78, { fill: 0.08, liquid: [140, 80, 40] }));
-    at(1195, 822, () => glassShape(ctx, 50, 86, { fill: 0.22, liquid: [150, 60, 36] }));
+    if (!(o.hide || []).includes('glassR')) at(1195, 822, () => glassShape(ctx, 50, 86, { fill: 0.22, liquid: [150, 60, 36] }));   // 结尾里他拿起来的那只
   }
   at(GLASS.x, GLASS.y, () => glassShape(ctx, GLASS.w, GLASS.h, { fill: 0.3, liquid: [160, 64, 40] }));
   // 散场以后才会有的样子：倒下的杯子、更多纸巾、空瓶（只在脑内的未来里出现）
@@ -436,13 +436,15 @@ function drawRoom(ctx, t, o = {}) {
   floor(ctx);
   spill(ctx, t);
   const cb = o.castBlur ?? 0;    // 「提前难过」那一镜：他还在，周围的人虚掉
-  if (o.people !== false) drawCast(ctx, t, ['coat', 'talkA', 'talkB'], cb);
+  const ex = o.exclude || [];
+  const only = (ids) => ids.filter((id) => !ex.includes(id));
+  if (o.people !== false) drawCast(ctx, t, only(['coat', 'talkA', 'talkB']), cb);
   sofa(ctx);
-  if (o.people !== false) drawCast(ctx, t, ['friend', 'arm'], cb);
+  if (o.people !== false) drawCast(ctx, t, only(['friend', 'arm']), cb);
   if (o.hero !== false) drawHero(ctx, o.heroT ?? t);
   if (o.lamp !== false) lamp(ctx, t);
-  table(ctx, t, { mess: o.mess ?? future(t) });
-  if (o.people !== false && !(o.exclude || []).includes('snack')) drawCast(ctx, t, ['snack'], cb);
+  if (o.table !== false) table(ctx, t, { mess: o.mess ?? future(t), hide: o.hide });
+  if (o.people !== false && !ex.includes('snack')) drawCast(ctx, t, ['snack'], cb);
 }
 
 // 灯串：沿着墙顶挂的一串小灯泡（聚会的灯，脑内的未来里熄灭）
@@ -505,9 +507,9 @@ function drawOver(ctx, t) {
 }
 
 // 光：吊灯（主光）、灯串（聚会的暖光）、楼道、窗外；脑内的未来里只剩一盏变冷的吊灯
-function light(t) {
-  const c = cam(t);
-  const w = 1 - smooth(prog(t, 7.7, 8.3));
+function light(t) { return lightsFor(cam(t), t, 1 - smooth(prog(t, 7.7, 8.3))); }
+// 任意机位下聚会时的灯光（「提前适应失去」那一镜也用）
+function lightsFor(c, t, w = 1) {
   const F = future(t);
   const sc = (x, y) => toScreen(c, x, y);
   const out = [];
@@ -548,4 +550,4 @@ function rimOnScreen(t) {
 // 静态画面（封面）用：指定门、楼道灯、灯串的状态
 function setStatic(st) { ST = st; }
 
-module.exports = { ...S, draw, drawOver, light, grade, cam, rimOnScreen, drawRoom, wall, floor, sofa, windowFrame, table, lamp, drawHero, cityLights, lampGlow, stringGlow, setStatic, future, GLASS, HERO, LAMP, roundRect };
+module.exports = { ...S, draw, drawOver, light, lightsFor, grade, cam, rimOnScreen, drawRoom, CAST, FLOOR, TABLE, SOFA, wall, floor, sofa, windowFrame, table, lamp, drawHero, cityLights, lampGlow, stringGlow, setStatic, future, GLASS, HERO, LAMP, roundRect };
