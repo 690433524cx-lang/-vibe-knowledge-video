@@ -3,7 +3,7 @@
 | 视频 | 目录 | 状态 |
 |---|---|---|
 | 《为什么你越舍不得，越容易继续浪费？》沉没成本 | `videos/sunk-cost/` | 无音乐全片 `output/full_v1.mp4` |
-| 《悲观主义》悲观解释风格 | `videos/pessimism/` | 最终版全片 `output/pessimism/full_final.mp4`（119.55 s，无 BGM；`full_final_noBGM.mp4` 相同），MAIN_BEAT_T 暂定 56.8，关键帧 `output/pessimism/keyframes_final/`，改动 `docs/pessimism/CHANGELOG.md`，正式封面 `output/pessimism/cover.png`（A 版），0–20 s 样片 `output/pessimism/sample_0-20s.mp4`（第二版），关键帧 `output/pessimism/keyframes_sample/`，封面三个方向 `output/pessimism/cover_A.png` / `cover_B.png` / `cover_C.png`（`node videos/pessimism/covers.js`，已选 A），分镜 `docs/pessimism/storyboard.md`，自检 `docs/pessimism/review.md`，素材来源 `docs/pessimism/sources.md` |
+| 《悲观主义》悲观解释风格 | `videos/pessimism/` | 最终版全片 `output/pessimism/full_final.mp4`（119.8 s，开头 1.3 s 单独片名，无 BGM；`full_final_noBGM.mp4` 相同），MAIN_BEAT_T 暂定 57.5，关键帧 `output/pessimism/keyframes_final/`，改动 `docs/pessimism/CHANGELOG.md`，正式封面 `output/pessimism/cover.png`（A 版），0–20 s 样片 `output/pessimism/sample_0-20s.mp4`（第二版），关键帧 `output/pessimism/keyframes_sample/`，封面三个方向 `output/pessimism/cover_A.png` / `cover_B.png` / `cover_C.png`（`node videos/pessimism/covers.js`，已选 A），分镜 `docs/pessimism/storyboard.md`，自检 `docs/pessimism/review.md`，素材来源 `docs/pessimism/sources.md` |
 | 《你是不是也有选择困难？》选择过载 / 满意解 | `videos/choice/` | 精修版无音乐全片 `output/choice/full_v2.mp4`（114.5 s），关键帧 `output/choice/keyframes_full/`，分镜 `docs/choice/storyboard.md`，自检 `docs/choice/review.md`，素材来源 `docs/choice/sources.md` |
 
 所有命令加 `--video choice` / `--video pessimism` 即可切换（默认 `sunk-cost`）。主重拍参数可用 `MAIN_BEAT_T`（或 `T` / `--T`）。

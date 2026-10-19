@@ -120,6 +120,8 @@ function shaped(b, env) { for (let i = 0; i < b.length; i++) b[i] *= env(i / SR)
 
 // 时间都是新时间轴（最终精修版）。没有任何背景音乐、持续的旋律或 pad：只有环境声和少量音效。
 const CUES = [
+  // 片名（真实 0–1.3 s）：门后面闷住的聚会声，片名淡出时接上真正的聚会
+  { t: -1.3, gain: 0.07, fx: () => party(99, 1.45, (t) => smoothstep(0, 0.3, t) * (1 - smoothstep(1.2, 1.45, t)), { lpHz: 520 }) },
   // 聚会：人声一直在；3.6–4.9 他脑内的散场里人声被抽空，4.9 回到现实
   { t: 0.0, gain: 0.15, fx: () => party(101, 6.8, (t) => (1 - smoothstep(3.55, 3.8, t) * 0.97 + smoothstep(4.85, 5.0, t) * 0.97) * (1 - smoothstep(5.6, 6.6, t))) },
   { t: 0.4, fx: () => clink(105), gain: 0.06, pan: -0.3 },

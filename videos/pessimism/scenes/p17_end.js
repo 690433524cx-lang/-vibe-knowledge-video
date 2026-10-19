@@ -1,16 +1,16 @@
-// 结尾（最终精修版）· 107.4–119.55 秒：散场以后，回到开头那间客厅。
+// 结尾（最终精修版）· 107.4–119.1 秒（设计时间）：散场以后，回到开头那间客厅。
 //   桌上是喝剩的杯子、盘子、纸巾和吃剩的东西；门关着，灯串熄了，只有窗外城市的冷光。他一个人坐在沙发上。
 //   108.0 慢慢站起来 → 109.3 弯腰拿起一只杯子 → 110.3 停住，看着手里的杯子 → 111.6 抬头看这间屋子
 //   → 112.9 拿着杯子走到墙边那盏没开的小台灯旁 → 115.5 伸手 → 116.3 打开它。
 //   灯很小、很暖、很克制：只照亮小桌、他的半边和身边一小块墙，不是阳光，也不是升华的光。
-//   开灯以后停 2.3 s，画面自然淡出（引擎 CLOSE_FADE 0.7 s）。最后一句「别先离开。」在字幕里，小一号、暖白。没有 CTA、没有尾题。
+//   开灯以后停 2.1 s，画面自然淡出（引擎 CLOSE_FADE 0.7 s）。最后一句「别先离开。」在字幕里，小一号、暖白。没有 CTA、没有尾题。
 const { W, H } = require('../../../src/config');
 const { prog, smooth, lerp, easeInOut } = require('../../../src/lib/util');
 const { withCam, toScreen, glassShape } = require('../lib');
 const { person } = require('../people');
 const party = require('./p1_party');
 
-const S = { start: 107.4, end: 119.6 };
+const S = { start: 107.4, end: 119.15 };
 const U = 300, SEAT_Y = 640, FEET_Y = 790;
 const SIDE = { x: 780, top: 590, floor: 704 };          // 墙边的小桌
 const SL = { x: 772, y: 590 };                          // 小台灯（底座）

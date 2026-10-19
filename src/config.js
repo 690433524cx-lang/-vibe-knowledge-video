@@ -32,8 +32,10 @@ const DESIGN_END = TL.DESIGN_END;
 // 高潮窗口：T-RIGID … T+RIGID 内保持 1:1
 const RIGID = TL.RIGID ?? 2.0;
 
+// 片头：设计时间 -LEAD … 0 是单独的片名（真实时间 0 … LEAD），正文仍从设计时间 0 开始
+const LEAD = TL.LEAD ?? 0;
 // 暂定 T：仅用于当前样片结构，不是最终音乐卡点
-const T = parseFloat(argValue('--T') ?? process.env.MAIN_BEAT_T ?? process.env.T ?? String(DESIGN_T));
+const T = parseFloat(argValue('--T') ?? process.env.MAIN_BEAT_T ?? process.env.T ?? String(TL.REAL_T ?? DESIGN_T + LEAD));
 // 真实片尾。默认跟随 T 平移；拿到音乐后可单独指定 END。
 const END = parseFloat(argValue('--END') ?? process.env.END ?? String(DESIGN_END + (T - DESIGN_T)));
 
@@ -42,7 +44,8 @@ const EXTRA_ANCHORS = JSON.parse(process.env.ANCHORS || '[]');
 
 function buildAnchors() {
   const a = [
-    { design: 0, real: 0 },
+    { design: -LEAD, real: 0 },
+    ...(LEAD ? [{ design: 0, real: LEAD }] : []),   // 片名的时长保持 1:1
     ...EXTRA_ANCHORS,
     { design: DESIGN_T - RIGID, real: T - RIGID },
     { design: DESIGN_T + RIGID, real: T + RIGID },
@@ -71,4 +74,4 @@ const toDesign = (real) => interp(ANCHORS, real, 'real', 'design');
 // 设计时间 → 真实时间
 const toReal = (design) => interp(ANCHORS, design, 'design', 'real');
 
-module.exports = { W, H, FPS, VIDEO, VIDEO_DIR, TL, DESIGN_T, DESIGN_END, RIGID, T, END, ANCHORS, toDesign, toReal };
+module.exports = { LEAD, W, H, FPS, VIDEO, VIDEO_DIR, TL, DESIGN_T, DESIGN_END, RIGID, T, END, ANCHORS, toDesign, toReal };
