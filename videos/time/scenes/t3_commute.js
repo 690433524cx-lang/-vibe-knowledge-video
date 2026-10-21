@@ -1,13 +1,21 @@
-// 第三幕 · 10.25–21.3 秒：重复的通勤。
-//   第一天（每镜约 0.42 s）：闹钟 → 刷牙 → 电梯 → 地铁 → 电脑 → 外卖 → 电脑（傍晚）→ 夜里的地铁 → 床上刷手机 → 关灯
-//   第二天（每镜约 0.22 s）、第三天（每镜约 0.16 s）：同样的十个镜头，只有闹钟上的星期变了。剪辑越来越快。
-//   18.25–21.3 地铁车窗：过肩镜头，人物看着玻璃里的自己；说到「没有留在记忆里」时倒影慢慢淡掉。
+// 第三幕 · 10.0–22.5 秒：日子开始复制自己。
+//   五天，每天同样六个镜头：闹钟 → 刷牙 → 地铁车窗 → 办公室（一排排一样的屏幕）→ 回家开门开灯 → 俯拍床和手机
+//   第一天正常；第二天几乎一样、更快；第三天开始重影；第四天几条相同的轨迹叠在一起；第五天只剩残影。
+//   17.7–22.5 小高潮：办公室、地铁、床、手机……像记忆卡片一样浮现 → 叠在一起 → 变模糊 → 压扁 → 消失，
+//             最后只剩几条极淡的光线 / 一条空白的时间轴。
+const { createCanvas } = require('@napi-rs/canvas');
 const L = require('../lib');
 const { W, H, FONT, rng, noise1, lerp, clamp, prog, smooth } = L;
 
-const T0 = 10.25;
-const DAYS = [{ dur: 0.42, day: '周一' }, { dur: 0.22, day: '周二' }, { dur: 0.16, day: '周三' }];
-const COOL = [150, 175, 205];
+const T0 = 10.0;
+const DAYS = [
+  { dur: 0.45, day: '周一', mode: 0 },
+  { dur: 0.28, day: '周二', mode: 0 },
+  { dur: 0.22, day: '周三', mode: 1 }, // 开始重影
+  { dur: 0.18, day: '周四', mode: 2 }, // 几条轨迹叠在一起
+  { dur: 0.15, day: '周五', mode: 3 }, // 只剩残影
+];
+const COOL = [160, 185, 215];
 
 // ---------------- 共用 ----------------
 function fill(ctx, c) { ctx.fillStyle = c; ctx.fillRect(0, 0, W, H); }
@@ -21,40 +29,29 @@ function glow(ctx, x, y, r, rgba) {
   g.addColorStop(0, rgba); g.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = g; ctx.fillRect(x - r, y - r, r * 2, r * 2);
 }
-// 失焦的人影（地铁里站着的乘客）
-function bystander(ctx, x, y, h, alpha = 1) {
-  L.blurred(ctx, 10, (c) => {
-    c.translate(x, y);
-    L.bust(c, { h, pal: { skin: '#3a3330', shirt: '#22252a', jacket: '#1d2024', hair: '#141110' } });
-  }, alpha);
-}
 
-// ---------------- 十个镜头 ----------------
-// 每个镜头：draw(ctx, k, lt, day)，k = 镜头内进度 0..1
+// ---------------- 六个镜头 ----------------
+// draw(ctx, k, lt, day)：k = 镜头内进度 0..1，lt = 镜头内时间（秒）
 
-// 1 闹钟：天没亮，床头柜上的手机亮了，一只手从被子里伸过来
+// 1 闹钟：天没亮，床头柜上的手机亮了，一只手从被子里伸过来按掉
 function alarm(ctx, k, lt, day) {
-  fill(ctx, '#1a1f26');
-  // 窗帘缝里一点天光
-  vgrad(ctx, 0, 620, '#2e3a48', '#1c222a', 120, 260);
-  // 被子
-  ctx.fillStyle = '#2c333c';
+  fill(ctx, '#232a33');
+  vgrad(ctx, 0, 620, '#3e4c5e', '#252d36', 120, 300);
+  ctx.fillStyle = '#36404c';
   ctx.beginPath();
   ctx.moveTo(1050, 1080); ctx.quadraticCurveTo(1150, 520, 1600, 470); ctx.quadraticCurveTo(1900, 450, 1920, 500); ctx.lineTo(1920, 1080);
   ctx.fill();
-  // 床头柜
-  ctx.fillStyle = '#2a231e';
+  ctx.fillStyle = '#3a2f27';
   ctx.beginPath(); ctx.moveTo(0, 690); ctx.lineTo(1120, 660); ctx.lineTo(1180, 1080); ctx.lineTo(0, 1080); ctx.fill();
-  ctx.fillStyle = '#3a3029';
+  ctx.fillStyle = '#4c3e33';
   ctx.beginPath(); ctx.moveTo(0, 690); ctx.lineTo(1120, 660); ctx.lineTo(1124, 676); ctx.lineTo(0, 708); ctx.fill();
-  // 手机（平放）
   ctx.save();
   ctx.translate(700, 800);
   ctx.transform(1, 0, -0.35, 0.42, 0, 0);
   ctx.fillStyle = '#08090b';
   ctx.beginPath(); ctx.roundRect(-175, -330, 350, 660, 40); ctx.fill();
   const pulse = 0.85 + 0.15 * Math.sin(lt * 18);
-  ctx.fillStyle = `rgba(200,214,232,${0.9 * pulse})`;
+  ctx.fillStyle = `rgba(206,220,238,${0.95 * pulse})`;
   ctx.beginPath(); ctx.roundRect(-160, -315, 320, 630, 30); ctx.fill();
   ctx.fillStyle = '#1c2633';
   ctx.textAlign = 'center';
@@ -63,54 +60,27 @@ function alarm(ctx, k, lt, day) {
   ctx.font = FONT.body(54);
   ctx.fillText(day, 0, 60);
   ctx.restore();
-  glow(ctx, 700, 790, 420, 'rgba(170,195,230,0.22)');
-  // 手：从被子里伸过来按掉闹钟
+  glow(ctx, 700, 790, 460, 'rgba(170,195,230,0.28)');
   const e = smooth(clamp(k * 1.6));
   const hx = lerp(1450, 900, e), hy = lerp(640, 772, e);
   L.lit(ctx, (c) => {
-    L.limb(c, [1980, 560], [hx + 150, hy - 30], 92, 70, '#3a414a');
-    L.limb(c, [hx + 160, hy - 32], [hx + 20, hy], 64, 52, '#9c7a64');
-    c.fillStyle = '#9c7a64';
+    L.limb(c, [1980, 560], [hx + 150, hy - 30], 92, 70, '#4a525c');
+    L.limb(c, [hx + 160, hy - 32], [hx + 20, hy], 64, 52, '#a7846c');
+    c.fillStyle = '#a7846c';
     c.beginPath(); c.ellipse(hx, hy + 4, 58, 34, 0.15, 0, Math.PI * 2); c.fill();
-    L.limb(c, [hx - 20, hy], [hx - 80, hy + 14], 22, 18, '#9c7a64');
-  }, { light: Math.PI * 0.85, rim: [190, 210, 240], rimA: 0.8, shadow: 0.5, ambient: 0.7, bbox: [800, 500, 1100, 400] });
+    L.limb(c, [hx - 20, hy], [hx - 80, hy + 14], 22, 18, '#a7846c');
+  }, { light: Math.PI * 0.85, rim: [190, 210, 240], rimA: 0.8, shadow: 0.45, ambient: 0.9, bbox: [800, 500, 1100, 400] });
 }
 
-// 2 刷牙：日光灯下的洗手台，侧面
-function brush(ctx, k, lt) {
-  fill(ctx, '#56615e');
-  // 瓷砖
-  ctx.strokeStyle = 'rgba(30,36,34,0.35)';
-  ctx.lineWidth = 2;
-  for (let x = 0; x < W; x += 96) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-  for (let y = 0; y < H; y += 96) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-  // 镜子（左）与镜前灯
-  vgrad(ctx, 150, 700, '#2c3436', '#1e2426', 160, 860);
-  ctx.fillStyle = '#e8eef0';
-  ctx.fillRect(200, 118, 620, 14);
-  glow(ctx, 510, 130, 520, 'rgba(220,235,240,0.25)');
-  // 镜子里的人（更暗、对着我们这边）
-  ctx.save();
-  ctx.beginPath(); ctx.rect(160, 150, 700, 550); ctx.clip();
-  ctx.globalAlpha = 0.6;
-  pose(ctx, 470, 1010, 1, lt);
-  ctx.restore();
-  // 台面和水池
-  ctx.fillStyle = '#c9cfcc';
-  ctx.fillRect(0, 820, 1250, 260);
-  ctx.fillStyle = '#9aa3a0';
-  ctx.fillRect(0, 820, 1250, 12);
-  L.lit(ctx, (c) => pose(c, 1180, 1010, -1, lt), { light: -2.4, rim: [220, 235, 240], rimA: 0.7, shadow: 0.5, ambient: 0.85, bbox: [850, 200, 600, 880] });
-}
-function pose(c, x, y, f, lt) {
+// 2 刷牙：日光灯下的洗手台，侧面，镜子里是同一个人
+function brushPose(c, x, y, f, lt) {
   c.save();
   c.translate(x, y);
   const b = Math.sin(lt * 34) * 10;
   L.side(c, { h: 980, kind: 'adult', f, yaw: 1, longSleeve: false, sleeve: 0.5,
-    pal: { ...L.PAL.adult, shirt: '#8b9094', jacket: null },
+    pal: { ...L.PAL.adult, shirt: '#9a9fa3', jacket: null },
     pose: { torso: 0.1, neck: 0.12, head: 0.05, reachN: [f * (112 + b * 0.5), -318], handN: Math.PI * 0.8, uArmF: -0.1, fArmF: 0.2 } });
-  // 牙刷
-  c.fillStyle = '#d8dee2';
+  c.fillStyle = '#e4eaee';
   c.save();
   c.translate(f * (122 + b * 0.5), -358);
   c.rotate(f > 0 ? 0.12 : -0.12);
@@ -118,287 +88,329 @@ function pose(c, x, y, f, lt) {
   c.restore();
   c.restore();
 }
-
-// 3 电梯：不锈钢门，楼层数字往下走，背影
-function elevator(ctx, k, lt) {
-  fill(ctx, '#2a2c2e');
-  // 门
-  for (const s of [-1, 1]) {
-    const x0 = s < 0 ? 620 : 960;
-    const g = ctx.createLinearGradient(x0, 0, x0 + 340, 0);
-    g.addColorStop(0, '#5c6164'); g.addColorStop(0.5, '#7b8083'); g.addColorStop(1, '#55595c');
-    ctx.fillStyle = g;
-    ctx.fillRect(x0, 180, 340, 900);
-  }
-  ctx.fillStyle = '#1a1c1e';
-  ctx.fillRect(957, 180, 6, 900);
-  // 门上的楼层显示
-  ctx.fillStyle = '#121314';
-  ctx.fillRect(880, 70, 160, 80);
-  const fl = Math.max(1, Math.round(lerp(12, 1, k)));
-  ctx.fillStyle = '#d0483a';
-  ctx.font = FONT.enMed(58);
-  ctx.textAlign = 'center';
-  ctx.fillText(String(fl).padStart(2, ' '), 960, 130);
-  // 按钮面板
-  ctx.fillStyle = '#4a4e51';
-  ctx.fillRect(1380, 420, 90, 240);
-  ctx.fillStyle = '#c8b27a';
-  for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(1425, 470 + i * 52, 13, 0, Math.PI * 2); ctx.fill(); }
-  glow(ctx, 960, 0, 700, 'rgba(240,236,220,0.18)');
-  // 背影
-  L.lit(ctx, (c) => {
-    c.translate(930, 860);
-    L.bust(c, { h: 1050, kind: 'adult' });
-  }, { light: -1.57, rim: [235, 230, 215], rimA: 0.7, shadow: 0.45, ambient: 0.75, bbox: [650, 300, 560, 780] });
-}
-
-// 4 / 8 地铁：车厢侧面，人物坐着低头看手机，窗外隧道的灯掠过
-function subway(ctx, k, lt, day, night) {
-  fill(ctx, night ? '#262c2c' : '#3a4442');
-  // 车窗带
-  ctx.fillStyle = '#0a0c0e';
-  ctx.beginPath(); ctx.roundRect(120, 190, 1680, 330, 30); ctx.fill();
+function brush(ctx, k, lt) {
+  fill(ctx, '#66726e');
+  ctx.strokeStyle = 'rgba(30,36,34,0.3)';
+  ctx.lineWidth = 2;
+  for (let x = 0; x < W; x += 96) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 96) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  vgrad(ctx, 150, 700, '#3a4446', '#2a3234', 160, 860);
+  ctx.fillStyle = '#eef3f4';
+  ctx.fillRect(200, 118, 620, 14);
+  glow(ctx, 510, 130, 560, 'rgba(225,238,242,0.3)');
   ctx.save();
-  ctx.beginPath(); ctx.roundRect(120, 190, 1680, 330, 30); ctx.clip();
-  const r = rng(night ? 401 : 402);
-  for (let i = 0; i < 14; i++) {
-    const y = 220 + r() * 270, len = 120 + r() * 260;
-    const x = ((r() * 3000 - (lt + i * 0.37) * 4200) % 3000 + 3000) % 3000 - 400;
-    ctx.fillStyle = `rgba(255,220,160,${0.25 + r() * 0.4})`;
-    ctx.fillRect(x, y, len, 3 + r() * 4);
-  }
+  ctx.beginPath(); ctx.rect(160, 150, 700, 550); ctx.clip();
+  ctx.globalAlpha = 0.6;
+  brushPose(ctx, 470, 1010, 1, lt);
   ctx.restore();
-  // 窗间立柱
-  ctx.fillStyle = night ? '#1e2322' : '#2c3432';
-  for (const x of [640, 1290]) ctx.fillRect(x, 190, 40, 330);
-  // 扶杆
-  ctx.fillStyle = '#9ea4a4';
-  ctx.fillRect(1500, 0, 16, 1080);
-  // 座椅
-  ctx.fillStyle = night ? '#2a3546' : '#3a4a62';
-  ctx.beginPath(); ctx.roundRect(0, 580, W, 190, 14); ctx.fill();
-  ctx.fillStyle = night ? '#232d3c' : '#33425a';
-  ctx.fillRect(0, 760, W, 90);
-  ctx.fillStyle = '#1a1d20';
-  ctx.fillRect(0, 850, W, 230);
-  // 人物
-  L.lit(ctx, (c) => {
-    c.translate(900, 770);
-    L.side(c, { h: 840, kind: 'adult', f: 1, yaw: 1, pose: {
-      torso: 0.22, neck: 0.42, head: 0.28,
-      reachN: [205, -150], handN: 2.2, reachF: [190, -160], handF: 2.2,
-      thighN: 1.5, shinN: 0.1, thighF: 1.45, shinF: 0.05, footN: 1.57, footF: 1.57,
-    } });
-    // 手机：屏幕光
-    c.save();
-    c.translate(255, -205);
-    c.rotate(-0.9);
-    c.fillStyle = '#c6d4e6';
-    c.fillRect(-30, -52, 60, 104);
-    c.restore();
-  }, { light: -1.8, rim: night ? [170, 190, 220] : [215, 225, 235], rimA: 0.7, shadow: 0.5, ambient: night ? 0.55 : 0.75, bbox: [750, 220, 500, 700] });
-  glow(ctx, 1160, 560, 180, 'rgba(180,205,240,0.25)');
-  // 前景失焦的站立乘客
-  if (!night) {
-    bystander(ctx, 260, 760, 1300, 0.9);
-    bystander(ctx, 1760, 820, 1250, 0.85);
-  } else {
-    bystander(ctx, 1780, 860, 1200, 0.6);
-  }
+  ctx.fillStyle = '#d4dad7';
+  ctx.fillRect(0, 820, 1250, 260);
+  ctx.fillStyle = '#a4adaa';
+  ctx.fillRect(0, 820, 1250, 12);
+  L.lit(ctx, (c) => brushPose(c, 1180, 1010, -1, lt), { light: -2.4, rim: [225, 238, 242], rimA: 0.7, shadow: 0.45, ambient: 0.95, bbox: [850, 200, 600, 880] });
 }
 
-// 5 / 7 电脑：从背后看，显示器的光；傍晚那一镜窗外变暗
-function desk(ctx, k, lt, day, evening) {
-  fill(ctx, evening ? '#1b1e22' : '#2c3236');
-  // 远处的窗与天光
-  vgrad(ctx, 60, 420, evening ? '#3a2f38' : '#5c6a74', evening ? '#20222a' : '#3c464c', 0, W);
-  ctx.fillStyle = evening ? '#14161a' : '#262c30';
-  for (let x = 0; x < W; x += 240) ctx.fillRect(x, 60, 18, 360);
-  // 远处的工位和屏幕（失焦）
-  L.blurred(ctx, 8, (c) => {
-    c.fillStyle = evening ? '#16181b' : '#22272a';
-    c.fillRect(0, 420, W, 300);
-    for (let i = 0; i < 7; i++) {
-      c.fillStyle = `rgba(190,210,230,${evening ? 0.35 : 0.5})`;
-      c.fillRect(80 + i * 270, 470, 150, 90);
+// 3 地铁：侧面，人物坐在车窗前，黑玻璃里映着他自己
+function subwayPose(c, x, y, lt, o = {}) {
+  c.save();
+  c.translate(x, y);
+  if (o.mirror) c.scale(-1, 1);
+  L.side(c, { h: 860, kind: 'adult', f: 1, yaw: 1, pose: {
+    torso: 0.05, neck: 0.05, head: 0.05 + Math.sin(lt * 1.5) * 0.02,
+    reachN: [150, -110], handN: 2.0, reachF: [140, -116], handF: 2.0,
+    thighN: 1.5, shinN: 0.1, thighF: 1.45, shinF: 0.05, footN: 1.57, footF: 1.57,
+  } });
+  c.restore();
+}
+function subway(ctx, k, lt) {
+  fill(ctx, '#4a5654');
+  const X0 = 360, Y0 = 150, X1 = 1700, Y1 = 600;
+  ctx.fillStyle = '#0d1114';
+  ctx.beginPath(); ctx.roundRect(X0, Y0, X1 - X0, Y1 - Y0, 34); ctx.fill();
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(X0, Y0, X1 - X0, Y1 - Y0, 34); ctx.clip();
+  const r = rng(402);
+  for (let i = 0; i < 10; i++) {
+    const y = Y0 + 30 + r() * (Y1 - Y0 - 60), len = 160 + r() * 300;
+    const x = ((r() * 3000 - (lt + i * 0.37) * 4200) % 3000 + 3000) % 3000 - 400;
+    ctx.fillStyle = `rgba(255,220,160,${0.3 + r() * 0.4})`;
+    ctx.fillRect(x, y, len, 4 + r() * 4);
+  }
+  // 玻璃里的倒影：同一个人，朝着另一边
+  ctx.globalAlpha = 0.42;
+  L.blurred(ctx, 2, (c) => subwayPose(c, 1330, 800, lt, { mirror: true }));
+  ctx.restore();
+  ctx.fillStyle = '#3c4846';
+  ctx.fillRect(0, 600, W, 40);
+  ctx.fillStyle = '#4c5e7a';
+  ctx.beginPath(); ctx.roundRect(0, 640, W, 160, 14); ctx.fill();
+  ctx.fillStyle = '#42526c';
+  ctx.fillRect(0, 790, W, 80);
+  ctx.fillStyle = '#262a2e';
+  ctx.fillRect(0, 870, W, 210);
+  ctx.fillStyle = '#b4baba';
+  ctx.fillRect(250, 0, 16, 1080);
+  L.lit(ctx, (c) => {
+    subwayPose(c, 900, 800, lt);
+    c.save(); c.translate(1062, 690); c.rotate(-1.1);
+    c.fillStyle = '#cfdcee'; c.fillRect(-28, -48, 56, 96);
+    c.restore();
+  }, { light: -1.7, rim: [220, 230, 240], rimA: 0.75, shadow: 0.45, ambient: 0.92, bbox: [760, 200, 520, 700] });
+  glow(ctx, 1060, 640, 200, 'rgba(185,210,240,0.3)');
+}
+
+// 4 办公室：中远景，一排排一模一样的工位和屏幕
+function worker(ctx, x, y, s, k, seed) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(s, s);
+  ctx.fillStyle = '#4a5054';
+  ctx.fillRect(-170, -20, 340, 16);
+  ctx.fillStyle = '#0f1214';
+  ctx.fillRect(-50, -150, 170, 110);
+  ctx.fillStyle = '#c2d0dc';
+  ctx.fillRect(-44, -144, 158, 98);
+  ctx.fillStyle = 'rgba(40,60,80,0.35)';
+  for (let i = 0; i < 6; i++) ctx.fillRect(-36, -134 + i * 14, 90 + ((seed * 7 + i * 13) % 50), 4);
+  ctx.translate(-70, 30);
+  L.bust(ctx, { h: 330, kind: 'adult', arms: true, tilt: Math.sin(k * 6 + seed) * 0.03 });
+  ctx.restore();
+}
+function office(ctx, k, lt) {
+  fill(ctx, '#3a4248');
+  const vx = 960, vy = 330;
+  ctx.fillStyle = '#2c3236';
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(W, 0); ctx.lineTo(vx + 400, vy); ctx.lineTo(vx - 400, vy); ctx.fill();
+  for (let i = 0; i < 6; i++) {
+    const z = 1 / (1 + i * 0.7);
+    const y = vy - 300 * z;
+    ctx.fillStyle = `rgba(236,242,244,${0.5 + 0.4 * z})`;
+    ctx.fillRect(vx - 520 * z, y, 1040 * z, 10 * z + 2);
+  }
+  vgrad(ctx, vy - 40, vy + 160, '#6c7a84', '#4a565e', 520, 1400);
+  ctx.fillStyle = '#42494e';
+  ctx.beginPath(); ctx.moveTo(0, H); ctx.lineTo(W, H); ctx.lineTo(vx + 440, vy + 160); ctx.lineTo(vx - 440, vy + 160); ctx.fill();
+  const rows = [0.32, 0.42, 0.56, 0.76, 1.04];
+  rows.forEach((s, ri) => {
+    const y = vy + 160 + (H - vy - 160) * Math.pow((s - 0.3) / 0.8, 1.1) + 60 * s;
+    const n = Math.round(3 + (1.1 - s) * 6);
+    const gap = 440 * s;
+    for (let i = 0; i < n; i++) {
+      const x = vx + (i - (n - 1) / 2) * gap;
+      if (ri < rows.length - 1) {
+        L.blurred(ctx, (1.1 - s) * 3, (c) => worker(c, x, y, s, k, ri * 10 + i), 0.95);
+      } else {
+        L.lit(ctx, (c) => worker(c, x, y, s, k, ri * 10 + i), { light: -1.6, rim: [200, 220, 240], rimA: 0.6, shadow: 0.35, ambient: 0.9, bbox: [x - 300, y - 400, 600, 500] });
+      }
     }
   });
-  // 天花板灯带
-  if (!evening) { ctx.fillStyle = 'rgba(235,240,240,0.5)'; ctx.fillRect(200, 20, 1500, 10); }
-  // 桌面
-  ctx.fillStyle = '#3c4044';
-  ctx.fillRect(0, 760, W, 320);
-  // 显示器
-  ctx.fillStyle = '#0d0f11';
-  ctx.fillRect(820, 250, 700, 430);
-  ctx.fillRect(1140, 680, 60, 90);
-  ctx.fillStyle = evening ? '#c3d0de' : '#b7c5d2';
-  ctx.fillRect(840, 270, 660, 390);
-  ctx.fillStyle = 'rgba(40,60,80,0.35)';
-  for (let i = 0; i < 12; i++) { ctx.fillRect(870, 300 + i * 28, 600 * (0.5 + 0.5 * ((i * 37) % 10) / 10), 6); }
-  ctx.fillStyle = 'rgba(40,60,80,0.15)';
-  for (let j = 0; j < 6; j++) ctx.fillRect(870 + j * 105, 290, 2, 350);
-  glow(ctx, 1170, 470, 600, `rgba(170,200,235,${evening ? 0.3 : 0.18})`);
-  // 椅背 + 背影
-  L.lit(ctx, (c) => {
-    c.fillStyle = '#141618';
-    c.beginPath(); c.roundRect(470, 760, 420, 400, 30); c.fill();
-    c.translate(680, 820);
-    L.bust(c, { h: 1000, kind: 'adult', tilt: 0.05 });
-  }, { light: -0.35, rim: [185, 210, 240], rimA: 0.8, shadow: 0.55, ambient: evening ? 0.55 : 0.7, bbox: [440, 300, 480, 780] });
+  glow(ctx, 960, 760, 700, 'rgba(180,205,235,0.14)');
 }
 
-// 6 外卖：俯拍桌面，同一个外卖盒
-function lunch(ctx, k, lt) {
-  fill(ctx, '#45484b');
-  L.blurred(ctx, 2, (c) => c.drawImage(L.wallTex(W, H, [70, 72, 75], 611), 0, 0));
-  // 键盘（画面上沿）
-  ctx.fillStyle = '#1f2124';
-  ctx.beginPath(); ctx.roundRect(260, -60, 1100, 230, 20); ctx.fill();
-  ctx.fillStyle = '#2c2f33';
-  for (let i = 0; i < 4; i++) for (let j = 0; j < 15; j++) ctx.fillRect(290 + j * 70, -40 + i * 50, 58, 40);
-  // 外卖盒
-  ctx.save();
-  ctx.translate(900, 640);
-  ctx.rotate(-0.06);
-  ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.beginPath(); ctx.roundRect(-300, -200, 620, 430, 30); ctx.fill();
-  ctx.fillStyle = '#16171a';
-  ctx.beginPath(); ctx.roundRect(-310, -215, 620, 430, 30); ctx.fill();
-  ctx.fillStyle = '#e4ddcf';
-  ctx.beginPath(); ctx.ellipse(-130, 0, 150, 160, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#6a4630';
-  ctx.beginPath(); ctx.roundRect(40, -180, 240, 170, 20); ctx.fill();
-  ctx.fillStyle = '#4c6a3a';
-  ctx.beginPath(); ctx.roundRect(40, 10, 240, 170, 20); ctx.fill();
-  ctx.restore();
-  // 筷子和手
-  const lift = Math.sin(clamp(k) * Math.PI) * 30;
+// 5 回家：门打开，放下包，灯亮了一下
+function home(ctx, k, lt) {
+  const lampOn = smooth(prog(k, 0.62, 0.7));
+  fill(ctx, lampOn > 0 ? `rgb(${Math.round(lerp(40, 92, lampOn))},${Math.round(lerp(42, 84, lampOn))},${Math.round(lerp(46, 72, lampOn))})` : '#282a2e');
+  ctx.fillStyle = `rgba(20,18,16,${0.5 - lampOn * 0.2})`;
+  ctx.fillRect(1260, 300, 260, 190);
+  ctx.fillStyle = '#3a3230';
+  ctx.fillRect(1100, 700, 520, 200);
+  ctx.fillStyle = 'rgba(255,230,190,0.1)';
+  ctx.fillRect(1100, 700, 520, 4);
+  const open = smooth(prog(k, 0.0, 0.3));
+  ctx.fillStyle = '#1a1a1c';
+  ctx.fillRect(520, 200, 360, 700);
+  ctx.fillStyle = `rgba(214,200,170,${0.9 * open})`;
+  ctx.fillRect(520, 200, 360, 700);
+  // 门扇：以左边为轴，向屋里打开（变窄）
+  const dw = 360 * (1 - open * 0.82);
+  ctx.fillStyle = '#4e4036';
+  ctx.beginPath(); ctx.moveTo(520, 200); ctx.lineTo(520 + dw, 200 - open * 30); ctx.lineTo(520 + dw, 900 + open * 30); ctx.lineTo(520, 900); ctx.fill();
+  ctx.fillStyle = '#c8b48a';
+  ctx.beginPath(); ctx.arc(520 + dw - 30 * (1 - open), 560, 8, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = `rgba(214,200,170,${0.25 * open})`;
+  ctx.beginPath(); ctx.moveTo(560, 900); ctx.lineTo(880, 900); ctx.lineTo(1100, 1080); ctx.lineTo(500, 1080); ctx.fill();
+  // 人：走进来，把包放到鞋柜上
+  const walk = smooth(prog(k, 0.15, 0.6));
+  const x = lerp(700, 980, walk);
+  const put = smooth(prog(k, 0.45, 0.62));
   L.lit(ctx, (c) => {
-    c.fillStyle = '#c9b48a';
-    c.save(); c.translate(1330, 900 - lift); c.rotate(-2.55);
-    c.fillRect(0, -6, 520, 10); c.fillRect(0, 12, 520, 10);
-    c.restore();
-    c.fillStyle = '#9c7a64';
-    c.beginPath(); c.ellipse(1370, 930 - lift, 100, 70, -0.6, 0, Math.PI * 2); c.fill();
-    L.limb(c, [1420, 960 - lift], [1700, 1150], 120, 130, '#3a3f45');
-  }, { light: -2.2, rim: [220, 225, 230], rimA: 0.5, shadow: 0.4, ambient: 0.8, bbox: [1100, 700, 700, 400] });
+    c.translate(x, 600);
+    const ph = walk * 6;
+    L.side(c, { h: 760, kind: 'adult', f: 1, yaw: 1, pose: {
+      torso: 0.06 + put * 0.25, neck: 0.1 + put * 0.2, head: 0,
+      thighN: Math.sin(ph) * 0.35 * (1 - put), shinN: Math.sin(ph) * 0.2 - 0.05, thighF: -Math.sin(ph) * 0.35 * (1 - put), shinF: -Math.sin(ph) * 0.2 - 0.05,
+      reachN: [lerp(40, 260, put), lerp(-10, 80, put)], handN: 0.4 + put,
+      uArmF: -Math.sin(ph) * 0.3, fArmF: -Math.sin(ph) * 0.2 + 0.2,
+    } });
+    c.fillStyle = '#2a2420';
+    c.beginPath(); c.roundRect(lerp(10, 230, put), lerp(-30, 70, put), 120, 90, 14); c.fill();
+  }, { light: lampOn > 0 ? -1.6 : Math.PI, rim: lampOn > 0 ? [255, 230, 190] : [230, 215, 185], rimA: 0.8, shadow: 0.5, ambient: lerp(0.7, 0.95, lampOn), bbox: [600, 200, 600, 800] });
+  ctx.fillStyle = lampOn > 0 ? '#fff0d4' : '#5a5650';
+  ctx.beginPath(); ctx.ellipse(1250, 40, 120, 26, 0, 0, Math.PI * 2); ctx.fill();
+  if (lampOn > 0) glow(ctx, 1250, 60, 900, `rgba(255,226,180,${0.22 * lampOn})`);
 }
 
-// 9 床上刷手机：黑暗里只有屏幕光照着侧脸
+// 6 俯拍床和手机：最后屏幕熄灭
 function bed(ctx, k, lt) {
-  fill(ctx, '#101317');
-  // 枕头
-  ctx.fillStyle = '#232931';
-  ctx.beginPath(); ctx.roundRect(200, 600, 470, 230, 90); ctx.fill();
+  const off = smooth(prog(k, 0.78, 0.92));
+  fill(ctx, '#1e2226');
+  ctx.fillStyle = '#3c3430';
+  ctx.fillRect(520, 40, 900, 1100);
+  ctx.fillStyle = '#7c8690';
+  ctx.fillRect(545, 65, 850, 1100);
+  ctx.fillStyle = '#a2acb4';
+  ctx.beginPath(); ctx.roundRect(660, 220, 520, 190, 70); ctx.fill();
+  // 人（仰躺，俯视）：头在枕头上，双手举着手机
   L.lit(ctx, (c) => {
-    c.translate(900, 720);
-    c.rotate(-Math.PI / 2);
-    L.side(c, { h: 900, kind: 'adult', f: 1, yaw: 1, pose: { torso: 0, neck: 0.05, head: -0.1, reachN: [215 + Math.sin(lt * 3) * 4, -330], handN: Math.PI * 0.75, uArmF: -0.2, fArmF: 0.4 } });
-  }, { light: -1.2, rim: [180, 205, 240], rimA: 0.9, shadow: 0.6, ambient: 0.5, bbox: [300, 380, 900, 500] });
-  // 被子盖住身体
-  ctx.fillStyle = '#1c2128';
-  ctx.beginPath(); ctx.moveTo(760, 1080); ctx.quadraticCurveTo(800, 690, 1150, 650); ctx.quadraticCurveTo(1700, 610, 1920, 660); ctx.lineTo(1920, 1080); ctx.fill();
-  // 手机：屏幕朝下照着脸
-  ctx.save();
-  ctx.translate(585, 470);
-  ctx.rotate(-0.25);
-  ctx.fillStyle = '#0a0b0d';
-  ctx.fillRect(-100, -22, 200, 44);
-  ctx.fillStyle = 'rgba(200,215,235,0.9)';
-  ctx.fillRect(-94, 16, 188, 6);
-  ctx.restore();
-  glow(ctx, 560, 560, 300, 'rgba(160,190,235,0.3)');
-}
-
-// 10 关灯：开关特写，手指按下，房间暗掉
-function lightsOff(ctx, k) {
-  fill(ctx, '#3a3632');
-  L.blurred(ctx, 1, (c) => c.drawImage(L.wallTex(W, H, [70, 64, 58], 621), 0, 0));
-  ctx.fillStyle = 'rgba(0,0,0,0.35)';
-  ctx.fillRect(1000, 410, 170, 250);
-  ctx.fillStyle = '#d8d2c6';
-  ctx.beginPath(); ctx.roundRect(990, 400, 170, 250, 12); ctx.fill();
-  const pressed = k > 0.5;
-  ctx.fillStyle = '#c4beb1';
-  ctx.beginPath(); ctx.roundRect(1030, 450, 90, 150, 8); ctx.fill();
-  ctx.fillStyle = pressed ? '#aaa496' : '#e6e0d4';
-  ctx.fillRect(1030, pressed ? 525 : 450, 90, 75);
-  const fx = lerp(1500, 1110, smooth(clamp(k * 2)));
-  L.lit(ctx, (c) => {
-    L.limb(c, [1980, 760], [fx + 230, 620], 150, 120, '#2e3236');
-    c.fillStyle = '#9c7a64';
-    c.beginPath(); c.ellipse(fx + 170, 600, 110, 80, -0.3, 0, Math.PI * 2); c.fill();
-    L.limb(c, [fx + 120, 560], [fx, pressed ? 545 : 500], 44, 36, '#9c7a64');
-  }, { light: -1.9, rim: [255, 230, 200], rimA: 0.5, shadow: 0.5, ambient: 0.8, bbox: [1000, 400, 900, 500] });
-  if (pressed) { ctx.fillStyle = `rgba(5,5,6,${0.82 * smooth(prog(k, 0.5, 0.62))})`; ctx.fillRect(0, 0, W, H); }
+    c.translate(920, 450);
+    L.bust(c, { h: 900, kind: 'adult', front: true, arms: false });
+    // 手臂从肩膀抬到胸前，手机举在下巴下方
+    L.limb(c, [-118, 20], [-62, 70], 62, 52, '#4a5058');
+    L.limb(c, [118, 20], [62, 70], 62, 52, '#4a5058');
+    c.fillStyle = '#a7846c';
+    c.beginPath(); c.ellipse(-56, 80, 30, 36, 0, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.ellipse(56, 80, 30, 36, 0, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#0c0d10';
+    c.beginPath(); c.roundRect(-66, 30, 132, 220, 16); c.fill();
+  }, { light: -1.57, rim: [190, 210, 240], rimA: 0.6 * (1 - off), shadow: 0.45, ambient: 0.85, bbox: [700, 200, 450, 700] });
+  ctx.fillStyle = '#56626e';
+  ctx.beginPath(); ctx.moveTo(545, 600); ctx.quadraticCurveTo(960, 560, 1395, 610); ctx.lineTo(1395, 1080); ctx.lineTo(545, 1080); ctx.fill();
+  ctx.strokeStyle = 'rgba(30,36,42,0.4)';
+  ctx.lineWidth = 6;
+  for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(600 + i * 200, 650); ctx.quadraticCurveTo(650 + i * 210, 850, 620 + i * 200, 1080); ctx.stroke(); }
+  glow(ctx, 920, 400, 420, `rgba(175,200,240,${0.35 * (1 - off)})`);
+  if (off > 0) { ctx.fillStyle = `rgba(6,7,9,${0.6 * off})`; ctx.fillRect(0, 0, W, H); }
 }
 
 const SHOTS = [
-  { fn: alarm, light: () => [{ x: 760, y: 760, rx: 640, ry: 420, i: 0.95, color: COOL }, { x: 1300, y: 640, rx: 700, ry: 400, i: 0.5 }] },
-  { fn: brush, light: () => [{ x: 900, y: 420, rx: 1000, ry: 700, i: 0.9, color: COOL }] },
-  { fn: elevator, light: () => [{ x: 960, y: 420, rx: 900, ry: 760, i: 0.9, color: [240, 232, 210] }] },
-  { fn: (c, k, lt, d) => subway(c, k, lt, d, false), light: () => [{ x: 960, y: 520, rx: 1300, ry: 650, i: 0.9, color: COOL }] },
-  { fn: (c, k, lt, d) => desk(c, k, lt, d, false), light: () => [{ x: 1000, y: 520, rx: 1100, ry: 700, i: 0.9, color: COOL }] },
-  { fn: lunch, light: () => [{ x: 1000, y: 620, rx: 1100, ry: 700, i: 0.9 }] },
-  { fn: (c, k, lt, d) => desk(c, k, lt, d, true), light: () => [{ x: 1100, y: 500, rx: 900, ry: 650, i: 0.85, color: COOL }] },
-  { fn: (c, k, lt, d) => subway(c, k, lt, d, true), light: () => [{ x: 1000, y: 500, rx: 1000, ry: 560, i: 0.75, color: COOL }] },
-  { fn: bed, light: () => [{ x: 560, y: 600, rx: 600, ry: 460, i: 0.85, color: COOL }] },
-  { fn: lightsOff, light: () => [{ x: 1080, y: 540, rx: 800, ry: 600, i: 0.8, color: [255, 220, 180] }] },
+  { fn: alarm, light: () => [{ x: 760, y: 760, rx: 700, ry: 460, i: 1, color: COOL }, { x: 1300, y: 640, rx: 760, ry: 460, i: 0.7 }] },
+  { fn: brush, light: () => [{ x: 900, y: 440, rx: 1100, ry: 760, i: 1, color: COOL }] },
+  { fn: subway, light: () => [{ x: 1000, y: 520, rx: 1300, ry: 700, i: 1, color: COOL }] },
+  { fn: office, light: () => [{ x: 960, y: 640, rx: 1400, ry: 760, i: 1, color: COOL }] },
+  { fn: home, light: (k) => [{ x: 700, y: 560, rx: 600, ry: 600, i: 0.9 }, { x: 1150, y: 400, rx: 1100, ry: 700, i: 0.95 * smooth(prog(k, 0.62, 0.7)) + 0.05 }] },
+  { fn: bed, light: (k) => [{ x: 920, y: 420, rx: 800, ry: 700, i: 1 - 0.6 * smooth(prog(k, 0.78, 0.92)), color: COOL }] },
 ];
 
-// ---------------- 地铁车窗：倒影 ----------------
-const R0 = T0 + DAYS.reduce((a, d) => a + d.dur * SHOTS.length, 0); // 18.25
-function reflection(ctx, lt, d) {
-  fill(ctx, '#1e2322');
-  // 车窗
-  const X0 = 260, Y0 = 110, X1 = 1760, Y1 = 830;
-  ctx.fillStyle = '#07090b';
-  ctx.beginPath(); ctx.roundRect(X0, Y0, X1 - X0, Y1 - Y0, 40); ctx.fill();
-  ctx.save();
-  ctx.beginPath(); ctx.roundRect(X0, Y0, X1 - X0, Y1 - Y0, 40); ctx.clip();
-  // 隧道：管线和一道道掠过的灯
-  ctx.strokeStyle = 'rgba(70,74,70,0.5)';
-  ctx.lineWidth = 4;
-  for (const y of [260, 300, 690]) { ctx.beginPath(); ctx.moveTo(X0, y); ctx.lineTo(X1, y + 4); ctx.stroke(); }
-  const r = rng(501);
-  for (let i = 0; i < 9; i++) {
-    const per = 0.55 + r() * 0.3, y = 200 + r() * 520;
-    const x = X1 + 300 - (((lt + r() * per) % per) / per) * (X1 - X0 + 900);
-    ctx.fillStyle = 'rgba(255,214,150,0.55)';
-    ctx.filter = 'blur(3px)';
-    ctx.fillRect(x, y, 420, 6);
-    ctx.filter = 'none';
+// ---------------- 重影 ----------------
+const GH = createCanvas(W, H), GHx = GH.getContext('2d');
+function renderShot(fn, k, lt, day) {
+  GHx.setTransform(1, 0, 0, 1, 0, 0);
+  GHx.globalAlpha = 1;
+  GHx.globalCompositeOperation = 'source-over';
+  GHx.filter = 'none';
+  GHx.clearRect(0, 0, W, H);
+  fn(GHx, k, lt, day);
+}
+// mode 0：正常；1：叠一层「昨天」；2：几条轨迹叠在一起；3：只剩残影
+function drawDay(ctx, S, k, lt, D) {
+  if (D.mode === 0) { S.fn(ctx, k, lt, D.day); return; }
+  const layers = D.mode === 1 ? [[0, 0, 0, 1], [-0.3, 14, -6, 0.38]]
+    : D.mode === 2 ? [[0, 0, 0, 0.62], [-0.25, 22, -8, 0.3], [-0.5, -18, 10, 0.26], [0.25, 36, 4, 0.22]]
+      : [[0, 0, 0, 0.3], [-0.2, 26, -10, 0.24], [-0.4, -22, 12, 0.22], [0.2, 44, 6, 0.2], [-0.6, -40, -4, 0.18]];
+  S.fn(ctx, clamp(k + layers[0][0]), lt, D.day);
+  if (D.mode === 3) {
+    // 残影：底色压暗，画面只剩重复动作的痕迹
+    ctx.fillStyle = 'rgba(14,15,17,0.72)';
+    ctx.fillRect(0, 0, W, H);
   }
-  // 倒影：正对玻璃的人，说到「没有留在记忆里」时淡掉
-  const fade = 1 - smooth(prog(d, 19.9, 21.2));
-  ctx.globalCompositeOperation = 'screen';
-  L.blurred(ctx, lerp(9, 2, fade), (c) => {
-    c.translate(1160, 840);
-    L.bust(c, { h: 1300, front: true, pal: { skin: '#a49a90', hair: '#2a2826', shirt: '#4a5056', jacket: '#4a5056' } });
-    // 车厢里的扶杆和灯在玻璃上的反光
-    c.fillStyle = '#4d5452';
-    c.fillRect(600, -900, 14, 1200);
-    c.fillStyle = '#9aa0a0';
-    c.fillRect(-1200, -760, 3000, 8);
-  }, 0.85 * fade + 0.05);
-  ctx.globalCompositeOperation = 'source-over';
-  // 玻璃上的一道冷光
-  const g = ctx.createLinearGradient(X0, Y0, X1, Y1);
-  g.addColorStop(0, 'rgba(200,220,230,0.06)');
-  g.addColorStop(0.35, 'rgba(200,220,230,0)');
-  ctx.fillStyle = g;
-  ctx.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
-  ctx.restore();
-  // 窗下的车厢壁
-  ctx.fillStyle = '#2e3534';
-  ctx.fillRect(0, 870, W, 210);
-  // 前景：人物的后脑和肩膀（过肩）
-  L.lit(ctx, (c) => {
-    c.translate(420 + lt * 4, 1010);
-    L.bust(c, { h: 1600, kind: 'adult', tilt: 0.08 });
-  }, { light: -0.3, rim: [190, 210, 230], rimA: 0.85, rimW: 4, shadow: 0.55, ambient: 0.6, bbox: [60, 480, 760, 600] });
+  for (let i = 1; i < layers.length; i++) {
+    const [dk, dx, dy, a] = layers[i];
+    renderShot(S.fn, clamp(k + dk), lt + dk * 0.3, D.day);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha *= a;
+    ctx.globalCompositeOperation = D.mode === 3 ? 'screen' : 'source-over';
+    if (D.mode === 3) ctx.filter = 'blur(3px) grayscale(0.6)';
+    ctx.drawImage(GH, dx, dy);
+    ctx.restore();
+  }
+}
+
+// ---------------- 记忆卡片：浮现 → 叠起 → 模糊 → 压扁 → 消失 ----------------
+const C0 = T0 + DAYS.reduce((a, d) => a + d.dur * SHOTS.length, 0); // ≈ 17.68
+const CARD_W = 520, CARD_H = 293;
+const CARDS = [
+  { shot: 3, x: 560, y: 360, rot: -0.05, at: 0.0 },   // 办公室
+  { shot: 2, x: 1370, y: 330, rot: 0.04, at: 0.2 },   // 地铁
+  { shot: 5, x: 820, y: 700, rot: 0.03, at: 0.4 },    // 床
+  { shot: 0, x: 1250, y: 720, rot: -0.04, at: 0.55 }, // 手机闹钟
+  { shot: 1, x: 420, y: 760, rot: 0.06, at: 0.7 },    // 刷牙
+  { shot: 4, x: 1560, y: 560, rot: -0.03, at: 0.85 }, // 回家
+];
+let cardCache = null;
+function cards() {
+  if (cardCache) return cardCache;
+  cardCache = CARDS.map((c) => {
+    renderShot(SHOTS[c.shot].fn, 0.55, 0.3, '周一');
+    const cv = createCanvas(CARD_W, CARD_H);
+    const x = cv.getContext('2d');
+    x.drawImage(GH, 0, 0, CARD_W, CARD_H);
+    // 冷一点、暗一点，像褪了色的记忆
+    x.fillStyle = 'rgba(20,24,30,0.25)';
+    x.fillRect(0, 0, CARD_W, CARD_H);
+    const v = x.createRadialGradient(CARD_W / 2, CARD_H / 2, CARD_H * 0.3, CARD_W / 2, CARD_H / 2, CARD_W * 0.6);
+    v.addColorStop(0, 'rgba(0,0,0,0)');
+    v.addColorStop(1, 'rgba(0,0,0,0.45)');
+    x.fillStyle = v;
+    x.fillRect(0, 0, CARD_W, CARD_H);
+    return cv;
+  });
+  return cardCache;
+}
+function memory(ctx, d) {
+  const t = d - C0;
+  fill(ctx, '#121417');
+  const stack = smooth(prog(t, 1.25, 2.15));  // 叠到一起
+  const blur = smooth(prog(t, 1.9, 2.9));     // 变模糊
+  const squash = smooth(prog(t, 2.55, 3.35)); // 压扁成一条线
+  const vanish = smooth(prog(t, 3.2, 3.9));   // 消失
+  const cs = cards();
+  CARDS.forEach((c, i) => {
+    const a = smooth(prog(t, c.at, c.at + 0.25)) * (1 - vanish);
+    if (a <= 0.01) return;
+    const x = lerp(c.x, 960 + (i - 2.5) * 6, stack) + noise1(t * 0.5, 300 + i) * 8;
+    const y = lerp(c.y, 520 + (i - 2.5) * 4, stack) + noise1(t * 0.5, 320 + i) * 6;
+    const s = lerp(1, 1.15, stack) * (1 + t * 0.01);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(c.rot * (1 - stack));
+    ctx.scale(s * lerp(1, 1.6, squash), s * lerp(1, 0.012, squash));
+    ctx.globalAlpha *= a * lerp(1, 0.55, stack);
+    if (blur > 0.02) ctx.filter = `blur(${(blur * 9).toFixed(1)}px)`;
+    // 白边（冲印照片）
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(-CARD_W / 2 - 8, -CARD_H / 2 - 4, CARD_W + 24, CARD_H + 26);
+    ctx.fillStyle = '#d8d2c4';
+    ctx.fillRect(-CARD_W / 2 - 14, -CARD_H / 2 - 14, CARD_W + 28, CARD_H + 28);
+    ctx.drawImage(cs[i], -CARD_W / 2, -CARD_H / 2);
+    ctx.restore();
+  });
+  // 最后：几条极淡的光线 + 一条空白的时间轴
+  const lines = smooth(prog(t, 3.1, 3.8));
+  if (lines > 0) {
+    ctx.save();
+    ctx.globalAlpha = lines;
+    const g = ctx.createLinearGradient(160, 0, W - 160, 0);
+    g.addColorStop(0, 'rgba(220,214,200,0)');
+    g.addColorStop(0.5, 'rgba(220,214,200,0.45)');
+    g.addColorStop(1, 'rgba(220,214,200,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(160, 519, W - 320, 2);
+    // 几个很淡的刻度：日子在，但什么也没留下
+    for (let i = 0; i < 24; i++) {
+      const x = 260 + i * 60;
+      ctx.fillStyle = `rgba(220,214,200,${0.12 + 0.08 * Math.sin(i * 1.7)})`;
+      ctx.fillRect(x, 512, 1, 16);
+    }
+    const r = rng(612);
+    for (let i = 0; i < 5; i++) {
+      const y = 380 + r() * 300, len = 300 + r() * 600, x = 200 + r() * 1100;
+      ctx.fillStyle = `rgba(200,210,225,${0.05 + r() * 0.05})`;
+      ctx.fillRect(x + t * 10 * (r() - 0.5), y, len, 1);
+    }
+    ctx.restore();
+  }
 }
 
 // ---------------- 序列 ----------------
@@ -409,15 +421,20 @@ DAYS.forEach((D, di) => {
     const dur = D.dur;
     list.push({
       at: t,
-      draw: (ctx, lt) => S.fn(ctx, clamp(lt / dur), lt + di * 0.37 + si * 0.11, D.day),
-      light: (lt) => S.light(lt),
-      grade: { warm: si === 9 ? 0.1 : -0.4, ambient: 0.22 },
+      draw: (ctx, lt) => drawDay(ctx, S, clamp(lt / dur), lt + di * 0.37 + si * 0.11, D),
+      light: (lt) => S.light(clamp(lt / dur)),
+      grade: { warm: si === 4 ? 0.1 : -0.3, ambient: D.mode === 3 ? 0.26 : 0.34 },
     });
     t += dur;
   });
 });
-list.push({ at: R0, draw: (ctx, lt, d) => reflection(ctx, lt, d), light: () => [{ x: 1150, y: 520, rx: 1000, ry: 600, i: 0.95, color: COOL }, { x: 420, y: 800, rx: 560, ry: 420, i: 0.7 }], grade: { warm: -0.45, ambient: 0.2 } });
+list.push({
+  at: C0,
+  draw: (ctx, lt, d) => memory(ctx, d),
+  light: (lt) => [{ x: 960, y: 530, rx: 1300, ry: 700, i: 0.95 * (1 - smooth(prog(lt, 3.2, 4.2))) + 0.25 }],
+  grade: { warm: -0.2, ambient: 0.3 },
+});
 const seq = L.sequence(list, 0);
 
-const S = { start: T0, end: 23.0 };
-module.exports = { ...S, draw: (ctx, d) => seq.draw(ctx, d), light: (d) => seq.light(d), grade: (d) => seq.grade(d), R0 };
+const S = { start: T0, end: 24.0 };
+module.exports = { ...S, draw: (ctx, d) => seq.draw(ctx, d), light: (d) => seq.light(d), grade: (d) => seq.grade(d), C0, DAYS, SHOT_COUNT: SHOTS.length };

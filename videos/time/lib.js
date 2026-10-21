@@ -414,6 +414,49 @@ function blurred(ctx, px, fn, alpha = 1) {
   ctx.restore();
 }
 
+// 记忆里的光：高光向外晕开一点（halation），只给童年段用
+const HB = createCanvas(W / 8, H / 8), HBx = HB.getContext('2d');
+function halation(ctx, amount = 0.3, tint = [255, 200, 140]) {
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  HBx.globalCompositeOperation = 'source-over';
+  HBx.filter = 'none';
+  HBx.drawImage(ctx.canvas, 0, 0, W / 8, H / 8);
+  // 只留亮部：先压暗再提对比
+  HBx.globalCompositeOperation = 'multiply';
+  HBx.drawImage(HB, 0, 0);
+  HBx.drawImage(HB, 0, 0);
+  HBx.globalCompositeOperation = 'multiply';
+  HBx.fillStyle = `rgb(${tint.join(',')})`;
+  HBx.fillRect(0, 0, W / 8, H / 8);
+  ctx.globalCompositeOperation = 'screen';
+  ctx.globalAlpha = amount;
+  ctx.filter = 'blur(28px)';
+  ctx.drawImage(HB, 0, 0, W, H);
+  ctx.restore();
+}
+
+// 空气里的灰尘：只在光柱里亮
+function dust(ctx, t, o = {}) {
+  const { n = 90, seed = 5, x0 = 0, y0 = 0, x1 = W, y1 = H, inBeam = () => 1, size = 1, alpha = 1 } = o;
+  const r = rng(seed);
+  ctx.save();
+  ctx.globalCompositeOperation = 'screen';
+  for (let i = 0; i < n; i++) {
+    const bx = r(), by = r(), sp = 0.3 + r() * 0.7, sz = (0.8 + r() * r() * 2.6) * size, ph = r() * 10;
+    const x = x0 + ((bx * (x1 - x0) + noise1(t * 0.25 * sp + ph, seed + i) * 60 + t * 8 * sp) % (x1 - x0) + (x1 - x0)) % (x1 - x0);
+    const y = y0 + ((by * (y1 - y0) + noise1(t * 0.2 * sp + ph, seed + i + 50) * 50 - t * 5 * sp) % (y1 - y0) + (y1 - y0)) % (y1 - y0);
+    const b = inBeam(x, y);
+    if (b <= 0.02) continue;
+    const tw = 0.6 + 0.4 * Math.sin(t * (2 + r() * 3) + ph);
+    ctx.fillStyle = `rgba(255,236,200,${0.75 * b * tw * alpha})`;
+    ctx.beginPath();
+    ctx.arc(x, y, sz, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 // 带纹理的墙 / 平面（缓存）
 const texCache = new Map();
 function wallTex(w, h, rgb, seed, o = {}) {
@@ -435,4 +478,4 @@ function wallTex(w, h, rgb, seed, o = {}) {
   return c;
 }
 
-module.exports = { ik2, withCam, drift, sequence, side, bust, head, limb, lit, blurred, wallTex, shade, PAL, BODY, W, H, C, FONT, rng, hash, noise1, lerp, clamp, prog, smooth };
+module.exports = { halation, dust, ik2, withCam, drift, sequence, side, bust, head, limb, lit, blurred, wallTex, shade, PAL, BODY, W, H, C, FONT, rng, hash, noise1, lerp, clamp, prog, smooth };

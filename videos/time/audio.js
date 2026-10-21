@@ -120,37 +120,53 @@ function click(seed) {
   return b;
 }
 
+// 门开、包放下
+function thud(seed) {
+  const b = buf(0.3), r = rng(seed), lp = biquad('lp', 400);
+  for (let i = 0; i < b.length; i++) { const t = i / SR; b[i] = lp(r() * 2 - 1) * Math.exp(-t * 25) * 2 + Math.sin(2 * Math.PI * 90 * t) * Math.exp(-t * 30) * 0.4; }
+  return b;
+}
+// 卡片消失时很轻的一阵「吸走」：低通噪声由强到无
+function fadeAway(seed, dur) {
+  const b = buf(dur), r = rng(seed), lp = biquad('lp', 900);
+  for (let i = 0; i < b.length; i++) { const t = i / SR, k = t / dur; b[i] = lp(r() * 2 - 1) * Math.sin(Math.PI * Math.min(1, k * 1.3)) * (1 - k) * 0.9; }
+  return b;
+}
+
 const CUES = [
-  // 童年
-  { t: 0, fx: () => cicadas(11, 6.4), gain: 0.14 },
-  { t: 0, fx: () => air(12, 6.4), gain: 0.05 },
-  { t: 3.62, fx: () => bell(13), gain: 0.12, pan: 0.3 },
-  { t: 5.0, fx: () => rain(14, 0.62), gain: 0.16 },
-  { t: 5.55, fx: () => fan(15, 0.62), gain: 0.07 },
-  { t: 6.0, fx: () => paper(16, 0.5), gain: 0.08 },
-  // 一年：每翻一个月一声很轻的「嗒」
-  ...[7.55, 8.1, 8.5, 8.8].map((t, i) => ({ t, fx: () => tick(17 + i), gain: 0.07 })),
+  // 童年：蝉鸣贯穿窗边和碎片
+  { t: 0, fx: () => cicadas(11, 6.0), gain: 0.15 },
+  { t: 0, fx: () => air(12, 6.0), gain: 0.05 },
+  { t: 2.0, fx: () => rain(14, 0.55), gain: 0.16 },
+  { t: 3.0, fx: () => fan(15, 0.75), gain: 0.08 },
+  { t: 4.5, fx: () => bell(13), gain: 0.12, pan: 0.3 },
+  { t: 5.2, fx: () => rain(19, 0.5), gain: 0.06 },
+  { t: 5.9, fx: () => paper(16, 0.5), gain: 0.08 },
+  // 一年：月份滚过时很轻的「嗒」
+  ...[7.0, 7.62, 8.12, 8.52].map((t, i) => ({ t, fx: () => tick(17 + i), gain: 0.07 })),
 ];
 
-// 通勤：与 scenes/t3_commute.js 的镜头时间一致
-const T0 = 10.25;
-const DURS = [0.42, 0.22, 0.16];
+// 日子：与 scenes/t3_commute.js 的镜头时间一致（6 个镜头 × 5 天）。第三天起声音也开始叠影。
+const T0 = 10.0;
+const DAYS = [[0.45, 0], [0.28, 0], [0.22, 1], [0.18, 2], [0.15, 3]];
 let t = T0;
-DURS.forEach((d, di) => {
+DAYS.forEach(([d, mode], di) => {
   const at = (k) => t + k * d;
-  const g = 1 - di * 0.15;
-  CUES.push(
-    { t: at(0), fx: () => alarm(Math.max(0.12, d * 0.9)), gain: 0.09 * g },
-    { t: at(2) + d * 0.5, fx: () => ding(), gain: 0.07 * g },
-    { t: at(3), fx: () => rumble(30 + di, d * 1.05, false), gain: 0.18 * g },
-    { t: at(4), fx: () => keys(40 + di, d * 0.95), gain: 0.06 * g },
-    { t: at(6), fx: () => keys(43 + di, d * 0.95), gain: 0.06 * g },
-    { t: at(7), fx: () => rumble(33 + di, d * 1.05, false), gain: 0.16 * g },
-    { t: at(9) + d * 0.5, fx: () => click(50 + di), gain: 0.12 * g },
-  );
-  t += d * 10;
+  const g = 1 - di * 0.12;
+  const echoes = mode === 0 ? [[0, 1]] : mode === 1 ? [[0, 1], [0.07, 0.4]] : mode === 2 ? [[0, 0.8], [0.06, 0.4], [0.11, 0.3]] : [[0.03, 0.4], [0.08, 0.3], [0.14, 0.25]];
+  for (const [e, eg] of echoes) {
+    CUES.push(
+      { t: at(0) + e, fx: () => alarm(Math.max(0.12, d * 0.9)), gain: 0.09 * g * eg },
+      { t: at(2) + e, fx: () => rumble(30 + di, d * 1.05, false), gain: 0.18 * g * eg },
+      { t: at(3) + e, fx: () => keys(40 + di, d * 0.95), gain: 0.07 * g * eg },
+      { t: at(4) + e, fx: () => thud(45 + di), gain: 0.06 * g * eg },
+      { t: at(4) + d * 0.64 + e, fx: () => click(50 + di), gain: 0.12 * g * eg },
+    );
+  }
+  t += d * 6;
 });
-// 地铁车窗：持续的车厢声
-CUES.push({ t, fx: () => rumble(60, 4.4), gain: 0.2 });
+// 记忆卡片：一张张落下 → 叠起 → 被吸走
+[0, 0.2, 0.4, 0.55, 0.7, 0.85].forEach((o, i) => CUES.push({ t: t + o, fx: () => paper(60 + i, 0.3), gain: 0.06 }));
+CUES.push({ t: t + 1.9, fx: () => fadeAway(70, 1.6), gain: 0.12 });
 
 module.exports = CUES;

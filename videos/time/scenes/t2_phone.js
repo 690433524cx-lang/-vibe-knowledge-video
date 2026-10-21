@@ -3,14 +3,25 @@
 //   6.5–6.9   内容转场：日历上的「7 月」→ 手机锁屏上的月份（同一位置叠化）。
 //   6.75–10.3 成年人的手拿着手机：JAN → MAR → JUN → SEP → DEC，越翻越快；DEC 停住，屏幕自动熄灭。
 const L = require('../lib');
-const { W, H, FONT, rng, noise1, lerp, prog, smooth } = L;
+const { W, H, FONT, rng, noise1, lerp, clamp, prog, smooth } = L;
 const { spring } = require('../../../src/lib/motion');
 const summer = require('./t1_summer');
 
-const S = { start: 5.9, end: 10.35 };
-const CAL0 = 5.95, PH0 = 6.55, MIXD = 0.35;
-const MONTHS = [['JAN', 6.55], ['MAR', 7.55], ['JUN', 8.1], ['SEP', 8.5], ['DEC', 8.8]];
-const OFF0 = 9.75, OFF1 = 10.15; // 屏幕变暗 → 熄灭
+const S = { start: 5.85, end: 10.05 };
+const CAL0 = 5.9, PH0 = 6.35, MIXD = 0.3;
+const NAMES = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+// 月份转盘：停在 JAN / MAR / JUN / SEP / DEC，中间的月份一闪而过（越来越快）
+const REEL = [[6.35, 0], [7.0, 0], [7.4, 2], [7.62, 2], [7.98, 5], [8.12, 5], [8.42, 8], [8.52, 8], [8.8, 11]];
+function reelPos(d) {
+  if (d <= REEL[0][0]) return 0;
+  for (let i = 1; i < REEL.length; i++) {
+    const [t1, p1] = REEL[i], [t0, p0] = REEL[i - 1];
+    if (d <= t1) return lerp(p0, p1, (k => k * k * (3 - 2 * k))((d - t0) / (t1 - t0)));
+  }
+  return 11;
+}
+const MONTHS = [['JAN', 6.35], ['MAR', 7.4], ['JUN', 7.98], ['SEP', 8.42], ['DEC', 8.8]];
+const OFF0 = 9.55, OFF1 = 9.95; // 屏幕变暗 → 熄灭
 
 // 日历特写：从窗边那一镜的日历位置推进
 function drawCalendar(ctx, d) {
@@ -42,13 +53,13 @@ function monthAt(d) {
 
 const PHONE = { x: 985, y: 510, w: 420, h: 860, r: 54, rot: -0.07 };
 // 锁屏壁纸随季节换一点色温
-const TINT = { JAN: ['#26303c', '#11161d'], MAR: ['#2b3530', '#121813'], JUN: ['#33352c', '#17170f'], SEP: ['#3a3029', '#171210'], DEC: ['#262a33', '#0f1116'] };
+const TINT = { JAN: ['#26303c', '#11161d'], FEB: ['#28323a', '#12161b'], MAR: ['#2b3530', '#121813'], APR: ['#2d3630', '#131812'], MAY: ['#30362d', '#151710'], JUN: ['#33352c', '#17170f'], JUL: ['#36342a', '#18160f'], AUG: ['#38322a', '#18140f'], SEP: ['#3a3029', '#171210'], OCT: ['#362e2a', '#161110'], NOV: ['#2e2c30', '#121114'], DEC: ['#262a33', '#0f1116'] };
 
 function screen(ctx, d, on) {
-  const [m, prev, k, idx] = monthAt(d);
+  const [m] = monthAt(d);
   const { w, h } = PHONE;
   // 壁纸
-  const [a, b] = TINT[m];
+  const [a, b] = TINT[NAMES[Math.round(reelPos(d))]] || TINT[m];
   const g = ctx.createLinearGradient(0, -h / 2, 0, h / 2);
   g.addColorStop(0, a);
   g.addColorStop(1, b);
@@ -72,22 +83,29 @@ function screen(ctx, d, on) {
   ctx.fillText('7:12', -w / 2 + 40, -h / 2 + 52);
   ctx.textAlign = 'right';
   ctx.fillRect(w / 2 - 74, -h / 2 + 34, 34, 16);
-  // 月份：大字，旧的向上滑走，新的从下面升上来
+  // 月份转盘：快的时候有运动模糊（往上拖出残影）
+  const pos = reelPos(d), speed = Math.abs(reelPos(d + 0.01) - pos) / 0.01;
   ctx.save();
   ctx.beginPath();
-  ctx.rect(-w / 2, -h / 2 + 90, w, 220);
+  ctx.rect(-w / 2, -h / 2 + 108, w, 196);
   ctx.clip();
   ctx.textAlign = 'center';
   ctx.font = FONT.enMed(150);
   ctx.letterSpacing = '6px';
-  const y0 = -h / 2 + 250;
-  if (prev && k < 1) {
-    ctx.fillStyle = `rgba(240,234,222,${1 - k})`;
-    ctx.fillText(prev, 0, y0 - k * 150);
+  const y0 = -h / 2 + 250, step = 165;
+  const blurN = Math.min(6, Math.round(speed * 0.5));
+  for (let i = Math.floor(pos) - 1; i <= Math.ceil(pos) + 1; i++) {
+    if (i < 0 || i > 11) continue;
+    const dy = (i - pos) * step;
+    const a = clamp(1 - Math.abs(i - pos) * 0.9);
+    if (a <= 0) continue;
+    for (let k = 0; k <= blurN; k++) {
+      ctx.fillStyle = `rgba(240,234,222,${a / (1 + blurN) * (k === 0 ? 1.4 : 1)})`;
+      ctx.fillText(NAMES[i], 0, y0 + dy - k * speed * 2.2);
+    }
   }
-  ctx.fillStyle = `rgba(240,234,222,${prev ? k : 1})`;
-  ctx.fillText(m, 0, y0 + (1 - k) * 150);
   ctx.restore();
+  const idx = Math.min(4, MONTHS.filter((m) => d >= m[1]).length - 1);
   // 日期 + 星期（小）
   ctx.textAlign = 'center';
   ctx.font = FONT.en(30);
