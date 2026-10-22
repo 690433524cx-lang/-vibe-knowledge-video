@@ -701,12 +701,20 @@ const SHOTS = [
   [4.44, shotRideHome],
   [5.16, shotPuddle],
 ];
+// 每个记忆一个日期：一个暑假，被记住的是一天一天
+const STAMPS = ['JUL 14', 'JUL 16', 'JUL 19', 'JUL 23', 'JUL 27', 'AUG 02', 'AUG 09', 'AUG 17'];
 const seq = L.sequence(SHOTS.map(([at, fn], i) => ({ at, draw: (ctx, lt) => fn(ctx, lt + (i ? MIX : 0)) })), MIX);
 const M_END = 5.9;
 const S = { start: 0, end: M_END + 0.25 };
 
 function draw(ctx, d) { seq.draw(ctx, d); }
-function drawOver(ctx, d) { L.halation(ctx, 0.32 * (1 - smooth(prog(d, M_END - 0.1, M_END + 0.2)))); }
+function drawOver(ctx, d) {
+  const out = 1 - smooth(prog(d, M_END - 0.1, M_END + 0.2));
+  L.halation(ctx, 0.32 * out);
+  // 日期印画在光照之后，保持清楚
+  const i = seq.at(d);
+  L.dateStamp(ctx, STAMPS[i], { alpha: smooth(prog(d - SHOTS[i][0], 0.04, 0.16)) * out });
+}
 
 function light(d) {
   if (d < 1.5) return [

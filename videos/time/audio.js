@@ -1,7 +1,8 @@
 // 《时间错觉》声音（设计时间）。没有指定 BGM：不加任何旋律型音乐，只有环境声和少量关键音效。
 // 童年：蝉鸣、自行车铃、雨、电扇；成年：闹钟、电梯、地铁、键盘、开关。全部由代码合成，克制。
 const { biquad, rng, SR, synth } = require('../../src/audio');
-const { paper, tick } = synth;
+const { DESIGN_T } = require('../../src/config');
+const { paper, tick, impact, scrollTicks, door } = synth;
 
 const buf = (sec) => new Float32Array(Math.ceil(sec * SR));
 const env = (t, dur, a = 0.05, r = 0.3) => Math.min(1, t / a) * Math.min(1, Math.max(0, (dur - t) / r));
@@ -168,5 +169,60 @@ DAYS.forEach(([d, mode], di) => {
 // 记忆卡片：一张张落下 → 叠起 → 被吸走
 [0, 0.2, 0.4, 0.55, 0.7, 0.85].forEach((o, i) => CUES.push({ t: t + o, fx: () => paper(60 + i, 0.3), gain: 0.06 }));
 CUES.push({ t: t + 1.9, fx: () => fadeAway(70, 1.6), gain: 0.12 });
+
+// 海浪：低通噪声一涌一退
+function waves(seed, dur) {
+  const b = buf(dur), r = rng(seed), lp = biquad('lp', 700), lp2 = biquad('lp', 2400);
+  for (let i = 0; i < b.length; i++) {
+    const t = i / SR, sw = 0.5 + 0.5 * Math.sin(2 * Math.PI * 0.35 * t - 1.2);
+    b[i] = (lp(r() * 2 - 1) * 1.4 + lp2(r() * 2 - 1) * 0.4 * sw * sw) * (0.4 + 0.6 * sw) * env(t, dur, 0.3, 0.6);
+  }
+  return b;
+}
+// 城市夜声：很远的车流
+function cityNight(seed, dur) {
+  const b = buf(dur), r = rng(seed), lp = biquad('lp', 260), bp = biquad('bp', 900, 0.6);
+  for (let i = 0; i < b.length; i++) {
+    const t = i / SR;
+    b[i] = (lp(r() * 2 - 1) * 1.6 + bp(r() * 2 - 1) * 0.25 * (0.5 + 0.5 * Math.sin(t * 0.7))) * env(t, dur, 1.2, 1.5);
+  }
+  return b;
+}
+
+// 4 第一次：空气声 + 每一格一点点它自己的声音
+CUES.push(
+  { t: 22.7, fx: () => air(80, 11), gain: 0.06 },
+  { t: 24.6, fx: () => rumble(81, 1.6), gain: 0.12 },        // 火车
+  { t: 25.6, fx: () => waves(82, 2.2), gain: 0.16 },         // 海
+  { t: 27.4, fx: () => paper(83, 0.4), gain: 0.07 },         // 递钱
+  { t: 28.6, fx: () => bell(84), gain: 0.05, pan: -0.3 },    // 倒地的车铃
+  { t: 31.6, fx: () => tick(85), gain: 0.05 },
+);
+// 5 记忆密度：走廊的空间声；光点落在时间轴上
+CUES.push({ t: 33.6, fx: () => air(90, 12), gain: 0.05 });
+[42.0, 42.2, 42.35, 42.5, 42.6, 42.75].forEach((t, i) => CUES.push({ t, fx: () => tick(91 + i), gain: 0.035 }));
+// 6 成年重复：每天同样的键盘声；换日子时一声很轻的「嗒」
+for (let i = 0; i < 5; i++) {
+  CUES.push({ t: 45.6 + i * 1.6, fx: () => keys(100 + i, 1.5), gain: 0.06 });
+  CUES.push({ t: 45.6 + i * 1.6, fx: () => tick(110 + i), gain: 0.05 });
+}
+CUES.push({ t: 53.6, fx: () => fadeAway(115, 2.6), gain: 0.08 });
+// 7 365 页：纸页一阵阵翻过，越来越稀，最后安静
+for (let i = 0; i < 14; i++) CUES.push({ t: 56.7 + i * 0.1, fx: () => paper(120 + i, 0.25), gain: 0.05 });
+CUES.push({ t: 58.8, fx: () => fadeAway(140, 1.8), gain: 0.07 });
+CUES.push({ t: 61.5, fx: () => fadeAway(141, 2.1), gain: 0.08 });
+// 8 T：唯一的一次低频冲击
+CUES.push({ t: DESIGN_T, fx: () => impact(150), gain: 0.42 });
+// 9–10：很安静的房间；相册滑动
+CUES.push({ t: 71.6, fx: () => air(160, 9.5), gain: 0.04 });
+CUES.push({ t: 82.0, fx: () => scrollTicks(161, 3.4), gain: 0.07 });
+// 11 空墙：关掉手机的一声，然后几乎无声
+CUES.push({ t: 91.9, fx: () => click(170), gain: 0.06 });
+// 12 雨、车厢，到站时慢下来
+CUES.push({ t: 100.8, fx: () => rain(180, 8.4), gain: 0.07 });
+CUES.push({ t: 100.8, fx: () => rumble(181, 8.4, false), gain: 0.12 });
+// 13 开窗，城市夜声进来
+CUES.push({ t: 110.9, fx: () => door(190, 1.2), gain: 0.06 });
+CUES.push({ t: 111.3, fx: () => cityNight(191, 8.6), gain: 0.1 });
 
 module.exports = CUES;

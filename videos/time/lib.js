@@ -457,6 +457,40 @@ function dust(ctx, t, o = {}) {
   ctx.restore();
 }
 
+// 老相机的日期印（橙色、微微晕开）：童年每个碎片一个日期，成年的日子用同一种印
+function dateStamp(ctx, text, o = {}) {
+  const { x = 1770, y = 880, alpha = 1, size = 40 } = o;
+  if (alpha <= 0.01) return;
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha *= alpha;
+  ctx.font = FONT.enMed(size);
+  ctx.letterSpacing = '5px';
+  ctx.textAlign = 'right';
+  ctx.shadowColor = 'rgba(255,120,40,0.9)';
+  ctx.shadowBlur = 14;
+  ctx.fillStyle = 'rgba(255,150,70,0.85)';
+  ctx.fillText(text, x, y);
+  ctx.shadowBlur = 3;
+  ctx.fillStyle = 'rgba(255,190,120,0.9)';
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+// 中央锚词：大、暖白、轻微旧印刷质感
+function anchorWord(ctx, text, o = {}) {
+  const { x = W / 2, y = 560, size = 120, alpha = 1, spacing = 18, seed = 1, color = '#efe6d3', font = FONT.serif } = o;
+  if (alpha <= 0.01) return;
+  const { inkText } = require('../../src/lib/material');
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha *= alpha;
+  ctx.shadowColor = 'rgba(0,0,0,0.6)';
+  ctx.shadowBlur = 24;
+  inkText(ctx, text, x, y, { font: font(size), color, align: 'center', seed, wear: 0.35, spacing });
+  ctx.restore();
+}
+
 // 带纹理的墙 / 平面（缓存）
 const texCache = new Map();
 function wallTex(w, h, rgb, seed, o = {}) {
@@ -478,4 +512,4 @@ function wallTex(w, h, rgb, seed, o = {}) {
   return c;
 }
 
-module.exports = { halation, dust, ik2, withCam, drift, sequence, side, bust, head, limb, lit, blurred, wallTex, shade, PAL, BODY, W, H, C, FONT, rng, hash, noise1, lerp, clamp, prog, smooth };
+module.exports = { dateStamp, anchorWord, halation, dust, ik2, withCam, drift, sequence, side, bust, head, limb, lit, blurred, wallTex, shade, PAL, BODY, W, H, C, FONT, rng, hash, noise1, lerp, clamp, prog, smooth };

@@ -233,4 +233,13 @@ function grade(d) {
   return d < PH0 + 0.2 ? { warm: 0.4, ambient: 0.5 } : { warm: -0.35, ambient: 0.18 };
 }
 
-module.exports = { ...S, draw, light, grade };
+// 与童年同一位置的日期印：童年一格一格走过日子，这里一下子跳过整月
+function drawOver(ctx, d) {
+  if (d < PH0) return;
+  const pos = reelPos(d);
+  const day = [14, 12, 11, 16, 13, 17, 15, 19, 16, 14, 18, 15][Math.round(pos)];
+  const a = smooth(prog(d, PH0, PH0 + MIXD)) * (1 - smooth(prog(d, OFF0, OFF1)));
+  L.dateStamp(ctx, `${NAMES[Math.round(pos)]} ${String(day).padStart(2, '0')}`, { alpha: a });
+}
+
+module.exports = { ...S, draw, drawOver, light, grade, hand, fingers, PHONE };

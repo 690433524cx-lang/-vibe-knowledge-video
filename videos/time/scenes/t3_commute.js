@@ -327,67 +327,73 @@ function drawDay(ctx, S, k, lt, D) {
   }
 }
 
-// ---------------- 记忆卡片：浮现 → 叠起 → 模糊 → 压扁 → 消失 ----------------
+// ---------------- 小高潮：重复的生活场景叠加 → 重合 → 压缩 → 消失 ----------------
 const C0 = T0 + DAYS.reduce((a, d) => a + d.dur * SHOTS.length, 0); // ≈ 17.68
-const CARD_W = 520, CARD_H = 293;
-const CARDS = [
-  { shot: 3, x: 560, y: 360, rot: -0.05, at: 0.0 },   // 办公室
-  { shot: 2, x: 1370, y: 330, rot: 0.04, at: 0.2 },   // 地铁
-  { shot: 5, x: 820, y: 700, rot: 0.03, at: 0.4 },    // 床
-  { shot: 0, x: 1250, y: 720, rot: -0.04, at: 0.55 }, // 手机闹钟
-  { shot: 1, x: 420, y: 760, rot: 0.06, at: 0.7 },    // 刷牙
-  { shot: 4, x: 1560, y: 560, rot: -0.03, at: 0.85 }, // 回家
+// 叠加顺序：办公室、地铁、床、手机闹钟、刷牙、回家；每层一点错位（像几条没对齐的轨迹）
+const LAYERS = [
+  { shot: 3, at: 0.0, dx: -60, dy: 20, s: 1.04 },
+  { shot: 2, at: 0.16, dx: 50, dy: -24, s: 1.06 },
+  { shot: 5, at: 0.32, dx: -30, dy: -36, s: 1.03 },
+  { shot: 0, at: 0.48, dx: 70, dy: 30, s: 1.05 },
+  { shot: 1, at: 0.64, dx: -80, dy: -10, s: 1.07 },
+  { shot: 4, at: 0.8, dx: 30, dy: 40, s: 1.02 },
 ];
-let cardCache = null;
-function cards() {
-  if (cardCache) return cardCache;
-  cardCache = CARDS.map((c) => {
-    renderShot(SHOTS[c.shot].fn, 0.55, 0.3, '周一');
-    const cv = createCanvas(CARD_W, CARD_H);
-    const x = cv.getContext('2d');
-    x.drawImage(GH, 0, 0, CARD_W, CARD_H);
-    // 冷一点、暗一点，像褪了色的记忆
-    x.fillStyle = 'rgba(20,24,30,0.25)';
-    x.fillRect(0, 0, CARD_W, CARD_H);
-    const v = x.createRadialGradient(CARD_W / 2, CARD_H / 2, CARD_H * 0.3, CARD_W / 2, CARD_H / 2, CARD_W * 0.6);
-    v.addColorStop(0, 'rgba(0,0,0,0)');
-    v.addColorStop(1, 'rgba(0,0,0,0.45)');
-    x.fillStyle = v;
-    x.fillRect(0, 0, CARD_W, CARD_H);
+let stills = null;
+function sceneStills() {
+  if (stills) return stills;
+  stills = LAYERS.map((l) => {
+    renderShot(SHOTS[l.shot].fn, 0.55, 0.3, '周五');
+    const cv = createCanvas(W, H);
+    cv.getContext('2d').drawImage(GH, 0, 0);
     return cv;
   });
-  return cardCache;
+  return stills;
 }
+const STACK = createCanvas(W, H), STx = STACK.getContext('2d');
 function memory(ctx, d) {
   const t = d - C0;
   fill(ctx, '#121417');
-  const stack = smooth(prog(t, 1.25, 2.15));  // 叠到一起
-  const blur = smooth(prog(t, 1.9, 2.9));     // 变模糊
-  const squash = smooth(prog(t, 2.55, 3.35)); // 压扁成一条线
-  const vanish = smooth(prog(t, 3.2, 3.9));   // 消失
-  const cs = cards();
-  CARDS.forEach((c, i) => {
-    const a = smooth(prog(t, c.at, c.at + 0.25)) * (1 - vanish);
-    if (a <= 0.01) return;
-    const x = lerp(c.x, 960 + (i - 2.5) * 6, stack) + noise1(t * 0.5, 300 + i) * 8;
-    const y = lerp(c.y, 520 + (i - 2.5) * 4, stack) + noise1(t * 0.5, 320 + i) * 6;
-    const s = lerp(1, 1.15, stack) * (1 + t * 0.01);
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(c.rot * (1 - stack));
-    ctx.scale(s * lerp(1, 1.6, squash), s * lerp(1, 0.012, squash));
-    ctx.globalAlpha *= a * lerp(1, 0.55, stack);
-    if (blur > 0.02) ctx.filter = `blur(${(blur * 9).toFixed(1)}px)`;
-    // 白边（冲印照片）
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(-CARD_W / 2 - 8, -CARD_H / 2 - 4, CARD_W + 24, CARD_H + 26);
-    ctx.fillStyle = '#d8d2c4';
-    ctx.fillRect(-CARD_W / 2 - 14, -CARD_H / 2 - 14, CARD_W + 28, CARD_H + 28);
-    ctx.drawImage(cs[i], -CARD_W / 2, -CARD_H / 2);
-    ctx.restore();
+  const align = smooth(prog(t, 1.0, 2.0));     // 错位的轨迹慢慢重合
+  const squash = smooth(prog(t, 2.0, 3.25));   // 压缩成一条线
+  const blur = smooth(prog(t, 1.6, 3.0));
+  const vanish = smooth(prog(t, 3.1, 3.8));
+  const st = sceneStills();
+  STx.setTransform(1, 0, 0, 1, 0, 0);
+  STx.globalCompositeOperation = 'source-over';
+  STx.globalAlpha = 1;
+  STx.filter = 'none';
+  STx.fillStyle = '#121417';
+  STx.fillRect(0, 0, W, H);
+  LAYERS.forEach((l, i) => {
+    const a = smooth(prog(t, l.at, l.at + 0.22));
+    if (a <= 0) return;
+    const k = 1 - align;
+    const sc = 1 + (l.s - 1) * k + t * 0.004;
+    const x = l.dx * k + noise1(t * 0.8, 400 + i) * 10 * k, y = l.dy * k + noise1(t * 0.8, 410 + i) * 8 * k;
+    STx.save();
+    STx.globalAlpha = a * (i === 0 ? 1 : lerp(0.55, 1 / (i + 1), align));
+    STx.translate(W / 2 + x, H / 2 + y);
+    STx.scale(sc, sc);
+    STx.drawImage(st[i], -W / 2, -H / 2);
+    STx.restore();
   });
+  // 重合之后褪色：分不清是哪一天
+  if (align > 0) {
+    STx.globalCompositeOperation = 'saturation';
+    STx.globalAlpha = align * 0.8;
+    STx.fillStyle = '#808080';
+    STx.fillRect(0, 0, W, H);
+    STx.globalCompositeOperation = 'source-over';
+  }
+  ctx.save();
+  ctx.globalAlpha *= 1 - vanish;
+  ctx.translate(W / 2, H / 2);
+  ctx.scale(lerp(1, 1.08, squash), lerp(1, 0.008, squash * squash));
+  if (blur > 0.02) ctx.filter = `blur(${(blur * 10).toFixed(1)}px)`;
+  ctx.drawImage(STACK, -W / 2, -H / 2);
+  ctx.restore();
   // 最后：几条极淡的光线 + 一条空白的时间轴
-  const lines = smooth(prog(t, 3.1, 3.8));
+  const lines = smooth(prog(t, 3.0, 3.7));
   if (lines > 0) {
     ctx.save();
     ctx.globalAlpha = lines;
@@ -396,16 +402,14 @@ function memory(ctx, d) {
     g.addColorStop(0.5, 'rgba(220,214,200,0.45)');
     g.addColorStop(1, 'rgba(220,214,200,0)');
     ctx.fillStyle = g;
-    ctx.fillRect(160, 519, W - 320, 2);
-    // 几个很淡的刻度：日子在，但什么也没留下
+    ctx.fillRect(160, 539, W - 320, 2);
     for (let i = 0; i < 24; i++) {
-      const x = 260 + i * 60;
       ctx.fillStyle = `rgba(220,214,200,${0.12 + 0.08 * Math.sin(i * 1.7)})`;
-      ctx.fillRect(x, 512, 1, 16);
+      ctx.fillRect(260 + i * 60, 532, 1, 16);
     }
     const r = rng(612);
     for (let i = 0; i < 5; i++) {
-      const y = 380 + r() * 300, len = 300 + r() * 600, x = 200 + r() * 1100;
+      const y = 400 + r() * 280, len = 300 + r() * 600, x = 200 + r() * 1100;
       ctx.fillStyle = `rgba(200,210,225,${0.05 + r() * 0.05})`;
       ctx.fillRect(x + t * 10 * (r() - 0.5), y, len, 1);
     }
@@ -431,7 +435,7 @@ DAYS.forEach((D, di) => {
 list.push({
   at: C0,
   draw: (ctx, lt, d) => memory(ctx, d),
-  light: (lt) => [{ x: 960, y: 530, rx: 1300, ry: 700, i: 0.95 * (1 - smooth(prog(lt, 3.2, 4.2))) + 0.25 }],
+  light: (lt) => [{ x: 960, y: 540, rx: 1400, ry: 800, i: 0.95 * (1 - smooth(prog(lt, 3.2, 4.2))) + 0.25, color: COOL }],
   grade: { warm: -0.2, ambient: 0.3 },
 });
 const seq = L.sequence(list, 0);
