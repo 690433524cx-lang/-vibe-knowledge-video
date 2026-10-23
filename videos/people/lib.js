@@ -9,6 +9,25 @@ const { spring } = require('../../src/lib/motion');
 // ---------------- 小工具 ----------------
 const ease = (k) => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 const mix = (a, b, k) => a.map((v, i) => lerp(v, b[i], k));
+// 平滑镜头路径：经过所有关键点，速度连续（不在关键点上停顿）。keys = [[t, v], …]，v 可以是数组
+function spline(t, keys) {
+  const n = keys.length;
+  if (t <= keys[0][0]) return keys[0][1];
+  if (t >= keys[n - 1][0]) return keys[n - 1][1];
+  let i = 1;
+  while (keys[i][0] < t) i++;
+  const [t0, p0] = keys[i - 1], [t1, p1] = keys[i];
+  const h = t1 - t0, u = (t - t0) / h;
+  const tan = (j) => {
+    if (j <= 0 || j >= n - 1) return Array.isArray(keys[j][1]) ? keys[j][1].map(() => 0) : 0;
+    const [ta, pa] = keys[j - 1], [tb, pb] = keys[j + 1];
+    return Array.isArray(pa) ? pa.map((v, k) => (pb[k] - v) / (tb - ta)) : (pb - pa) / (tb - ta);
+  };
+  const m0 = tan(i - 1), m1 = tan(i);
+  const h00 = 2 * u ** 3 - 3 * u ** 2 + 1, h10 = u ** 3 - 2 * u ** 2 + u, h01 = -2 * u ** 3 + 3 * u ** 2, h11 = u ** 3 - u ** 2;
+  const f = (a, b, ma, mb) => h00 * a + h10 * h * ma + h01 * b + h11 * h * mb;
+  return Array.isArray(p0) ? p0.map((v, k) => f(v, p1[k], m0[k], m1[k])) : f(p0, p1, m0, m1);
+}
 // 在时间点之间分段插值：keys = [[t, v], …]，v 可以是数或数组
 function track(t, keys, fn = ease) {
   if (t <= keys[0][0]) return keys[0][1];
@@ -129,11 +148,11 @@ const CAST = {
 // ---------------- 特写的手（俯视，掌心朝下） ----------------
 // 原点 = 手腕，手指朝 -y。curl：手指收起；lift：手离开桌面（影子分离）；spread：张开。
 function hand(c, o) {
-  const { x, y, rot = 0, s = 1, curl = 0, lift = 0, spread = 0, skin = '#c39a7a', sleeve = '#8c7258', mirror = 1, index = 0, arm = 900 } = o;
+  const { x, y, rot = 0, s = 1, curl = 0, lift = 0, spread = 0, skin = '#c39a7a', sleeve = '#8c7258', mirror = 1, index = 0, arm = 900, point = 0, sy = 1, middle = 0 } = o;
   c.save();
   c.translate(x, y);
   c.rotate(rot);
-  c.scale(s * mirror, s);
+  c.scale(s * mirror, s * sy);
   // 影子
   c.save();
   c.translate(18 + lift * 26, 22 + lift * 30);
@@ -170,7 +189,8 @@ function hand(c, o) {
   // 四根手指：食指 → 小指（index 单独控制，可以敲桌子）
   const F = [[-40, 0.92, 21], [-13, 1.0, 22], [14, 0.95, 21], [40, 0.74, 18]];
   F.forEach(([fx, len, fw], i) => {
-    const cu = clamp(curl + (i === 0 ? index : 0));
+    // point：只伸食指，其余手指收拢；middle：中指也伸出（两指按住东西）
+    const cu = i === 0 ? clamp(curl * (1 - point) + index) : i === 1 ? clamp(lerp(curl, Math.max(curl, 0.95), point * (1 - middle))) : clamp(Math.max(curl, 0.95 * point));
     const L0 = 118 * len * (1 - 0.55 * cu);
     const a0 = (i - 1.5) * 0.07 * (1 + spread * 2);
     const bx = fx * 0.95, by = -92 - (i === 1 || i === 2 ? 6 : 0);
@@ -185,7 +205,7 @@ function hand(c, o) {
     }
   });
   // 拇指
-  T.limb(c, [-48, -10], [-88 - spread * 20, -74], 30, 23, T.shade(skin, 0.86));
+  T.limb(c, [-48, -10], [lerp(-88 - spread * 20, -30, point), lerp(-74, -70, point)], 30, 23, T.shade(skin, 0.86));
   // 指根的骨节高光
   c.fillStyle = 'rgba(255,226,200,0.14)';
   for (const fx of [-38, -12, 14, 38]) { c.beginPath(); c.ellipse(fx, -98, 10, 6, 0, 0, Math.PI * 2); c.fill(); }
@@ -425,6 +445,6 @@ function camLights(cam, lights) {
 }
 
 module.exports = {
-  ...T, T, ease, track, glow, rrect, mix, spring, SEAT, figure, CAST, hand, billFolder, restaurant, TBL, tableTop, tableApron,
+  ...T, T, ease, track, spline, glow, rrect, mix, spring, SEAT, figure, CAST, hand, billFolder, restaurant, TBL, tableTop, tableApron,
   plate, glass, teapot, billSmall, RECEIPT, camPt, camLights,
 };
