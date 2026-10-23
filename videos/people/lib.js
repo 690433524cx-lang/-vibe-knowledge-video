@@ -103,7 +103,7 @@ function figure(c, o) {
     c.lineTo(ex + er * 0.9 * Math.sign(s), ey - ry * 0.22 - laugh * ry * 0.06 + (o.frown || 0) * ry * 0.07);
     c.stroke();
     // 眼：笑的时候眯成弧
-    const open = (o.eye ?? 1) * (1 - laugh);
+    const open = (o.eye ?? 1) * (1 - laugh) * (1 - 0.3 * (o.smile || 0));
     c.fillStyle = 'rgba(22,14,10,0.92)';
     c.strokeStyle = 'rgba(22,14,10,0.92)';
     if (open > 0.15) {
@@ -124,12 +124,15 @@ function figure(c, o) {
       c.ellipse(X(0.8), Y(0.4), rx * 0.12, ry * 0.05 + ry * 0.07 * m, 0.2 * Math.sign(s), 0, Math.PI * 2);
       c.fill();
     } else {
+      // smile：闭着嘴的礼貌微笑——嘴角往上、脸颊鼓一点；frown：嘴角往下
+      const sm = o.smile || 0;
       c.lineWidth = Math.max(1.2, rx * 0.045);
       c.strokeStyle = 'rgba(70,36,28,0.7)';
       c.beginPath();
-      c.moveTo(X(0.7), Y(0.42));
-      c.lineTo(X(0.86), Y(0.4 + (o.frown || 0) * 0.04));
+      c.moveTo(X(0.66), Y(0.4 - sm * 0.06));
+      c.quadraticCurveTo(X(0.76), Y(0.45 + sm * 0.03), X(0.86), Y(0.4 - sm * 0.1 + (o.frown || 0) * 0.04));
       c.stroke();
+      if (sm > 0.05) { c.fillStyle = `rgba(255,200,170,${0.18 * sm})`; c.beginPath(); c.ellipse(X(0.55), Y(0.22), rx * 0.16, ry * 0.08, 0, 0, Math.PI * 2); c.fill(); }
     }
   }
   c.restore();
