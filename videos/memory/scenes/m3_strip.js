@@ -36,13 +36,17 @@ function strip(ctx, d, dx) {
     if (cx < -FW || cx > W + FW) continue;
     const k = KS[clamp(i, 0, N - 1)];
     const img = L.snapshot(k, k >= 0.5 ? 'memory' : 'photo');
+    // 格子很小：单独提亮，保证手机上能看清每格的差别
+    ctx.save();
+    ctx.filter = 'brightness(1.55) contrast(1.06)';
     ctx.drawImage(img, cx - FW / 2, Y - FH / 2, FW, FH);
+    ctx.restore();
     // 两头多出来的格子是暗的（片头 / 片尾）
     let dim = i < 0 || i >= N ? 0.85 : 0;
     // 亮光走过：被照亮的那一格亮，其余压暗
     if (i >= 0 && i < N && d > PASS - 0.3) {
       const on = Math.max(0, 1 - Math.abs(f - i) * 1.2);
-      const passed = i < f ? 0.45 : 0.55;
+      const passed = i < f ? 0.3 : 0.4;
       dim = Math.max(0, passed * (1 - on)) * smooth(prog(d, PASS - 0.3, PASS + 0.2));
       if (i === N - 1) dim *= 1 - smooth(prog(d, PASS + 0.55 * (N - 1) - 0.2, PASS + 0.55 * (N - 1) + 0.3));
     }
@@ -92,8 +96,8 @@ function light(d) {
   const fx = W / 2 + (f - (N - 1) / 2) * PITCH;
   const on = smooth(prog(d, PASS - 0.3, PASS + 0.2));
   return [
-    { x: W / 2, y: Y, rx: 1250, ry: 520, i: 0.85 * smooth(prog(d, IN0, IN0 + 0.6)), color: [240, 220, 196] },
-    { x: fx, y: Y, rx: 360, ry: 300, i: 0.5 * on, color: [255, 200, 140] },
+    { x: W / 2, y: Y, rx: 1300, ry: 460, i: 1.0 * smooth(prog(d, IN0, IN0 + 0.6)), color: [240, 220, 196] },
+    { x: fx, y: Y, rx: 420, ry: 320, i: 0.8 * on, color: [255, 200, 140] },
   ];
 }
 function grade() { return { warm: 0.1, ambient: 0.3 }; }

@@ -85,6 +85,6 @@ function light(d) {
     { x: lerp(900, 960, k), y: lerp(420, 540, k), rx: lerp(980, 1500, k), ry: lerp(700, 1000, k), i: 1.0, color: [255, 200, 140] },
   ];
 }
-function grade() { return { warm: 0.35, ambient: 0.3 }; }
+function grade() { return { warm: 0.22, ambient: 0.3 }; }
 
 module.exports = { ...S, draw, light, grade };

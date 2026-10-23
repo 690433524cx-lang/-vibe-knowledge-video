@@ -102,7 +102,7 @@ function draw(ctx, d) {
   L.label(ctx, '记 忆', LEFT.x, LEFT.y + 300, { size: 38, alpha: la, ls: 10, color: '#e4d8c0' });
   L.label(ctx, '照 片', RIGHT.x, RIGHT.y + 300, { size: 38, alpha: la, ls: 10, color: '#e4d8c0' });
   // 「确定」盖在记忆上
-  L.stamp(ctx, '确定', LEFT.x + 200, LEFT.y + 150, d, STAMP, { size: 100, rot: -0.12, color: '#c8402f' });
+  L.stamp(ctx, '确定', LEFT.x + 200, LEFT.y + 150, d, STAMP, { size: 100, rot: -0.12, color: '#b23a2c' });
   ctx.restore();
 }
 
@@ -110,10 +110,12 @@ function light(d) {
   const k = ease(prog(d, PULL0, PULL1));
   const out = 1 - smooth(prog(d, OUT0, OUT1));
   return [
-    { x: lerp(960, LEFT.x, k), y: lerp(540, LEFT.y, k), rx: lerp(1500, 760, k), ry: lerp(1000, 560, k), i: 1.0 * out, color: [255, 196, 136] },
+    // 回忆全屏：光只落在妈妈、孩子和窗上，四周沉在暗里
+    { x: lerp(780, LEFT.x, k), y: lerp(600, LEFT.y, k), rx: lerp(1050, 760, k), ry: lerp(760, 560, k), i: 1.0 * out, color: [246, 204, 156] },
+    { x: 1450, y: 440, rx: 560, ry: 480, i: 0.7 * out * (1 - k), color: [200, 210, 220] },
     { x: lerp(1290, RIGHT.x, k), y: lerp(610, RIGHT.y, k), rx: 760, ry: 560, i: 0.95 * smooth(prog(d, SLIDE, SLIDE + 0.5)) * out, color: [236, 230, 220] },
   ];
 }
-function grade(d) { return { warm: lerp(0.4, 0.15, smooth(prog(d, PULL0, PULL1))), ambient: 0.32 }; }
+function grade(d) { return { warm: lerp(0.25, 0.1, smooth(prog(d, PULL0, PULL1))), ambient: 0.3 }; }
 
 module.exports = { ...S, draw, light, grade };
