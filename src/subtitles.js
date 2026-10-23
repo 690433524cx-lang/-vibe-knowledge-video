@@ -126,7 +126,7 @@ function drawLineV2(ctx, s, a, k) {
     ctx.clip();
   }
   segs.forEach(([t, red], i) => {
-    ctx.fillStyle = red ? C.subRed : (s.color || st.color);
+    ctx.fillStyle = red ? (s.accent || C.subRed) : (s.color || st.color);
     ctx.fillText(t, x, y);
     x += widths[i];
   });

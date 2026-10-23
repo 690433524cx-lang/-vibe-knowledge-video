@@ -245,6 +245,17 @@ function snapshot(k, look = k >= 0.5 ? 'memory' : 'photo', t = 0) {
   snapCache.set(key, c);
   return c;
 }
+// 指定版本（例如：只把外套换掉、只把天气换掉、越想越冷），按名字缓存
+function snapshotV(name, v, look = 'memory', t = 0) {
+  const key = `v:${name}:${look}:${t}`;
+  if (snapCache.has(key)) return snapCache.get(key);
+  const c = createCanvas(W, H);
+  const x = c.getContext('2d');
+  room(x, v, t);
+  finish(x, c, look);
+  snapCache.set(key, c);
+  return c;
+}
 function finish(x, c, look) {
   if (look === 'memory') {
     // 柔：低分辨率模糊叠回
@@ -410,4 +421,4 @@ function label(ctx, text, x, y, o = {}) {
   ctx.restore();
 }
 
-module.exports = { ...T, T, TRUTH, MEMORY, version, room, snapshot, finish, print, crayonCircle, stamp, label, WIN, DOOR, FLOOR, spring, rgb, hex, inkText };
+module.exports = { ...T, T, TRUTH, MEMORY, version, room, snapshot, snapshotV, finish, print, crayonCircle, stamp, label, WIN, DOOR, FLOOR, spring, rgb, hex, inkText };

@@ -6,8 +6,8 @@
 const L = require('../lib');
 const { W, H, FONT, rng, noise1, lerp, clamp, prog, smooth } = L;
 
-const S = { start: 16.0, end: 22.8 };
-const IN0 = 16.0, STOP = 18.4, LAB = 18.5, PASS = 19.3;
+const S = { start: 16.0, end: 24.0 };
+const IN0 = 16.0, STOP = 18.4, LAB = 18.5, PASS = 19.9;
 const N = 5, FW = 352, FH = FW * 9 / 16, PITCH = 380, Y = 520;
 const KS = [0, 0.22, 0.45, 0.72, 1];
 const NAMES = ['第 1 次想起', '第 2 次想起', '第 3 次想起', '第 7 次想起', '第 N 次想起'];
@@ -57,7 +57,7 @@ function strip(ctx, d, dx) {
 }
 
 function draw(ctx, d) {
-  const a = smooth(prog(d, IN0, IN0 + 0.5)) * (1 - smooth(prog(d, 22.3, 22.8)));
+  const a = smooth(prog(d, IN0, IN0 + 0.5)) * (1 - smooth(prog(d, 23.0, 23.55)));
   if (a <= 0) return;
   const dx = offset(d);
   const v = Math.abs(speed(d));

@@ -53,6 +53,52 @@ function rain(ctx, t, a) {
   ctx.restore();
 }
 
+// 6.9–7.6 s：一次很短的「记忆错位」——外套闪成藏青、窗外闪成晴天、孩子在窗边闪了一下，然后恢复。
+// 在图像坐标里画（已缩放到回忆画面）。返回窗外「晴天」的强度，用来压掉雨。
+const GL0 = 6.9;
+const BUF = require('@napi-rs/canvas').createCanvas(W, H);
+const on = (d, a, b) => (d >= a && d < b ? 1 : 0);
+function slip(ctx, d, mem) {
+  if (d < GL0 - 0.05 || d > GL0 + 0.8) return 0;
+  const coat = on(d, GL0, GL0 + 0.07) || on(d, GL0 + 0.13, GL0 + 0.5);
+  const sun = on(d, GL0 + 0.2, GL0 + 0.27) || on(d, GL0 + 0.32, GL0 + 0.62);
+  const kid = on(d, GL0 + 0.3, GL0 + 0.6);
+  const tear = on(d, GL0, GL0 + 0.07) || on(d, GL0 + 0.6, GL0 + 0.67);
+  // 换掉的那一块边缘是化开的（椭圆渐隐），不出现矩形的硬边
+  const region = (img, x, y, w, h, a = 1) => {
+    const bx = BUF.getContext('2d');
+    bx.globalCompositeOperation = 'source-over';
+    bx.clearRect(0, 0, W, H);
+    bx.drawImage(img, 0, 0);
+    bx.globalCompositeOperation = 'destination-in';
+    bx.save();
+    bx.translate(x + w / 2, y + h / 2);
+    bx.scale(w / h, 1);
+    const g = bx.createRadialGradient(0, 0, h * 0.3, 0, 0, h * 0.5);
+    g.addColorStop(0, 'rgba(0,0,0,1)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    bx.fillStyle = g;
+    bx.fillRect(-h, -h, h * 2, h * 2);
+    bx.restore();
+    ctx.save();
+    ctx.globalAlpha *= a;
+    ctx.drawImage(BUF, 0, 0, W, H);
+    ctx.restore();
+  };
+  if (coat) region(L.snapshotV('coatBlue', L.version(1, { coat: L.TRUTH.coat })), L.DOOR.x - 90, 190, 420, 720);
+  if (sun) region(L.snapshotV('sunWin', L.version(1, { rain: 0 })), L.WIN.x - 80, L.WIN.y - 60, L.WIN.w + 160, L.WIN.h + 120);
+  if (kid) region(L.snapshotV('kidRight', L.version(1, { childX: 1150, childF: -1 })), 1010, 450, 290, 470, 0.85);
+  if (tear) {
+    // 一条横向的错层：画面在这一条里往旁边滑了一下
+    const y0 = 600, bh = 70;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, y0, W, bh); ctx.clip();
+    ctx.drawImage(mem, 34, 0, W, H);
+    ctx.restore();
+  }
+  return sun;
+}
+
 function draw(ctx, d) {
   const out = smooth(prog(d, OUT0, OUT1));
   const enter = smooth(prog(d, 4.45, 4.72));
@@ -75,7 +121,8 @@ function draw(ctx, d) {
   ctx.save();
   ctx.scale(sc, sc);
   ctx.translate(-W / 2, -H / 2);
-  rain(ctx, d, 1 - 0.6 * M.k);
+  const sunFlip = slip(ctx, d, mem);
+  rain(ctx, d, (1 - 0.6 * M.k) * (1 - sunFlip));
   // 照片压上来时，回忆暗下去一点
   const dim = smooth(prog(d, SLIDE, SLIDE + 0.6)) * (1 - M.k) * 0.35;
   if (dim > 0) { ctx.fillStyle = `rgba(10,8,6,${dim})`; ctx.fillRect(0, 0, W, H); }
