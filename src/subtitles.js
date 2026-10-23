@@ -133,6 +133,34 @@ function drawLineV2(ctx, s, a, k) {
   ctx.restore();
 }
 
+// 逐段出现的一行（reveal: 第 2、3… 段的出现时间，段之间用全角空格分开）：
+// 新的一段淡入时，整行平滑地重新居中，已经出现的部分不闪。
+function drawRevealV2(ctx, s, a, k, t) {
+  const st = V2[s.style || 'sub'] || V2.sub;
+  const px = Math.round((s.size || st.px) * (require('./config').TL.SUB_SCALE ?? 1));
+  const parts = s.text.split('　');
+  ctx.save();
+  ctx.font = st.font(px);
+  ctx.letterSpacing = `${st.ls}px`;
+  const sep = ctx.measureText('　').width;
+  const ws = parts.map((p) => ctx.measureText(p).width);
+  const pa = parts.map((_, i) => (i === 0 ? 1 : smooth(prog(t, s.reveal[i - 1], s.reveal[i - 1] + 0.3))));
+  const vis = ws.reduce((acc, w, i) => acc + (i === 0 ? w : pa[i] * (sep + w)), 0);
+  let x = W / 2 - vis / 2;
+  const y = (s.y ?? 962) + (1 - easeOut(k)) * 6;
+  ctx.shadowColor = 'rgba(0,0,0,0.55)';
+  ctx.shadowBlur = 14;
+  ctx.shadowOffsetY = 2;
+  ctx.fillStyle = s.color || st.color;
+  parts.forEach((p, i) => {
+    if (i > 0) x += sep;
+    ctx.globalAlpha = a * pa[i];
+    ctx.fillText(p, x + (1 - pa[i]) * 10, y);
+    x += ws[i];
+  });
+  ctx.restore();
+}
+
 // t 为设计时间
 function drawSubtitles(ctx, t) {
   if (require('./config').TL.LOOK === 'v2') {
@@ -140,7 +168,8 @@ function drawSubtitles(ctx, t) {
       const fi = s.fi ?? 0.35, fo = s.fo ?? 0.35;
       if (t < s.t || t > s.t + s.d + fo) continue;
       const a = smooth(prog(t, s.t, s.t + fi)) * (1 - smooth(prog(t, s.t + s.d, s.t + s.d + fo)));
-      drawLineV2(ctx, s, a, prog(t, s.t, s.t + Math.max(0.45, fi)));
+      if (s.reveal) drawRevealV2(ctx, s, a, prog(t, s.t, s.t + Math.max(0.45, fi)), t);
+      else drawLineV2(ctx, s, a, prog(t, s.t, s.t + Math.max(0.45, fi)));
     }
     return;
   }
