@@ -9,7 +9,7 @@ module.exports = {
   GRID: 48,
   GRID_ALPHA: 0.05,
   GRAIN: 0.035,
-  SUB_PX: 54,
+  SUB_PX: 64,     // 普通字幕（v0.2：54 → 64，手机端）
   SUB_Y: 978,
   HEADER: '',
 };

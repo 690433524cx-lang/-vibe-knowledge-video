@@ -155,9 +155,11 @@ function drawLineV3(ctx, s, a, k) {
   ctx.globalAlpha = a;
   ctx.shadowColor = 'rgba(0,0,0,0.8)';
   ctx.shadowBlur = 12;
+  // dip：强调字在某一瞬间轻轻下沉再稳住（「踩空」随亮点一起往下一点）
+  const dip = s.dip != null && s.now != null ? 5 * Math.max(0, (s.now - s.dip) / 0.05) * Math.exp(1 - Math.max(0, (s.now - s.dip) / 0.05)) * (s.now > s.dip ? 1 : 0) : 0;
   segs.forEach(([t, gold], i) => {
     ctx.fillStyle = gold ? (s.accent || '#e6b566') : (s.color || '#ebe2cf');
-    ctx.fillText(t, x, y);
+    ctx.fillText(t, x, y + (gold ? dip : 0));
     x += widths[i];
   });
   ctx.restore();
@@ -170,7 +172,7 @@ function drawSubtitles(ctx, t) {
       const fi = s.fi ?? 0.25, fo = s.fo ?? 0.25;
       if (t < s.t || t > s.t + s.d + fo) continue;
       const a = smooth(prog(t, s.t, s.t + fi)) * (1 - smooth(prog(t, s.t + s.d, s.t + s.d + fo)));
-      drawLineV3(ctx, s, a, prog(t, s.t, s.t + Math.max(0.3, fi)));
+      drawLineV3(ctx, { ...s, now: t }, a, prog(t, s.t, s.t + Math.max(0.3, fi)));
     }
     return;
   }

@@ -100,30 +100,31 @@ function low(seed = 7) {
 }
 
 const CUES = [
-  // A · 0–6
+  // A · 0–5.7：安静但有预兆 → 第一次「踩空」
   { t: 0.05, fx: heartbeat, gain: 0.22 },
-  { t: 0.8, fx: () => tick(101), gain: 0.025 },
-  { t: 2.0, fx: heartbeat, gain: 0.12 },
-  { t: 2.95, fx: () => snap(102), gain: 0.07 },
-  { t: 3.12, fx: () => fall(103), gain: 0.42 },
-  { t: 3.17, fx: () => pulse(104), gain: 0.32 },
-  // B · 6–14
-  { t: 6.0, fx: () => unfold(105, 0.35, true), gain: 0.05 },
-  { t: 6.45, fx: () => unfold(106, 0.7, false), gain: 0.04 },
-  { t: 6.95, fx: () => tick(107), gain: 0.03 },
-  { t: 7.05, fx: () => tick(108), gain: 0.025 },
-  { t: 8.6, fx: () => pulse(109), gain: 0.34 },
-  { t: 9.95, fx: pip, gain: 0.05 },
-  { t: 12.3, fx: () => low(110), gain: 0.3 },
-  { t: 12.32, fx: () => tick(111), gain: 0.04 },
-  { t: 14.05, fx: () => unfold(112, 0.6, false), gain: 0.035 },
-  // C · 14–23.5
-  { t: 14.5, fx: () => tick(113), gain: 0.035 },
-  { t: 15.2, fx: () => breath(114, 3.4), gain: 0.05 },
-  { t: 16.9, fx: () => tick(115), gain: 0.03 },
-  { t: 17.7, fx: () => line(116, 0.95), gain: 0.03 },
-  { t: 19.15, fx: () => unfold(117, 0.45, true), gain: 0.035 },
-  ...[0, 1, 2, 3].map((i) => ({ t: 19.6 + i * 0.36, fx: () => tick(120 + i), gain: 0.03 })),
+  { t: 1.5, fx: heartbeat, gain: 0.16 },
+  { t: 1.6, fx: () => line(100, 1.3, 5200, 5600), gain: 0.012 },   // 不稳的极细电流感
+  { t: 3.0, fx: () => snap(102), gain: 0.08 },
+  { t: 3.08, fx: () => fall(103), gain: 0.45 },
+  { t: 3.1, fx: () => pulse(104), gain: 0.34 },
+  // B · 5.7–14：拉回 → 抖 + 脉冲 → 清醒 → 收成时间轴 → 名字
+  { t: 5.7, fx: () => unfold(105, 0.3, true), gain: 0.06 },
+  { t: 7.55, fx: () => pulse(109), gain: 0.36 },
+  { t: 7.57, fx: () => line(118, 0.45, 2400, 3600), gain: 0.03 },  // 脉冲扩散到四肢
+  { t: 7.95, fx: pip, gain: 0.05 },
+  { t: 9.0, fx: () => unfold(106, 1.2, false), gain: 0.04 },
+  { t: 9.95, fx: () => tick(107), gain: 0.03 },
+  { t: 10.05, fx: () => tick(108), gain: 0.025 },
+  { t: 12.4, fx: () => low(110), gain: 0.3 },
+  { t: 12.42, fx: () => tick(111), gain: 0.04 },
+  { t: 13.65, fx: () => unfold(112, 0.6, false), gain: 0.035 },
+  // C · 14–20：知识结构快速展开
+  { t: 14.3, fx: () => tick(113), gain: 0.035 },
+  { t: 14.5, fx: () => breath(114, 3.2), gain: 0.05 },
+  { t: 16.3, fx: () => tick(119), gain: 0.03 },
+  { t: 15.9, fx: () => line(116, 1.0, 2200, 2800), gain: 0.025 },  // 主干向下生长
+  { t: 17.55, fx: () => unfold(117, 0.4, true), gain: 0.035 },
+  ...[0, 1, 2, 3].map((i) => ({ t: 17.9 + i * 0.3, fx: () => tick(120 + i), gain: 0.032 })),
 ];
 
 module.exports = CUES;

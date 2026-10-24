@@ -14,7 +14,7 @@ const G = {
   text: '#e4dac6',       // 节点中文标签
   head: '#efe6d3',       // 核心词
   grey: '#9a9182',       // 英文小标签
-  dimLine: [206, 196, 176],
+  dimLine: [222, 208, 182],   // 人体线稿：灰金
   red: '#a8473b',
 };
 const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${clamp(a).toFixed(3)})`;
@@ -174,7 +174,8 @@ function smoothOpen(ctx, pts) {
 }
 
 // x, y：背部基线左端（头的正下方）。a：线稿透明度；jerk：0..1 抽动；flash：0..1 金色闪亮
-function body(ctx, x, y, { a = 0.5, jerk = 0, flash = 0, scale = 1, soft = 0 } = {}) {
+// pulse：0..1 一次金色脉冲从身体中心向头、手、脚扩散（后面「神经信号」的第一次预告）
+function body(ctx, x, y, { a = 0.5, jerk = 0, flash = 0, scale = 1, soft = 0, pulse = 0 } = {}) {
   if (a <= 0.003 && flash <= 0.003) return;
   const pts = BODY.map((p) => deform(p, jerk));
   const arm = ARM.map((p) => {
@@ -209,6 +210,33 @@ function body(ctx, x, y, { a = 0.5, jerk = 0, flash = 0, scale = 1, soft = 0 } =
   ctx.beginPath(); ctx.ellipse(hc[0], hc[1], HEAD.rx, HEAD.ry, 0, 0, Math.PI * 2); ctx.fill();
   paint(rgba(G.dimLine, a * (1 - soft * 0.4)), 2, 0);
   if (flash > 0.003) paint(rgba(G.brightRGB, flash), 2.2, 14, rgba(G.goldRGB, flash));
+  if (pulse > 0 && pulse < 1) {
+    const R = 330, c = deform([250, -30], jerk), fade = Math.pow(1 - pulse, 0.6);
+    const gr = ctx.createRadialGradient(c[0], c[1], 0, c[0], c[1], R);
+    const p0 = clamp(pulse - 0.28), p1 = clamp(pulse), p2 = clamp(pulse + 0.04);
+    gr.addColorStop(0, rgba(G.brightRGB, 0));
+    if (p0 > 0) gr.addColorStop(p0, rgba(G.brightRGB, 0));
+    gr.addColorStop(Math.max(p0 + 0.001, p1), rgba(G.brightRGB, fade));
+    gr.addColorStop(Math.min(1, Math.max(p1 + 0.002, p2)), rgba(G.brightRGB, 0));
+    gr.addColorStop(1, rgba(G.brightRGB, 0));
+    ctx.lineWidth = 4 / scale;
+    ctx.strokeStyle = gr;
+    ctx.shadowColor = rgba(G.goldRGB, fade);
+    ctx.shadowBlur = 20;
+    smoothClosed(ctx, pts); ctx.stroke();
+    smoothOpen(ctx, arm); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(hc[0], hc[1], HEAD.rx, HEAD.ry, 0, 0, Math.PI * 2); ctx.stroke();
+    // 脉冲到达末端：头、手、脚各亮一下
+    const tipA = smooth(prog(pulse, 0.7, 0.85)) * (1 - smooth(prog(pulse, 0.85, 1)));
+    if (tipA > 0.01) for (const q of [hc, arm[arm.length - 1], deform([510, -50], jerk)]) {
+      const g2 = ctx.createRadialGradient(q[0], q[1], 0, q[0], q[1], 22);
+      g2.addColorStop(0, rgba(G.brightRGB, 0.9 * tipA));
+      g2.addColorStop(1, rgba(G.brightRGB, 0));
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = g2;
+      ctx.beginPath(); ctx.arc(q[0], q[1], 22, 0, Math.PI * 2); ctx.fill();
+    }
+  }
   ctx.restore();
 }
 
