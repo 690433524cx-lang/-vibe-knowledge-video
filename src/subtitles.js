@@ -133,8 +133,47 @@ function drawLineV2(ctx, s, a, k) {
   ctx.restore();
 }
 
+// ---------- 第三版：黑金科学图解 ----------
+// 无衬线、暖白、固定在下方安全区；{…} 为暖金。0.25 s 淡入 + 上移 5 px，稳定停留，0.25 s 淡出。
+function drawLineV3(ctx, s, a, k) {
+  const TL = require('./config').TL;
+  const px = s.size || TL.SUB_PX || 54;
+  if (s.text.includes('\n')) {
+    const lines = s.text.split('\n');
+    const lh = Math.round(px * 1.45);
+    lines.forEach((t, i) => drawLineV3(ctx, { ...s, text: t, y: (s.y ?? TL.SUB_Y ?? 978) - (lines.length - 1 - i) * lh }, a, k));
+    return;
+  }
+  ctx.save();
+  ctx.font = FONT.sans(px);
+  ctx.letterSpacing = `${s.ls ?? 2}px`;
+  ctx.textBaseline = 'alphabetic';
+  const segs = segments(s.text);
+  const widths = segs.map(([t]) => ctx.measureText(t).width);
+  let x = W / 2 - widths.reduce((p, q) => p + q, 0) / 2;
+  const y = (s.y ?? TL.SUB_Y ?? 978) + (1 - easeOut(k)) * 5;
+  ctx.globalAlpha = a;
+  ctx.shadowColor = 'rgba(0,0,0,0.8)';
+  ctx.shadowBlur = 12;
+  segs.forEach(([t, gold], i) => {
+    ctx.fillStyle = gold ? (s.accent || '#e6b566') : (s.color || '#ebe2cf');
+    ctx.fillText(t, x, y);
+    x += widths[i];
+  });
+  ctx.restore();
+}
+
 // t 为设计时间
 function drawSubtitles(ctx, t) {
+  if (require('./config').TL.LOOK === 'v3') {
+    for (const s of SUBS) {
+      const fi = s.fi ?? 0.25, fo = s.fo ?? 0.25;
+      if (t < s.t || t > s.t + s.d + fo) continue;
+      const a = smooth(prog(t, s.t, s.t + fi)) * (1 - smooth(prog(t, s.t + s.d, s.t + s.d + fo)));
+      drawLineV3(ctx, s, a, prog(t, s.t, s.t + Math.max(0.3, fi)));
+    }
+    return;
+  }
   if (require('./config').TL.LOOK === 'v2') {
     for (const s of SUBS) {
       const fi = s.fi ?? 0.35, fo = s.fo ?? 0.35;

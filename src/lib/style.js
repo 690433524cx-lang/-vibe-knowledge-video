@@ -13,6 +13,14 @@ for (const [file, name] of [
   ['EB_Garamond_wght_400.ttf', 'Garamond'],
   ['EB_Garamond_wght_500.ttf', 'GaramondMed'],
   ['EB_Garamond_ital_wght_1_400.ttf', 'GaramondItalic'],
+  // 第三版（入睡抽动起）：黑金科学图解，用无衬线
+  ['NotoSansSC_300.ttf', 'SansSCLight'],
+  ['NotoSansSC_400.ttf', 'SansSC'],
+  ['NotoSansSC_500.ttf', 'SansSCMed'],
+  ['NotoSansSC_700.ttf', 'SansSCBold'],
+  ['Inter_400.ttf', 'Inter'],
+  ['Inter_600.ttf', 'InterSemi'],
+  ['JBMono_400.ttf', 'Mono'],
 ]) {
   const f = path.join(FONT_DIR, file);
   if (require('fs').existsSync(f)) GlobalFonts.registerFromPath(f, name);
@@ -33,6 +41,13 @@ const FONT = {
   en: (px) => `${px}px Garamond`,
   enMed: (px) => `${px}px GaramondMed`,
   enItalic: (px) => `${px}px GaramondItalic`,
+  sansLight: (px) => `${px}px SansSCLight`,
+  sans: (px) => `${px}px SansSC`,
+  sansMed: (px) => `${px}px SansSCMed`,
+  sansBold: (px) => `${px}px SansSCBold`,
+  inter: (px) => `${px}px Inter`,
+  interSemi: (px) => `${px}px InterSemi`,
+  mono: (px) => `${px}px Mono`,
 };
 
 const C = {
