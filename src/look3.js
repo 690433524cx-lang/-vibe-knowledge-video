@@ -4,7 +4,7 @@
 //   没有台灯、纸张、胶片晃动——主角是图形本身，必须干净、稳定、锐利。
 //   只保留：极轻的暗角、极细的颗粒（防止暗部渐变出现色带）、片尾收黑。
 const { createCanvas } = require('@napi-rs/canvas');
-const { W, H, DESIGN_END, toDesign, TL, splitTime } = require('./config');
+const { W, H, DESIGN_END, toDesign, TL, splitTime, paceIn } = require('./config');
 const { prog, smooth, rng } = require('./lib/util');
 
 function makeGround() {
@@ -62,7 +62,8 @@ const layer = createCanvas(W, H);
 const layerCtx = layer.getContext('2d');
 
 function renderFrameV3(ctx, tReal, frameIndex, SCENES, drawSubtitles) {
-  const raw = toDesign(tReal);
+  const fin = toDesign(tReal);       // 成片时间
+  const raw = paceIn(fin);           // 去掉阅读节奏放慢 → 插段之后的时间轴
   const { d, ins } = splitTime(raw);
   const env = { frameIndex, raw, ins };
   ctx.save();
@@ -83,7 +84,7 @@ function renderFrameV3(ctx, tReal, frameIndex, SCENES, drawSubtitles) {
   drawSubtitles(ctx, d, raw, ins != null);
 
   const cf = TL.CLOSE_FADE ?? 1.0;
-  const close = smooth(prog(raw, DESIGN_END - cf, DESIGN_END - 0.05));
+  const close = smooth(prog(fin, DESIGN_END - cf, DESIGN_END - 0.05));
   if (close > 0) {
     ctx.fillStyle = `rgba(6,5,4,${close})`;
     ctx.fillRect(0, 0, W, H);
