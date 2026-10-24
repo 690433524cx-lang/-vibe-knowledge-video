@@ -1,7 +1,7 @@
 // A + B · 0.0–14.0 秒：一条金线、一个位置亮点、一个平躺的人体线稿。
 //   第 0 帧：金线 + 亮点 + 很淡的人体 + 第一句字幕，完整可读。
 //   1.5 s 起亮点开始轻微不稳（人体保持完全水平：身体没动，感觉系统先变了）。
-//   3.0 s 前方断开，3.08 s 亮点下坠 145 px（约 13% 画面高度），留 0.25 s 细金残影；3.1 s 人体抽动一次。
+//   3.0 s 前方断开，3.08 s 亮点下坠 165 px（约 15% 画面高度），留 0.25 s 细金残影；3.1 s 人体抽动一次。
 //   5.7 s 亮点被拉回、断口重连；7.55 s 再抖一次，金色脉冲从身体中心扩散到四肢。
 //   9.0–10.4 s 金线连续收缩成「清醒 → 入睡」时间轴；12.0 s 退到标题后面，12.4 s 标题出现时沿线一道波纹。
 //   13.65 s 起交给 h3_axis（同一条线继续生长）。
@@ -25,7 +25,7 @@ function geom(d) {
 }
 
 const GAP = [1180, 1300];
-const BREAK = 3.0, FALL0 = 3.08, FALL = 145, RECALL = 5.7;
+const BREAK = 3.0, FALL0 = 3.08, FALL = 165, RECALL = 5.7;
 const JERK1 = 3.1, JERK2 = 7.55;
 const gapOpen = (d) => smooth(prog(d, BREAK, BREAK + 0.08)) * (1 - smooth(prog(d, RECALL + 0.05, RECALL + 0.3)));
 
@@ -60,7 +60,7 @@ function bodyState(d) {
   a *= 1 - smooth(prog(d, 11.9, 12.5));
   const jerk = Math.min(1, impulse(d, JERK1) + impulse(d, JERK2));
   const fl = (t0, k0, tau) => (d >= t0 ? k0 * Math.exp(-(d - t0) / tau) : 0);
-  const flash = (fl(FALL0, 0.95, 0.14) + fl(JERK2, 0.6, 0.12)) * (1 - smooth(prog(d, 11.9, 12.2)));
+  const flash = (fl(FALL0, 1.0, 0.16) + fl(JERK2, 0.6, 0.12)) * (1 - smooth(prog(d, 11.9, 12.2)));
   const pulse = prog(d, JERK2 + 0.02, JERK2 + 0.5);
   return { x, y, a, jerk, flash, pulse };
 }
@@ -110,8 +110,8 @@ function drawAxisB(ctx, d, g) {
   L.node(ctx, g.x0, g.y, { r: 7.5, a, pop: prog(d, 9.9, 10.25) });
   L.node(ctx, g.x1, g.y, { r: 7.5, a: a * 0.8, pop: prog(d, 10.0, 10.35), hollow: true });
   const wake = 1 - smooth(prog(d, 11.9, 12.2));
-  L.label(ctx, '清醒', 'AWAKE', g.x0, g.y - 34, { a: a * wake, zhPx: 37, enPx: 18, gap: 76 });
-  L.label(ctx, '入睡', 'SLEEP', g.x1, g.y - 34, { a: a * 0.85 * wake, zhPx: 37, enPx: 18, gap: 76 });
+  L.label(ctx, '清醒', 'AWAKE', g.x0, g.y - 34, { a: a * wake, zhPx: 43, enPx: 18, gap: 78 });
+  L.label(ctx, '入睡', 'SLEEP', g.x1, g.y - 34, { a: a * 0.85 * wake, zhPx: 43, enPx: 18, gap: 78 });
 }
 
 function drawDot(ctx, d) {

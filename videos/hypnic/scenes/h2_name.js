@@ -8,7 +8,7 @@ const PX = 168, TAG_PX = 28;
 const CY = 548;
 
 // 片尾和某些段落里，小标签让位（之后的段落按需追加）
-const HIDE = [];
+const HIDE = [[112.0, 200]];
 
 function draw(ctx, d) {
   const k = easeInOut(prog(d, MOVE0, MOVE1));

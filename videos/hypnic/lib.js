@@ -240,7 +240,109 @@ function body(ctx, x, y, { a = 0.5, jerk = 0, flash = 0, scale = 1, soft = 0, pu
   ctx.restore();
 }
 
+// ---------- 图谱生长 ----------
+// 一段金线按 k 生长，线头带一个亮点
+function grow(ctx, pts, k, { a = 0.85, w = 1.7, glow = 7, color = G.goldRGB, tip = true, dash = null } = {}) {
+  if (k <= 0 || a <= 0.003) return null;
+  let t = null;
+  goldStroke(ctx, () => { if (dash) ctx.setLineDash(dash); t = polyPartial(ctx, pts, k); }, { a, w, glow, color });
+  if (tip && k < 1 && t) node(ctx, t[0], t[1], { r: 3.8, a, color: G.brightRGB });
+  return t;
+}
+// 折线上按比例 k 的点（用于沿路径传导的信号）
+function along(pts, k) {
+  const seg = [];
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) { const l = Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]); seg.push(l); total += l; }
+  let left = total * clamp(k);
+  for (let i = 1; i < pts.length; i++) {
+    if (left <= seg[i - 1]) { const f = seg[i - 1] ? left / seg[i - 1] : 0; return [lerp(pts[i - 1][0], pts[i][0], f), lerp(pts[i - 1][1], pts[i][1], f)]; }
+    left -= seg[i - 1];
+  }
+  return pts[pts.length - 1];
+}
+function pathLen(pts) {
+  let t = 0;
+  for (let i = 1; i < pts.length; i++) t += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+  return t;
+}
+// 线中点的小箭头（方向 = p0 → p1）
+function arrowMid(ctx, p0, p1, a, s = 7) {
+  const ang = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]);
+  const x = (p0[0] + p1[0]) / 2, y = (p0[1] + p1[1]) / 2;
+  goldStroke(ctx, () => {
+    ctx.beginPath();
+    ctx.moveTo(x - Math.cos(ang - 0.6) * s, y - Math.sin(ang - 0.6) * s);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x - Math.cos(ang + 0.6) * s, y - Math.sin(ang + 0.6) * s);
+    ctx.stroke();
+  }, { a, w: 1.6, glow: 4 });
+}
+// 极简大脑：一个圆角轮廓 + 中线 + 两道沟
+function brain(ctx, x, y, { a = 1, pop = 1, glow = 0 } = {}) {
+  if (a <= 0.003 || pop <= 0) return;
+  const s = pop < 1 ? spring(pop, 0, 1.6, 0.6) : 1;
+  ctx.save();
+  ctx.translate(x, y); ctx.scale(s, s);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = rgba(G.goldRGB, 0.9 * a);
+  ctx.lineWidth = 1.8;
+  ctx.shadowColor = rgba(G.goldRGB, (0.5 + glow) * a); ctx.shadowBlur = 8 + glow * 14;
+  ctx.fillStyle = 'rgba(11,10,9,0.85)';
+  ctx.beginPath(); ctx.ellipse(0, 0, 70, 46, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = rgba(G.goldRGB, 0.55 * a);
+  ctx.beginPath(); ctx.moveTo(0, -44); ctx.bezierCurveTo(-8, -20, 8, 0, 0, 44); ctx.stroke();
+  for (const sx of [-1, 1]) {
+    ctx.beginPath(); ctx.moveTo(sx * 18, -32); ctx.bezierCurveTo(sx * 40, -18, sx * 26, 4, sx * 46, 14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx * 14, 10); ctx.bezierCurveTo(sx * 30, 22, sx * 44, 22, sx * 52, 32); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ---------- 四个系统的数据曲线（u：0..1 时间，返回 0..1，1 = 高） ----------
+const sig01 = (u, c = 0.5, k = 9) => { const f = (v) => 1 / (1 + Math.exp(-(v - c) * k)); return (f(u) - f(0)) / (f(1) - f(0)); };
+const CURVE = {
+  resp: (u) => 0.55 - 0.08 * u + (0.36 - 0.18 * u) * Math.sin(2 * Math.PI * (4.6 * u - 1.1 * u * u)),
+  heart: (u) => {
+    const ph = 6.0 * u - 1.6 * u * u, f = ph - Math.floor(ph);
+    let v = 0.42 - 0.16 * u;
+    if (f > 0.42 && f < 0.48) v += 0.5 * Math.sin(((f - 0.42) / 0.06) * Math.PI);
+    else if (f > 0.48 && f < 0.53) v -= 0.12 * Math.sin(((f - 0.48) / 0.05) * Math.PI);
+    return v;
+  },
+  // 肌肉张力：下降最明显；blip > 0 时在 0.86 附近出现一次很短的异常波动
+  muscle: (u, blip = 0) => {
+    let v = 0.94 - 0.78 * sig01(u, 0.45, 8);
+    const b = (u - 0.86) / 0.018;
+    if (blip > 0 && Math.abs(b) < 3) v += blip * 0.2 * Math.exp(-b * b) - blip * 0.08 * Math.exp(-(b - 1.6) * (b - 1.6));
+    return v;
+  },
+  arousal: (u) => 0.9 - 0.68 * sig01(u, 0.55, 6) + 0.025 * Math.sin(u * 37) * (1 - u),
+};
+const BLIP_U = 0.86;
+// 在矩形里画一条数据曲线（画到 k），frame：极淡的上下参考线
+function chart(ctx, fn, R, k, { a = 1, w = 2, glow = 6, color = G.goldRGB, frame = 0.12, n = 160, tip = true } = {}) {
+  if (a <= 0.003) return null;
+  if (frame > 0) {
+    ctx.save();
+    ctx.strokeStyle = rgba(G.dimLine, frame * a); ctx.lineWidth = 1; ctx.setLineDash([2, 7]);
+    for (const y of [R.y0, R.y1]) { ctx.beginPath(); ctx.moveTo(R.x0, y); ctx.lineTo(R.x1, y); ctx.stroke(); }
+    ctx.restore();
+  }
+  const pts = [];
+  for (let i = 0; i <= n; i++) { const u = i / n; pts.push([lerp(R.x0, R.x1, u), lerp(R.y1, R.y0, fn(u))]); }
+  return grow(ctx, pts, k, { a, w, glow, color, tip });
+}
+const lerpRect = (A, B, k) => ({ x0: lerp(A.x0, B.x0, k), x1: lerp(A.x1, B.x1, k), y0: lerp(A.y0, B.y0, k), y1: lerp(A.y1, B.y1, k) });
+const rectPt = (R, u, v) => [lerp(R.x0, R.x1, u), lerp(R.y1, R.y0, v)];
+// 以 (cx, cy) 为中心整体缩放（用于「推进」「拉远」「收拢」）
+function zoomAbout(ctx, cx, cy, s, tx = cx, ty = cy) {
+  ctx.translate(tx, ty); ctx.scale(s, s); ctx.translate(-cx, -cy);
+}
+
 module.exports = {
   W, H, FONT, G, rgba, ...U, spring, env, impulse,
   text, label, node, ripple, polyPartial, bez, goldStroke, body,
+  grow, along, pathLen, arrowMid, brain, CURVE, BLIP_U, sig01, chart, lerpRect, rectPt, zoomAbout,
 };
