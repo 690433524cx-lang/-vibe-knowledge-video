@@ -125,6 +125,20 @@ const CUES = [
   { t: 15.9, fx: () => line(116, 1.0, 2200, 2800), gain: 0.025 },  // 主干向下生长
   { t: 17.55, fx: () => unfold(117, 0.4, true), gain: 0.035 },
   ...[0, 1, 2, 3].map((i) => ({ t: 17.9 + i * 0.3, fx: () => tick(120 + i), gain: 0.032 })),
+  // 插段 · 「长个」误区（raw: true，总时间轴 13.65–20.65）
+  { raw: true, t: 13.7, fx: () => unfold(300, 0.5, false), gain: 0.035 },
+  { raw: true, t: 13.95, fx: () => snap(301), gain: 0.05 },
+  { raw: true, t: 15.25, fx: () => low(302), gain: 0.2 },
+  { raw: true, t: 15.25, fx: () => tick(303), gain: 0.04 },
+  ...[15.5, 15.6, 15.7].map((t, i) => ({ raw: true, t, fx: () => tick(304 + i), gain: 0.022, pan: 0.4 })),
+  { raw: true, t: 15.8, fx: () => line(307, 0.7, 2400, 3200), gain: 0.02, pan: 0.4 },
+  { raw: true, t: 16.0, fx: pip, gain: 0.04 },
+  { raw: true, t: 16.55, fx: () => line(308, 0.18, 5200, 3800), gain: 0.05 },
+  { raw: true, t: 16.6, fx: () => snap(309), gain: 0.07 },
+  { raw: true, t: 17.95, fx: () => unfold(310, 0.6, false), gain: 0.03 },
+  { raw: true, t: 18.6, fx: () => low(311), gain: 0.18 },
+  ...[18.8, 19.05, 19.3, 19.55].map((t, i) => ({ raw: true, t, fx: () => tick(312 + i), gain: 0.03 })),
+  { raw: true, t: 19.9, fx: () => unfold(316, 0.75, true), gain: 0.035 },
   // D · 20–34.6：四条曲线依次亮起；呼吸声放慢、心跳放慢
   { t: 23.9, fx: () => line(130, 1.3, 2000, 2300), gain: 0.022 },
   { t: 24.0, fx: () => breath(131, 3.6), gain: 0.05 },

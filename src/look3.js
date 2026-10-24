@@ -4,7 +4,7 @@
 //   没有台灯、纸张、胶片晃动——主角是图形本身，必须干净、稳定、锐利。
 //   只保留：极轻的暗角、极细的颗粒（防止暗部渐变出现色带）、片尾收黑。
 const { createCanvas } = require('@napi-rs/canvas');
-const { W, H, DESIGN_END, toDesign, TL } = require('./config');
+const { W, H, DESIGN_END, toDesign, TL, splitTime } = require('./config');
 const { prog, smooth, rng } = require('./lib/util');
 
 function makeGround() {
@@ -58,22 +58,32 @@ function makeGrain(count = 3, seed = 901) {
 
 const ground = makeGround();
 const grain = makeGrain();
+const layer = createCanvas(W, H);
+const layerCtx = layer.getContext('2d');
 
 function renderFrameV3(ctx, tReal, frameIndex, SCENES, drawSubtitles) {
-  const d = toDesign(tReal);
-  const env = { frameIndex };
+  const raw = toDesign(tReal);
+  const { d, ins } = splitTime(raw);
+  const env = { frameIndex, raw, ins };
   ctx.save();
   ctx.globalCompositeOperation = 'source-over';
   ctx.globalAlpha = 1;
   ctx.drawImage(ground, 0, 0);
   ctx.restore();
 
-  for (const s of SCENES) if (d >= s.start && d <= s.end) { ctx.save(); s.draw(ctx, d, env); ctx.restore(); }
+  if (ins == null) {
+    for (const s of SCENES) if (!s.insert && d >= s.start && d <= s.end) { ctx.save(); s.draw(ctx, d, env); ctx.restore(); }
+  } else {
+    // 插段：原片停在 at 那一帧，画到图层上，由插段场景决定它显示多少（淡出 / 从中心展开）
+    layerCtx.clearRect(0, 0, W, H);
+    for (const s of SCENES) if (!s.insert && d >= s.start && d <= s.end) { layerCtx.save(); s.draw(layerCtx, d, env); layerCtx.restore(); }
+    for (const s of SCENES) if (s.insert) { ctx.save(); s.draw(ctx, ins, { ...env, layer }); ctx.restore(); }
+  }
 
-  drawSubtitles(ctx, d);
+  drawSubtitles(ctx, d, raw, ins != null);
 
   const cf = TL.CLOSE_FADE ?? 1.0;
-  const close = smooth(prog(d, DESIGN_END - cf, DESIGN_END - 0.05));
+  const close = smooth(prog(raw, DESIGN_END - cf, DESIGN_END - 0.05));
   if (close > 0) {
     ctx.fillStyle = `rgba(6,5,4,${close})`;
     ctx.fillRect(0, 0, W, H);

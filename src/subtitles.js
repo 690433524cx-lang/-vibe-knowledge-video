@@ -14,6 +14,7 @@ for (let i = 0; i < SUBS.length; i++) {
   const a = SUBS[i];
   for (let j = i + 1; j < SUBS.length; j++) {
     const b = SUBS[j];
+    if (!!a.raw !== !!b.raw) continue;
     if (Math.abs((a.y ?? 968) - (b.y ?? 968)) < 60 && b.t < a.t + a.d + 0.32) a.d = Math.max(0.6, b.t - a.t - 0.32);
   }
 }
@@ -165,10 +166,12 @@ function drawLineV3(ctx, s, a, k) {
   ctx.restore();
 }
 
-// t 为设计时间
-function drawSubtitles(ctx, t) {
+// t 为设计时间；raw 为插段之后的总时间轴（raw: true 的字幕按它计时）
+function drawSubtitles(ctx, t0, raw = t0, inInsert = false) {
   if (require('./config').TL.LOOK === 'v3') {
     for (const s of SUBS) {
+      if (inInsert && !s.raw) continue;
+      const t = s.raw ? raw : t0;
       const fi = s.fi ?? 0.25, fo = s.fo ?? 0.25;
       if (t < s.t || t > s.t + s.d + fo) continue;
       const a = smooth(prog(t, s.t, s.t + fi)) * (1 - smooth(prog(t, s.t + s.d, s.t + s.d + fo)));

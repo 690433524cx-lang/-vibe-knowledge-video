@@ -71,4 +71,14 @@ const toDesign = (real) => interp(ANCHORS, real, 'real', 'design');
 // 设计时间 → 真实时间
 const toReal = (design) => interp(ANCHORS, design, 'design', 'real');
 
-module.exports = { W, H, FPS, VIDEO, VIDEO_DIR, TL, DESIGN_T, DESIGN_END, RIGID, T, END, ANCHORS, toDesign, toReal };
+// 插段（timeline.js 里 INSERT = { at, dur }）：原片在 at 处「暂停」dur 秒，插入一段独立场景，之后整体顺延。
+// 场景、字幕、音效都仍按原时间轴编写；raw 是插段之后的总时间轴。
+const INSERT = TL.INSERT || null;
+function splitTime(raw) {
+  if (!INSERT || raw < INSERT.at) return { d: raw, ins: null };
+  if (raw < INSERT.at + INSERT.dur) return { d: INSERT.at, ins: raw - INSERT.at };
+  return { d: raw - INSERT.dur, ins: null };
+}
+const baseToRaw = (d) => (INSERT && d >= INSERT.at ? d + INSERT.dur : d);
+
+module.exports = { INSERT, splitTime, baseToRaw, W, H, FPS, VIDEO, VIDEO_DIR, TL, DESIGN_T, DESIGN_END, RIGID, T, END, ANCHORS, toDesign, toReal };

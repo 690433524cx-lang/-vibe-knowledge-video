@@ -5,7 +5,7 @@
 | 《为什么你越舍不得，越容易继续浪费？》沉没成本 | `videos/sunk-cost/` | 无音乐全片 `output/full_v1.mp4` |
 | 《你是不是也有选择困难？》选择过载 / 满意解 | `videos/choice/` | 精修版无音乐全片 `output/choice/full_v2.mp4`（114.5 s），关键帧 `output/choice/keyframes_full/`，分镜 `docs/choice/storyboard.md`，自检 `docs/choice/review.md`，素材来源 `docs/choice/sources.md` |
 | 《时间错觉》为什么越长大，时间过得越快？ | `videos/time/` | 无 BGM 完整片 `output/time/full_v1.mp4`（120 s），封面 `output/time/cover.jpg`，关键帧 `output/time/keyframes_full/`，时间轴 `docs/time/timeline.md`，分镜 `docs/time/storyboard.md`，验收 `docs/time/review.md`，`docs/time/CHANGELOG.md` |
-| 《为什么你快睡着时，有时会突然"踩空"惊醒？》入睡抽动 | `videos/hypnic/` | 无 BGM 完整预览版 `output/hypnic/preview_v1.mp4`（114.6 s），关键帧 `output/hypnic/keyframes_full/`，0–20 s 样片 `output/hypnic/sample_0-20s.mp4`，分镜 `docs/hypnic/storyboard.md`，自检 `docs/hypnic/review.md`。第三版画面管线 `src/look3.js`（黑金科学图解） |
+| 《为什么你快睡着时，有时会突然"踩空"惊醒？》入睡抽动 | `videos/hypnic/` | 无 BGM 完整预览版 `output/hypnic/preview_v2.mp4`（121.6 s，含「长个」误区插段），关键帧 `output/hypnic/keyframes_full/`，0–20 s 样片 `output/hypnic/sample_0-20s.mp4`，分镜 `docs/hypnic/storyboard.md`，自检 `docs/hypnic/review.md`。第三版画面管线 `src/look3.js`（黑金科学图解） |
 | 《你最确定的那段回忆，可能是你自己编的》被改写的记忆 | `videos/memory/` | 无 BGM 完整片 `output/memory/full_v1.mp4`（119 s），封面 `output/memory/cover.jpg`，关键帧 `output/memory/keyframes_full/`，分镜 `docs/memory/storyboard.md`，验收 `docs/memory/review.md`，`docs/memory/CHANGELOG.md` |
 
 所有命令加 `--video choice` 即可切换到新片（默认 `sunk-cost`）。主重拍参数可用 `MAIN_BEAT_T`（或 `T` / `--T`）。

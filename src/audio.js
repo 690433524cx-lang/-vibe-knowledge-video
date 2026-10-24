@@ -2,7 +2,7 @@
 // 全片核心音效控制在 8～12 种以内，且都很轻，不与《千年之后》抢。
 const fs = require('fs');
 const path = require('path');
-const { toReal, VIDEO_DIR } = require('./config');
+const { toReal, VIDEO_DIR, baseToRaw } = require('./config');
 const { rng } = require('./lib/util');
 
 const SR = 48000;
@@ -150,7 +150,7 @@ function mixSfx(fromReal, toRealT) {
   const len = Math.ceil((toRealT - fromReal) * SR);
   const L = new Float32Array(len), R = new Float32Array(len);
   for (const c of CUES) {
-    const start = Math.round((toReal(c.t) - fromReal) * SR);
+    const start = Math.round((toReal(c.raw ? c.t : baseToRaw(c.t)) - fromReal) * SR);
     const s = c.fx();
     const pan = c.pan || 0;
     for (let i = 0; i < s.length; i++) {

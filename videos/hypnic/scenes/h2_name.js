@@ -10,8 +10,12 @@ const CY = 548;
 // 片尾和某些段落里，小标签让位（之后的段落按需追加）
 const HIDE = [[112.0, 200]];
 
-function draw(ctx, d) {
-  const k = easeInOut(prog(d, MOVE0, MOVE1));
+function draw(ctx, d, env = {}) {
+  // 插段（「长个」误区）期间由 h1b 接管标题；插段之后标题已经在左上角
+  const INS = require('../../../src/config').INSERT;
+  if (INS && env.ins != null) return;
+  const after = INS && env.raw != null && env.raw >= INS.at + INS.dur;
+  const k = after ? 1 : easeInOut(prog(d, MOVE0, MOVE1));
   ctx.save();
   ctx.font = FONT.sansMed(PX);
   ctx.letterSpacing = '14px';
@@ -39,8 +43,8 @@ function draw(ctx, d) {
   ctx.restore();
 
   // 小标签旁的英文
-  const ta = smooth(prog(d, MOVE1 - 0.1, MOVE1 + 0.3)) * 0.6 * (1 - hide);
+  const ta = smooth(prog(d, MOVE1 - 0.1, MOVE1 + 0.3)) * (after ? smooth(prog(env.raw, INS.at + INS.dur, INS.at + INS.dur + 0.4)) : 1) * 0.6 * (1 - hide);
   L.text(ctx, 'HYPNIC JERK', 120 + (tw * TAG_PX) / PX + 18, 94, { font: FONT.inter(15), color: G.gold, a: ta, align: 'left', ls: 4 });
 }
 
-module.exports = { ...S, draw, HIDE };
+module.exports = { ...S, draw, HIDE, PX, TAG_PX, CY };
