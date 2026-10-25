@@ -107,6 +107,8 @@ const cvFar = $('far'), cvMain = $('main'), cvNear = $('near'), cvGrain = $('gra
 const xFar = cvFar.getContext('2d'), xMain = cvMain.getContext('2d'), xNear = cvNear.getContext('2d'), xGrain = cvGrain.getContext('2d');
 const FLASH = $('flash'), SWEEP = $('sweep'), FOR = $('foR'), FOB = $('foB');
 const TAU = Math.PI * 2;
+/* ?render：逐帧导出模式（不自动播放，由外部按帧驱动） */
+const RENDER = new URLSearchParams(location.search).has('render');
 
 /* ---------------- 舞台缩放与 Canvas 分辨率 ---------------- */
 let K = 1, KA = 1;
@@ -316,21 +318,30 @@ const SPR = {
   bokG: sprite(C.gold, 160, [[0, .9], [.5, .75], [.78, .35], [1, 0]]),
   bokWarm: sprite(C.warm, 160, [[0, .9], [.5, .75], [.78, .35], [1, 0]]),
 };
+const AR = RENDER ? rng(20251025) : Math.random;
 const amb = { warm: 0, up: 0 };
-const DUST = Array.from({ length: 90 }, () => ({ x: Math.random() * 2240 - 160, y: Math.random() * 1320 - 120, r: .5 + Math.random() * .75, a: .1 + Math.random() * .2, ang: Math.random() * TAU, sp: 3 + Math.random() * 5 }));
+const DUST = Array.from({ length: 90 }, () => ({ x: AR() * 2240 - 160, y: AR() * 1320 - 120, r: .5 + AR() * .75, a: .1 + AR() * .2, ang: AR() * TAU, sp: 3 + AR() * 5 }));
 function newBokeh(first) {
-  const dir = Math.random() < .5 ? 1 : -1, d = 40 + Math.random() * 80;
-  return { d, a: .05 + Math.random() * .07, gold: Math.random() < .4, vx: dir * (20 + Math.random() * 20), vy: (Math.random() * 2 - 1) * 6,
-    x: first ? Math.random() * 1920 : (dir > 0 ? -300 - Math.random() * 300 : 2220 + Math.random() * 300), y: 120 + Math.random() * 840 };
+  const dir = AR() < .5 ? 1 : -1, d = 40 + AR() * 80;
+  return { d, a: .05 + AR() * .07, gold: AR() < .4, vx: dir * (20 + AR() * 20), vy: (AR() * 2 - 1) * 6,
+    x: first ? AR() * 1920 : (dir > 0 ? -300 - AR() * 300 : 2220 + AR() * 300), y: 120 + AR() * 840 };
 }
 const BOKEH = [newBokeh(true), newBokeh(true), newBokeh(true), newBokeh(false)];
+function updateAmbient(dt) {
+  for (const p of DUST) {
+    p.x += Math.cos(p.ang) * p.sp * dt; p.y += Math.sin(p.ang) * p.sp * dt - amb.up * 16 * dt;
+    if (p.x < -170) p.x += 2260; if (p.x > 2090) p.x -= 2260; if (p.y < -130) p.y += 1340; if (p.y > 1210) p.y -= 1340;
+  }
+  BOKEH.forEach((b, i) => {
+    b.x += b.vx * dt; b.y += b.vy * dt;
+    if ((b.vx > 0 && b.x > 2300) || (b.vx < 0 && b.x < -380)) BOKEH[i] = newBokeh(false);
+  });
+}
 function drawFar(dt, cx, cy, cs) {
   const k = KA, sf = 1 + (cs - 1) * .3;
   xFar.setTransform(1, 0, 0, 1, 0, 0); xFar.clearRect(0, 0, cvFar.width, cvFar.height);
   xFar.setTransform(k * sf, 0, 0, k * sf, k * (960 - 960 * sf + cx * .3), k * (540 - 540 * sf + cy * .3));
   for (const p of DUST) {
-    p.x += Math.cos(p.ang) * p.sp * dt; p.y += Math.sin(p.ang) * p.sp * dt - amb.up * 16 * dt;
-    if (p.x < -170) p.x += 2260; if (p.x > 2090) p.x -= 2260; if (p.y < -130) p.y += 1340; if (p.y > 1210) p.y -= 1340;
     const s = p.r * 2 + 4;
     if (amb.warm < .999) { xFar.globalAlpha = p.a * (1 - amb.warm); xFar.drawImage(SPR.dustW, p.x - s / 2, p.y - s / 2, s, s); }
     if (amb.warm > .001) { xFar.globalAlpha = Math.min(1, p.a * 1.4) * amb.warm; xFar.drawImage(SPR.dustG, p.x - s / 2, p.y - s / 2, s, s); }
@@ -341,9 +352,7 @@ function drawNear(dt, cx, cy, cs) {
   const k = KA, sf = 1 + (cs - 1) * 1.5;
   xNear.setTransform(1, 0, 0, 1, 0, 0); xNear.clearRect(0, 0, cvNear.width, cvNear.height);
   xNear.setTransform(k * sf, 0, 0, k * sf, k * (960 - 960 * sf + cx * 1.5), k * (540 - 540 * sf + cy * 1.5));
-  BOKEH.forEach((b, i) => {
-    b.x += b.vx * dt; b.y += b.vy * dt;
-    if ((b.vx > 0 && b.x > 2300) || (b.vx < 0 && b.x < -380)) BOKEH[i] = newBokeh(false);
+  BOKEH.forEach(b => {
     const s = b.d * 1.6;
     xNear.globalAlpha = b.a * (1 - amb.warm); xNear.drawImage(b.gold ? SPR.bokG : SPR.bokW, b.x - s / 2, b.y - s / 2, s, s);
     if (amb.warm > .001) { xNear.globalAlpha = Math.min(.16, b.a * 1.3) * amb.warm; xNear.drawImage(SPR.bokWarm, b.x - s / 2, b.y - s / 2, s, s); }
@@ -1178,8 +1187,9 @@ const TOTAL = BUILD.start;
 
 /* ---------------- 渲染循环 ---------------- */
 let lastNow = performance.now();
-function render() {
-  const now = performance.now(), dt = Math.min(.05, (now - lastNow) / 1000); lastNow = now; clock += dt;
+function render(dtIn) {
+  const now = performance.now(), dt = dtIn ?? Math.min(.05, (now - lastNow) / 1000); lastNow = now; clock += dt;
+  updateAmbient(dt);
   const cs = camState();
   camEl.style.transform = `translate(${cs.x.toFixed(2)}px,${cs.y.toFixed(2)}px) scale(${cs.s.toFixed(4)})`;
   drawFar(dt, cs.x, cs.y, cs.s);
@@ -1211,7 +1221,7 @@ function render() {
   HG.style.textShadow = `0 0 24px rgba(${gv[0]},${gv[1]},${gv[2]},${(.6 * gi).toFixed(3)})`;
   if (G.qm && +G.qm.style.opacity > 0) gsap.set(G.qm, { rotation: 10 * Math.sin(clock * 3.2) });
 }
-gsap.ticker.add(render);
+if (!RENDER) gsap.ticker.add(() => render());
 
 /* ---------------- 键盘：空格重播，1–8 跳幕 ---------------- */
 addEventListener('keydown', e => {
@@ -1225,6 +1235,10 @@ console.log('%c《镜像》卡点时间表（全片绝对时间，秒）', 'colo
 console.table(BEATS.map(b => ({ 卡点: b.name, 时间: b.t })));
 console.log('各幕开始：' + STARTS.map((s, i) => `第${i + 1}幕 ${s.toFixed(2)}s`).join('  ·  ') + `  ·  总时长 ${TOTAL.toFixed(2)}s`);
 window.__mirror = { master, STARTS, BEATS, TOTAL };
+if (RENDER) {
+  window.__preroll = n => { for (let i = 0; i < n; i++) updateAmbient(1 / 60); };
+  window.__frame = t => { master.seek(t, false); clock = t - 1 / 60; render(1 / 60); };
+}
 
 /* ---------------- 启动：字体就绪后立即播放 ---------------- */
 const fontsReady = Promise.all([
@@ -1232,7 +1246,7 @@ const fontsReady = Promise.all([
   document.fonts.load('500 32px "Noto Sans SC"', '镜像版原图版'),
   document.fonts.load('500 36px "JetBrains Mono"', '0123456789'),
 ]).then(() => document.fonts.ready);
-Promise.race([fontsReady, new Promise(r => setTimeout(r, 3000))]).then(() => master.play(0));
+Promise.race([fontsReady, new Promise(r => setTimeout(r, 3000))]).then(() => { if (RENDER) window.__ready = true; else master.play(0); });
 })();
 </script>
 </body>
