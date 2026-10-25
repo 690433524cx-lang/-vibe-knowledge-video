@@ -1850,7 +1850,7 @@ function ready() {
 }
 gsap.ticker.add(frame);
 ready().then(() => { printHits(); restart(0); });
-window.__yuzhi = { seek: t => { restart(t); master.pause(); frame(); }, time: () => master && master.time() };
+window.__yuzhi = { seek: t => { restart(t); master.pause(); frame(); }, step: t => { master.pause(); master.seek(t, true); frame(); }, time: () => master && master.time() };
 })();
 </script>
 </body>
