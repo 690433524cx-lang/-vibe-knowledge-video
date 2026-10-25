@@ -91,8 +91,17 @@ const V2 = {
   hand: { font: (px) => FONT.hand(px), px: 66, ls: 2, color: C.subRed },
 };
 
+// 第三版：黑色信息空间里的无衬线字幕（暖白，下方安全区固定）
+const V3 = {
+  sub: { font: (px) => FONT.sans(px), px: 50, ls: 3, color: '#ece6da' },
+  small: { font: (px) => FONT.sans(px), px: 38, ls: 3, color: '#d9d2c4' },
+  hook: { font: (px) => FONT.sansMed(px), px: 76, ls: 5, color: '#f1ebdf' },
+  quote: { font: (px) => FONT.sansMed(px), px: 64, ls: 5, color: '#f1ebdf' },
+};
+
 function drawLineV2(ctx, s, a, k) {
-  const st = V2[s.style || 'sub'] || V2.sub;
+  const look3 = require('./config').TL.LOOK === 'v3';
+  const st = (look3 ? V3 : V2)[s.style || 'sub'] || (look3 ? V3 : V2).sub;
   // SUB_SCALE：普通字幕整体放大（钩子大字不受影响）
   const px = Math.round((s.size || st.px) * (s.style === 'hook' ? 1 : (require('./config').TL.SUB_SCALE ?? 1)));
   // 两行字幕：「\n」分行，最后一行压在原来的基线上，上一行往上排
@@ -116,8 +125,8 @@ function drawLineV2(ctx, s, a, k) {
   const y = (s.y ?? 962) + (1 - easeOut(k)) * 6;
   const blur = (1 - smooth(k)) * 3;
   ctx.globalAlpha = a;
-  ctx.shadowColor = 'rgba(0,0,0,0.55)';
-  ctx.shadowBlur = 14;
+  ctx.shadowColor = look3 ? 'rgba(0,0,0,0.95)' : 'rgba(0,0,0,0.55)';
+  ctx.shadowBlur = look3 ? 20 : 14;
   ctx.shadowOffsetY = 2;
   if (blur > 0.2) ctx.filter = `blur(${blur.toFixed(1)}px)`;
   if (s.style === 'hand') {
@@ -135,7 +144,7 @@ function drawLineV2(ctx, s, a, k) {
 
 // t 为设计时间
 function drawSubtitles(ctx, t) {
-  if (require('./config').TL.LOOK === 'v2') {
+  if (['v2', 'v3'].includes(require('./config').TL.LOOK)) {
     for (const s of SUBS) {
       const fi = s.fi ?? 0.35, fo = s.fo ?? 0.35;
       if (t < s.t || t > s.t + s.d + fo) continue;

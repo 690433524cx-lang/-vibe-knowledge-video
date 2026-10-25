@@ -16,3 +16,9 @@ get "Noto+Serif+SC:wght@400" Noto_Serif_SC_wght_400.ttf
 get "EB+Garamond:wght@400" EB_Garamond_wght_400.ttf
 get "EB+Garamond:ital,wght@1,400" EB_Garamond_ital_wght_1_400.ttf
 get "EB+Garamond:wght@500" EB_Garamond_wght_500.ttf
+get "Noto+Sans+SC:wght@300" Noto_Sans_SC_wght_300.ttf
+get "Noto+Sans+SC:wght@400" Noto_Sans_SC_wght_400.ttf
+get "Noto+Sans+SC:wght@500" Noto_Sans_SC_wght_500.ttf
+get "Noto+Sans+SC:wght@700" Noto_Sans_SC_wght_700.ttf
+get "JetBrains+Mono:wght@400" JetBrains_Mono_wght_400.ttf
+get "JetBrains+Mono:wght@500" JetBrains_Mono_wght_500.ttf

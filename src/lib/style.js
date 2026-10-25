@@ -13,6 +13,13 @@ for (const [file, name] of [
   ['EB_Garamond_wght_400.ttf', 'Garamond'],
   ['EB_Garamond_wght_500.ttf', 'GaramondMed'],
   ['EB_Garamond_ital_wght_1_400.ttf', 'GaramondItalic'],
+  // 第三版（提前焦虑起）：未来感的黑色信息空间，中文无衬线 + 等宽英文
+  ['Noto_Sans_SC_wght_300.ttf', 'SansSCLight'],
+  ['Noto_Sans_SC_wght_400.ttf', 'SansSC'],
+  ['Noto_Sans_SC_wght_500.ttf', 'SansSCMed'],
+  ['Noto_Sans_SC_wght_700.ttf', 'SansSCBold'],
+  ['JetBrains_Mono_wght_400.ttf', 'Mono'],
+  ['JetBrains_Mono_wght_500.ttf', 'MonoMed'],
 ]) {
   const f = path.join(FONT_DIR, file);
   if (require('fs').existsSync(f)) GlobalFonts.registerFromPath(f, name);
@@ -33,6 +40,12 @@ const FONT = {
   en: (px) => `${px}px Garamond`,
   enMed: (px) => `${px}px GaramondMed`,
   enItalic: (px) => `${px}px GaramondItalic`,
+  sansLight: (px) => `${px}px SansSCLight`,
+  sans: (px) => `${px}px SansSC`,
+  sansMed: (px) => `${px}px SansSCMed`,
+  sansBold: (px) => `${px}px SansSCBold`,
+  mono: (px) => `${px}px Mono`,
+  monoMed: (px) => `${px}px MonoMed`,
 };
 
 const C = {

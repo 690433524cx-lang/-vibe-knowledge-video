@@ -92,6 +92,7 @@ function applyLight(ctx, L) {
 }
 
 function renderFrame(ctx, tReal, frameIndex) {
+  if (require('./config').TL.LOOK === 'v3') return require('./look3').renderFrameV3(ctx, tReal, frameIndex, SCENES, drawSubtitles);
   if (require('./config').TL.LOOK === 'v2') return require('./look2').renderFrameV2(ctx, tReal, frameIndex, SCENES, drawSubtitles);
   const d = toDesign(tReal);
   const [sx, sy] = climaxShake(d);
