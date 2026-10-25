@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>镜像</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Noto+Sans+SC:wght@500&family=Noto+Serif+SC:wght@700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden;cursor:none}
+*{cursor:none}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;overflow:hidden;background:#050505}
+#stage>*{position:absolute;left:0;top:0;width:1920px;height:1080px}
+#bg{background:#050505}
+#dawn{position:absolute;inset:0;opacity:0;background:linear-gradient(to bottom,#0B1630 0%,#3A2E4F 40%,#E8A26A 100%)}
+#horizon{position:absolute;left:0;bottom:0;width:100%;height:120px;opacity:0;
+  background:radial-gradient(ellipse 70% 100% at 50% 100%,rgba(255,196,140,.95),rgba(232,162,106,.35) 55%,rgba(232,162,106,0) 100%)}
+#camera{transform-origin:960px 540px;will-change:transform}
+#camera>*{position:absolute;left:0;top:0;width:1920px;height:1080px}
+canvas{display:block}
+#subtitle,#fx,#grain,#near,#far{pointer-events:none}
+#hookWrap{position:absolute;left:0;top:0;width:1920px;height:1080px;perspective:1600px;perspective-origin:960px 540px}
+#hook{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:960px 540px}
+.t{position:absolute;white-space:nowrap;line-height:1.3}
+.serif{font-family:'Noto Serif SC',serif;font-weight:700}
+.sans{font-family:'Noto Sans SC',sans-serif;font-weight:500}
+.mono{font-family:'JetBrains Mono','Noto Sans SC',monospace;font-weight:500}
+.c{display:inline-block}
+.lab{text-shadow:0 2px 10px rgba(0,0,0,.85)}
+.kg,.kb,.kr{display:inline-block;--g:0}
+.kg{color:#E8C27A;text-shadow:0 0 calc(8px + 18px*var(--g)) rgba(232,194,122,calc(.35 + .55*var(--g))),0 2px 12px rgba(0,0,0,.8)}
+.kb{color:#7FB3FF;text-shadow:0 0 calc(8px + 18px*var(--g)) rgba(127,179,255,calc(.35 + .55*var(--g))),0 2px 12px rgba(0,0,0,.8)}
+.kr{color:#E5484D;text-shadow:0 0 calc(8px + 18px*var(--g)) rgba(229,72,77,calc(.35 + .55*var(--g))),0 2px 12px rgba(0,0,0,.8)}
+.sub{position:absolute;left:0;top:938px;width:1920px;text-align:center;white-space:nowrap;
+  font-family:'Noto Sans SC',sans-serif;font-weight:500;font-size:56px;line-height:56px;letter-spacing:.06em;
+  color:#F2F2F2;text-shadow:0 2px 12px rgba(0,0,0,.8)}
+.ctr{position:absolute;width:320px;height:76px;overflow:hidden}
+.ctr span{position:absolute;left:0;top:0;width:100%;text-align:center;line-height:76px;font-size:56px;color:#F2F2F2;opacity:0}
+.ctr span.red{color:#E5484D;text-shadow:0 0 18px rgba(229,72,77,.6)}
+.card{position:absolute;width:480px;padding:36px;border:1px solid rgba(242,242,242,.9);border-radius:16px;background:rgba(5,5,5,.55)}
+.card .ct{font-family:'Noto Sans SC',sans-serif;font-weight:500;font-size:38px;color:#E8C27A;margin-bottom:26px;line-height:1.2}
+.card .it{display:flex;align-items:center;gap:12px;font-family:'Noto Sans SC',sans-serif;font-weight:500;font-size:34px;color:#F2F2F2;line-height:1.5;margin-top:14px;white-space:nowrap}
+.card svg{width:38px;height:38px;flex:none;overflow:visible}
+.card path{fill:none;stroke:#E8C27A;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:44;stroke-dashoffset:44;filter:drop-shadow(0 0 6px rgba(232,194,122,.7))}
+#vig{position:absolute;inset:0;background:radial-gradient(ellipse 75% 75% at 50% 50%,rgba(0,0,0,0) 52%,rgba(0,0,0,.4) 100%)}
+#sweep{position:absolute;left:860px;top:-1000px;width:200px;height:3080px;opacity:0;transform:rotate(45deg);
+  background:linear-gradient(90deg,rgba(127,179,255,0) 0%,rgba(127,179,255,.25) 50%,rgba(127,179,255,0) 100%)}
+#flash{position:absolute;inset:0;background:#fff;opacity:0}
+#grain{opacity:.04;image-rendering:pixelated}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"><div id="dawn"></div><div id="horizon"></div></div>
+  <canvas id="far"></canvas>
+  <div id="camera">
+    <canvas id="main"></canvas>
+    <div id="dom">
+      <div id="hookWrap"><div id="hook">
+        <div class="t serif" id="h1" style="left:960px;top:460px;font-size:96px;color:#F2F2F2;transform:translate(-50%,-50%);opacity:.7;filter:blur(4px)">镜子里的你，</div>
+        <div class="t serif" id="h2" style="left:960px;top:600px;font-size:112px;color:#F2F2F2;transform:translate(-50%,-50%);opacity:.7;filter:blur(4px)">从来不是<span id="hg" style="color:#E8C27A;text-shadow:0 0 24px rgba(232,194,122,.6)">别人眼里的你</span>。</div>
+        <div class="t sans" id="h3" style="left:960px;top:720px;font-size:36px;color:#BDBDBD;transform:translate(-50%,-50%);opacity:0">你可能，从来没见过自己真正的脸</div>
+      </div></div>
+    </div>
+  </div>
+  <canvas id="near"></canvas>
+  <div id="subtitle"></div>
+  <div id="fx"><div id="vig"></div><div id="sweep"></div><div id="flash"></div></div>
+  <canvas id="grain" width="640" height="360"></canvas>
+</div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="rgbsplit" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feColorMatrix in="SourceGraphic" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="r"/>
+    <feOffset id="foR" in="r" dx="-4" dy="0" result="ro"/>
+    <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="g"/>
+    <feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="b"/>
+    <feOffset id="foB" in="b" dx="4" dy="0" result="bo"/>
+    <feComposite in="ro" in2="g" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="rg"/>
+    <feComposite in="rg" in2="bo" operator="arithmetic" k1="0" k2="1" k3="1" k4="0"/>
+  </filter>
+</svg>
+<script>
+(() => {
+'use strict';
+
+/* =====================================================================
+   《镜像》 · 八幕动态知识短片
+   ---------------------------------------------------------------------
+   卡点时间表（全片绝对时间，单位：秒）
+   这些数值由阅读时间规则自动排程后得出，页面加载时会用 console.log 打印
+   精确值（以控制台为准）：
+     第一幕  文字镜像翻转开始 3.50        翻回完成 5.90
+     第二幕  “第27张” 26.34
+     第三幕  人脸裂开 36.38              左右拼脸完成 38.38
+     第五幕  “×25”最后一次闪现 71.50     最长好感度条长完 73.40
+     第六幕  金色对勾 102.98             “是因为它‘陌生’”出现 109.08
+     第七幕  “约+30%”出现 119.66
+     总时长 143.5 秒（字幕阅读时间规则自动顺延后的结果）
+   ===================================================================== */
+
+const C = { bg:'#050505', gold:'#E8C27A', blue:'#7FB3FF', red:'#E5484D', white:'#F2F2F2', g1:'#BDBDBD', g2:'#8A8A8A', g3:'#3A3A3A', warm:'#F0B878' };
+const $ = id => document.getElementById(id);
+const stage = $('stage'), camEl = $('camera'), DOM = $('dom'), SUBL = $('subtitle');
+const cvFar = $('far'), cvMain = $('main'), cvNear = $('near'), cvGrain = $('grain');
+const xFar = cvFar.getContext('2d'), xMain = cvMain.getContext('2d'), xNear = cvNear.getContext('2d'), xGrain = cvGrain.getContext('2d');
+const FLASH = $('flash'), SWEEP = $('sweep'), FOR = $('foR'), FOB = $('foB');
+const TAU = Math.PI * 2;
+
+/* ---------------- 舞台缩放与 Canvas 分辨率 ---------------- */
+let K = 1, KA = 1;
+function fit() {
+  const w = innerWidth, h = innerHeight, ss = Math.min(w / 1920, h / 1080);
+  stage.style.transform = `translate(${(w - 1920 * ss) / 2}px,${(h - 1080 * ss) / 2}px) scale(${ss})`;
+  const dpr = window.devicePixelRatio || 1;
+  K = Math.min(2, Math.max(1, dpr * ss * 1.12));
+  KA = Math.min(1.5, Math.max(.75, dpr * ss));
+  for (const [cv, k] of [[cvMain, K], [cvFar, KA], [cvNear, KA]]) {
+    cv.width = Math.round(1920 * k); cv.height = Math.round(1080 * k);
+    cv.style.width = '1920px'; cv.style.height = '1080px';
+  }
+  cvGrain.style.width = '1920px'; cvGrain.style.height = '1080px';
+}
+fit();
+addEventListener('resize', fit);
+
+/* ---------------- 工具 ---------------- */
+const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const _hex = {};
+function rgbOf(c) {
+  if (c[0] === '#') { if (!_hex[c]) { const n = parseInt(c.slice(1), 16); _hex[c] = [n >> 16 & 255, n >> 8 & 255, n & 255]; } return _hex[c]; }
+  return c.match(/[\d.]+/g).slice(0, 3).map(Number);
+}
+function mix(a, b, t) {
+  if (t <= .001) return a; if (t >= .999) return b;
+  const A = rgbOf(a), B = rgbOf(b);
+  return `rgb(${A[0] + (B[0] - A[0]) * t | 0},${A[1] + (B[1] - A[1]) * t | 0},${A[2] + (B[2] - A[2]) * t | 0})`;
+}
+function rgba(c, a) { const v = rgbOf(c); return `rgba(${v[0]},${v[1]},${v[2]},${a})`; }
+function quadPts(a, c, b, n = 16) { const o = []; for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t; o.push([u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]]); } return o; }
+function cubicPts(a, b, c, d, n = 20) { const o = []; for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t; o.push([u*u*u*a[0] + 3*u*u*t*b[0] + 3*u*t*t*c[0] + t*t*t*d[0], u*u*u*a[1] + 3*u*u*t*b[1] + 3*u*t*t*c[1] + t*t*t*d[1]]); } return o; }
+function crPts(P, closed, seg = 10) {
+  const n = P.length, out = [], g = i => closed ? P[(i + n) % n] : P[Math.max(0, Math.min(n - 1, i))];
+  const last = closed ? n : n - 1;
+  for (let i = 0; i < last; i++) {
+    const p0 = g(i - 1), p1 = g(i), p2 = g(i + 1), p3 = g(i + 2);
+    for (let j = 0; j < seg; j++) {
+      const t = j / seg, t2 = t * t, t3 = t2 * t, f = k => .5 * (2 * p1[k] + (-p0[k] + p2[k]) * t + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * t2 + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * t3);
+      out.push([f(0), f(1)]);
+    }
+  }
+  out.push(closed ? out[0].slice() : P[n - 1].slice());
+  return out;
+}
+function strokePoly(ctx, pts, prog = 1) {
+  const n = pts.length; if (n < 2 || prog <= 0) return;
+  const segs = (n - 1) * Math.min(1, prog), full = Math.floor(segs);
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i <= full; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  if (full < n - 1) { const f = segs - full, a = pts[full], b = pts[full + 1]; ctx.lineTo(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f); }
+  ctx.stroke();
+}
+
+/* =====================================================================
+   镜像人脸：全片唯一的人脸绘制函数
+   ===================================================================== */
+const eyePts = (x, y) => [...quadPts([x - 36, y], [x, y - 24], [x + 36, y]), ...quadPts([x + 36, y], [x, y + 22], [x - 36, y]).slice(1)];
+const FACE = [
+  { n:'hair', out:1, pts: crPts([[-188,-150],[-212,-215],[-180,-292],[-98,-336],[8,-344],[112,-326],[182,-272],[202,-205],[180,-150]], false, 10) },
+  { n:'contour', out:1, pts: crPts([[0,-250],[-185,-150],[-200,-20],[-150,150],[0,260],[140,150],[188,-20],[178,-150]], true, 14) },
+  { n:'hairline', out:1, pts: crPts([[-185,-150],[-150,-190],[-95,-207],[-40,-200]], false, 10) },
+  { n:'hairline', out:1, pts: crPts([[-40,-200],[25,-214],[105,-210],[152,-188],[178,-150]], false, 10) },
+  { n:'part', out:1, pts: [[-55,-255],[-47.5,-227.5],[-40,-200]] },
+  { n:'browL', pts: quadPts([-140,-118],[-97,-134],[-55,-128]) },
+  { n:'browR', pts: quadPts([55,-112],[97,-118],[140,-104]) },
+  { n:'eyeL', pts: eyePts(-95,-70) },
+  { n:'eyeR', pts: eyePts(95,-66) },
+  { n:'pupilL', dot:[-95,-70,5] },
+  { n:'pupilR', dot:[95,-66,5] },
+  { n:'mole', dot:[118,-36,3.5] },
+  { n:'nose', nose:1, pts: [[0,-50],[4,-7.5],[8,35]] },
+  { n:'nose', nose:1, pts: quadPts([-30,48],[0,68],[30,48]) },
+  { n:'nose', nose:1, pts: quadPts([-34,26],[-47,42],[-30,48],10) },
+  { n:'nose', nose:1, pts: quadPts([34,26],[47,42],[30,48],10) },
+  { n:'mouth', pts: quadPts([-72,118],[0,142],[72,110],20) },
+];
+
+/**
+ * drawFace(ctx, cx, cy, scale, options)
+ * options: mirror, color, half('full'|'left'|'right'), highlight[], noseScale,
+ *          以及 hlColor/hlAmt（高亮色与强度）、progress（描边进度）、glow、sx（水平展开系数）、
+ *          outline（外轮廓缩放）、noseMix（鼻子金色程度）、clip（裁切矩形）、lw
+ */
+function drawFace(ctx, cx, cy, scale, o = {}) {
+  const m = (o.mirror ? -1 : 1) * (o.sx ?? 1);
+  const ns = o.noseScale ?? 1, ol = o.outline ?? 1, pr = o.progress ?? 1;
+  const col = o.color || C.white, glow = o.glow ?? 8;
+  const hl = o.highlight || [], hc = o.hlColor || C.red, ha = o.hlAmt ?? 1;
+  const half = o.half && o.half !== 'full' ? o.half : null;
+  if (half && Math.abs(m) < 1e-3) return;
+  ctx.save();
+  if (o.clip) { ctx.beginPath(); ctx.rect(o.clip[0], o.clip[1], o.clip[2], o.clip[3]); ctx.clip(); }
+  if (half) {
+    const W = 3000, xe = cx + m * (half === 'left' ? -W : W) * scale;
+    ctx.beginPath(); ctx.rect(Math.min(cx, xe), cy - W, Math.abs(xe - cx), 2 * W); ctx.clip();
+  }
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = o.lw ?? 2;
+  const tf = (p, x, y) => {
+    if (p.nose) { x *= ns; y = 30 + (y - 30) * ns; }
+    if (p.out) { x *= ol; y *= ol; }
+    return [cx + m * x * scale, cy + y * scale];
+  };
+  for (const p of FACE) {
+    let c = col, g = glow;
+    if (p.nose && o.noseMix) { c = mix(col, C.gold, o.noseMix); g = glow + 8 * o.noseMix; }
+    if (ha > 0 && hl.includes(p.n)) { c = mix(c, hc, ha); g = glow + 8 * ha; }
+    ctx.strokeStyle = c; ctx.fillStyle = c; ctx.shadowColor = c; ctx.shadowBlur = g;
+    if (p.dot) {
+      if (pr < .7) continue;
+      const a = Math.min(1, (pr - .7) / .2), q = tf(p, p.dot[0], p.dot[1]);
+      ctx.save(); ctx.globalAlpha *= a; ctx.beginPath(); ctx.arc(q[0], q[1], Math.max(1.6, p.dot[2] * scale), 0, TAU); ctx.fill(); ctx.restore();
+      continue;
+    }
+    const pts = p.pts.map(q => tf(p, q[0], q[1]));
+    strokePoly(ctx, pts, pr);
+  }
+  ctx.restore();
+}
+function facePt(o, x, y) { const m = (o.mirror ? -1 : 1) * (o.sx ?? 1); return [o.x + m * x * o.s, o.y + y * o.s]; }
+function facePoints(cx, cy, s, mirror) {
+  const out = [], m = mirror ? -1 : 1;
+  for (const p of FACE) if (p.pts) for (const q of p.pts) out.push([cx + m * q[0] * s, cy + q[1] * s]);
+  return out;
+}
+
+/* =====================================================================
+   画布对象注册表（全部属性由 GSAP 时间线驱动，可任意跳转）
+   ===================================================================== */
+const OBJS = [];
+function add(o) { o.alpha ??= 0; o.z ??= 5; OBJS.push(o); return o; }
+function face(p) { return add(Object.assign({ type:'face', x:960, y:540, s:1, mirror:false, c1:C.white, c2:C.gold, cm:0, half:null, hl:[], hlAmt:0, ns:1, noseMix:0, prog:1, glow:8, sx:1, outline:1, clip:null, z:10 }, p)); }
+function L(p) { return add(Object.assign({ type:'line', color:C.gold, lw:1.5, glow:8, prog:0, dash:null, flow:0, arrow:false, z:12 }, p)); }
+function circ(p) { return add(Object.assign({ type:'circle', color:C.gold, lw:1.8, glow:10, prog:0, r:15, z:12 }, p)); }
+function rect(p) { return add(Object.assign({ type:'rect', color:C.white, lw:1, glow:0, prog:0, r:8, explode:0, z:4 }, p)); }
+function fnObj(fn, p) { return add(Object.assign({ type:'fn', fn }, p)); }
+
+const DRAW = {
+  face(ctx, o) {
+    drawFace(ctx, o.x, o.y, o.s, { mirror:o.mirror, color:mix(o.c1, o.c2, o.cm), half:o.half, highlight:o.hl, hlAmt:o.hlAmt,
+      noseScale:o.ns, noseMix:o.noseMix, progress:o.prog, glow:o.glow, sx:o.sx, outline:o.outline, clip:o.clip });
+  },
+  line(ctx, o) {
+    ctx.strokeStyle = o.color; ctx.lineWidth = o.lw; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.shadowColor = o.color; ctx.shadowBlur = o.glow;
+    if (o.dash) { ctx.setLineDash(o.dash); ctx.lineDashOffset = -(o.flow || 0) * clock; }
+    strokePoly(ctx, o.pts, o.prog);
+    if (o.arrow && o.prog > .05) {
+      ctx.setLineDash([]);
+      const n = o.pts.length, segs = (n - 1) * Math.min(1, o.prog), i = Math.min(n - 2, Math.floor(segs)), f = segs - i;
+      const a = o.pts[i], b = o.pts[i + 1], ex = a[0] + (b[0] - a[0]) * Math.min(1, f), ey = a[1] + (b[1] - a[1]) * Math.min(1, f);
+      const ang = Math.atan2(b[1] - a[1], b[0] - a[0]), s = 14;
+      ctx.beginPath(); ctx.moveTo(ex - s * Math.cos(ang - .45), ey - s * Math.sin(ang - .45)); ctx.lineTo(ex, ey);
+      ctx.lineTo(ex - s * Math.cos(ang + .45), ey - s * Math.sin(ang + .45)); ctx.stroke();
+    }
+  },
+  circle(ctx, o) {
+    ctx.strokeStyle = o.color; ctx.lineWidth = o.lw; ctx.lineCap = 'round'; ctx.shadowColor = o.color; ctx.shadowBlur = o.glow;
+    ctx.beginPath(); ctx.arc(o.x, o.y, o.r, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, o.prog)); ctx.stroke();
+  },
+  rect(ctx, o) {
+    const { x, y, w, h } = o, r = Math.min(o.r, w / 2, h / 2);
+    ctx.strokeStyle = o.color; ctx.lineWidth = o.lw; ctx.lineCap = 'round'; ctx.shadowColor = o.color; ctx.shadowBlur = o.glow;
+    if (o.explode > 0) {
+      const e = o.explode, d = e * 260, x0 = x - w / 2, y0 = y - h / 2;
+      ctx.globalAlpha *= Math.max(0, 1 - e);
+      ctx.beginPath();
+      ctx.moveTo(x0 + r, y0 - d); ctx.lineTo(x0 + w - r, y0 - d);
+      ctx.moveTo(x0 + r, y0 + h + d); ctx.lineTo(x0 + w - r, y0 + h + d);
+      ctx.moveTo(x0 - d, y0 + r); ctx.lineTo(x0 - d, y0 + h - r);
+      ctx.moveTo(x0 + w + d, y0 + r); ctx.lineTo(x0 + w + d, y0 + h - r);
+      ctx.stroke(); return;
+    }
+    const P = 2 * (w - 2 * r) + 2 * (h - 2 * r) + TAU * r;
+    if (o.prog < 1) ctx.setLineDash([P * o.prog, P + 10]);
+    ctx.beginPath(); ctx.roundRect(x - w / 2, y - h / 2, w, h, r); ctx.stroke();
+  },
+  beam(ctx, o) {
+    const pr = Math.min(1, o.prog); if (pr <= 0) return;
+    const x1 = o.x0 + (o.x1 - o.x0) * pr, y1 = o.y0 + (o.y1 - o.y0) * pr;
+    const dx = x1 - o.x0, dy = y1 - o.y0, len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len;
+    const w1 = o.w0 + (o.w1 - o.w0) * pr;
+    const poly = (k) => { ctx.beginPath(); ctx.moveTo(o.x0 + nx * o.w0 * k / 2, o.y0 + ny * o.w0 * k / 2); ctx.lineTo(x1 + nx * w1 * k / 2, y1 + ny * w1 * k / 2);
+      ctx.lineTo(x1 - nx * w1 * k / 2, y1 - ny * w1 * k / 2); ctx.lineTo(o.x0 - nx * o.w0 * k / 2, o.y0 - ny * o.w0 * k / 2); ctx.closePath(); ctx.fill(); };
+    ctx.fillStyle = o.color; ctx.shadowColor = o.color; ctx.shadowBlur = 18;
+    ctx.save(); ctx.globalAlpha *= .18; poly(5); ctx.restore();
+    poly(1);
+    ctx.save(); ctx.globalAlpha *= .8; ctx.beginPath(); ctx.arc(x1, y1, w1 * 1.4, 0, TAU); ctx.fill(); ctx.restore();
+  },
+  fn(ctx, o) { o.fn(ctx, o); },
+};
+
+/* =====================================================================
+   远景微尘 · 近景光斑 · 胶片噪点
+   ===================================================================== */
+function sprite(color, size, stops) {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const g = c.getContext('2d'), gr = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  for (const [o, a] of stops) gr.addColorStop(o, rgba(color, a));
+  g.fillStyle = gr; g.fillRect(0, 0, size, size); return c;
+}
+const SPR = {
+  dustW: sprite(C.white, 32, [[0, 1], [.35, .8], [1, 0]]),
+  dustG: sprite(C.warm, 32, [[0, 1], [.35, .8], [1, 0]]),
+  bokW: sprite(C.white, 160, [[0, .9], [.5, .75], [.78, .35], [1, 0]]),
+  bokG: sprite(C.gold, 160, [[0, .9], [.5, .75], [.78, .35], [1, 0]]),
+  bokWarm: sprite(C.warm, 160, [[0, .9], [.5, .75], [.78, .35], [1, 0]]),
+};
+const amb = { warm: 0, up: 0 };
+const DUST = Array.from({ length: 90 }, () => ({ x: Math.random() * 2240 - 160, y: Math.random() * 1320 - 120, r: .5 + Math.random() * .75, a: .1 + Math.random() * .2, ang: Math.random() * TAU, sp: 3 + Math.random() * 5 }));
+function newBokeh(first) {
+  const dir = Math.random() < .5 ? 1 : -1, d = 40 + Math.random() * 80;
+  return { d, a: .05 + Math.random() * .07, gold: Math.random() < .4, vx: dir * (20 + Math.random() * 20), vy: (Math.random() * 2 - 1) * 6,
+    x: first ? Math.random() * 1920 : (dir > 0 ? -300 - Math.random() * 300 : 2220 + Math.random() * 300), y: 120 + Math.random() * 840 };
+}
+const BOKEH = [newBokeh(true), newBokeh(true), newBokeh(true), newBokeh(false)];
+function drawFar(dt, cx, cy, cs) {
+  const k = KA, sf = 1 + (cs - 1) * .3;
+  xFar.setTransform(1, 0, 0, 1, 0, 0); xFar.clearRect(0, 0, cvFar.width, cvFar.height);
+  xFar.setTransform(k * sf, 0, 0, k * sf, k * (960 - 960 * sf + cx * .3), k * (540 - 540 * sf + cy * .3));
+  for (const p of DUST) {
+    p.x += Math.cos(p.ang) * p.sp * dt; p.y += Math.sin(p.ang) * p.sp * dt - amb.up * 16 * dt;
+    if (p.x < -170) p.x += 2260; if (p.x > 2090) p.x -= 2260; if (p.y < -130) p.y += 1340; if (p.y > 1210) p.y -= 1340;
+    const s = p.r * 2 + 4;
+    if (amb.warm < .999) { xFar.globalAlpha = p.a * (1 - amb.warm); xFar.drawImage(SPR.dustW, p.x - s / 2, p.y - s / 2, s, s); }
+    if (amb.warm > .001) { xFar.globalAlpha = Math.min(1, p.a * 1.4) * amb.warm; xFar.drawImage(SPR.dustG, p.x - s / 2, p.y - s / 2, s, s); }
+  }
+  xFar.globalAlpha = 1;
+}
+function drawNear(dt, cx, cy, cs) {
+  const k = KA, sf = 1 + (cs - 1) * 1.5;
+  xNear.setTransform(1, 0, 0, 1, 0, 0); xNear.clearRect(0, 0, cvNear.width, cvNear.height);
+  xNear.setTransform(k * sf, 0, 0, k * sf, k * (960 - 960 * sf + cx * 1.5), k * (540 - 540 * sf + cy * 1.5));
+  BOKEH.forEach((b, i) => {
+    b.x += b.vx * dt; b.y += b.vy * dt;
+    if ((b.vx > 0 && b.x > 2300) || (b.vx < 0 && b.x < -380)) BOKEH[i] = newBokeh(false);
+    const s = b.d * 1.6;
+    xNear.globalAlpha = b.a * (1 - amb.warm); xNear.drawImage(b.gold ? SPR.bokG : SPR.bokW, b.x - s / 2, b.y - s / 2, s, s);
+    if (amb.warm > .001) { xNear.globalAlpha = Math.min(.16, b.a * 1.3) * amb.warm; xNear.drawImage(SPR.bokWarm, b.x - s / 2, b.y - s / 2, s, s); }
+  });
+  xNear.globalAlpha = 1;
+}
+const grainImg = xGrain.createImageData(640, 360), grainBuf = new Uint32Array(grainImg.data.buffer);
+function drawGrain() {
+  for (let i = 0; i < grainBuf.length; i++) { const v = Math.random() * 255 | 0; grainBuf[i] = 0xff000000 | v << 16 | v << 8 | v; }
+  xGrain.putImageData(grainImg, 0, 0);
+}
+
+/* =====================================================================
+   粒子对象池（≤3000）与确定性爆发（按时间线时间解析计算，可跳转）
+   ===================================================================== */
+const POOL_MAX = 3000, poolFree = Array.from({ length: POOL_MAX }, () => ({}));
+const BURSTS = [];
+function burst(b) { BURSTS.push(b); return b; }
+function drawBursts(ctx, now) {
+  for (const b of BURSTS) {
+    const age = now - b.t0, on = age >= 0 && age <= b.life;
+    if (on && !b.ps) { const r = rng(b.seed); b.ps = poolFree.splice(0, Math.min(b.n, poolFree.length)); b.ps.forEach((p, i) => b.init(p, r, i)); }
+    if (!on && b.ps) { for (const p of b.ps) poolFree.push(p); b.ps = null; }
+    if (on) { ctx.save(); b.draw(ctx, b.ps, age); ctx.restore(); }
+  }
+}
+
+/* =====================================================================
+   镜头、后期
+   ===================================================================== */
+const cam = { s: 1, x: 0, y: 0, imp: 0, shake: 0 };
+const FXS = { chroma: 0 };
+let clock = 0;
+function camState() {
+  const t = clock;
+  const dx = 4.2 * Math.sin(t * TAU / 7 + .6) + 1.8 * Math.sin(t * TAU / 3.3 + 2.0);
+  const dy = 4.2 * Math.sin(t * TAU / 7.6 + 2.1) + 1.8 * Math.sin(t * TAU / 2.9 + .4);
+  const sh = cam.shake > .001 ? cam.shake : 0;
+  const shx = sh ? 8 * sh * Math.sin(t * 97) : 0, shy = sh ? 8 * sh * Math.cos(t * 83) : 0;
+  return { x: cam.x + dx + shx, y: cam.y + dy + shy, s: cam.s * (1 + cam.imp) * (1 + .003 * Math.sin(t * TAU / 6)) };
+}
+
+/* =====================================================================
+   文字工具
+   ===================================================================== */
+const markup = s => s.replace(/\{([gbr])\|([^}]*)\}/g, (m, c, t) => `<span class="k${c}">${t}</span>`);
+const plain = s => s.replace(/\{[gbr]\||\}/g, '');
+function splitChars(e) {
+  const out = [];
+  const walk = node => [...node.childNodes].forEach(n => {
+    if (n.nodeType === 3) {
+      const frag = document.createDocumentFragment();
+      for (const ch of n.textContent) { const s = document.createElement('span'); s.className = 'c'; s.textContent = ch; frag.appendChild(s); out.push(s); }
+      n.replaceWith(frag);
+    } else walk(n);
+  });
+  walk(e); return out;
+}
+function txt(o) {
+  const e = document.createElement('div');
+  e.className = 't ' + (o.f || 'serif') + (o.cls ? ' ' + o.cls : '');
+  e.innerHTML = markup(o.html); e.style.fontSize = o.size + 'px'; e.style.color = o.color || C.white;
+  if (o.ls) e.style.letterSpacing = o.ls;
+  if (o.shadow) e.style.textShadow = o.shadow;
+  (o.parent || DOM).appendChild(e);
+  const al = o.align || 'center';
+  gsap.set(e, { left: o.x, top: o.y, xPercent: al === 'left' ? 0 : al === 'right' ? -100 : -50, yPercent: -50, opacity: 0 });
+  if (o.chars) { e.chars = splitChars(e); gsap.set(e.chars, { opacity: 0 }); }
+  return e;
+}
+
+/* =====================================================================
+   阅读时间规则 & 排程（自动顺延）
+   ===================================================================== */
+const SUB_STAG = .035, SUB_DUR = .45, SUB_OUT = .35, SUB_GAP = .05;
+const PUNCT = /[，。、：；！？“”‘’《》（）—…·,.\s!?:;'"()\-]/;
+const countChars = s => [...plain(s)].filter(c => !PUNCT.test(c)).length;
+/** 每句字幕最短停留：1.2 秒 + 字数 × 0.18 秒，且不少于 2.5 秒 */
+const readHold = n => Math.max(2.5, 1.2 + n * .18);
+const appearDur = len => (len - 1) * SUB_STAG + SUB_DUR;
+const bigA = (s, st = .05, d = .5) => ([...plain(s)].length - 1) * st + d;
+
+const BUILD = { start: 0, subFree: 0 };
+const BEATS = [];
+const BEAT = (name, local) => BEATS.push({ name, t: +(BUILD.start + local).toFixed(2) });
+
+/**
+ * plan(名义时长, cues)：根据字幕阅读时间与主体文字停留规则自动插入停顿，后续动画全部顺延。
+ * 返回 T(t)：把脚本里的幕内时间映射到实际幕内时间。
+ */
+function plan(nominal, cues) {
+  const delays = [];
+  const T = t => { let s = t; for (const d of delays) if (d.at <= t + 1e-9) s += d.d; return s; };
+  let free = BUILD.subFree - BUILD.start, last = -Infinity;
+  const key = c => c.type === 'hold' ? c.to : c.t;
+  for (const c of cues.slice().sort((a, b) => key(a) - key(b))) {
+    let pa = c.pauseAt ?? key(c); if (pa <= last) pa = last + 1e-3;
+    if (c.type === 'sub') {
+      c.len = [...plain(c.text)].length; c.n = countChars(c.text);
+      const want = T(c.t); if (free > want + 1e-6) delays.push({ at: Math.min(pa, c.t), d: free - want });
+      c.start = T(c.t); c.fadeAt = c.start + appearDur(c.len) + readHold(c.n);
+      free = c.fadeAt + SUB_OUT + SUB_GAP;
+    } else if (c.type === 'hold') {
+      const cur = T(c.to) - T(c.from); if (cur < c.need - 1e-6) delays.push({ at: pa, d: c.need - cur });
+    } else if (c.type === 'after') {
+      const want = T(c.t), f = free - SUB_GAP; if (f > want + 1e-6) delays.push({ at: Math.min(pa, c.t), d: f - want });
+    }
+    last = key(c);
+  }
+  const tl = gsap.timeline();
+  const P = { T, tl, dur: T(nominal), subs: cues.filter(c => c.type === 'sub') };
+  P.subs.forEach(c => addSub(tl, c));
+  if (P.subs.length) BUILD.subFree = Math.max(BUILD.subFree, BUILD.start + free);
+  tl.set({}, {}, P.dur);
+  return P;
+}
+function addSub(tl, c) {
+  const e = document.createElement('div'); e.className = 'sub'; e.innerHTML = markup(c.text); SUBL.appendChild(e);
+  const chars = splitChars(e), kws = [...e.querySelectorAll('.kg,.kb,.kr')];
+  gsap.set(e, { autoAlpha: 0 }); gsap.set(chars, { opacity: 0 });
+  const p = c.start, A = appearDur(chars.length);
+  tl.set(e, { autoAlpha: 1, opacity: 1, y: 0, filter: 'blur(0px)', immediateRender: false }, p);
+  tl.fromTo(chars, { opacity: 0, y: 12, filter: 'blur(8px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: SUB_DUR, ease: 'power3.out', stagger: SUB_STAG, immediateRender: false }, p);
+  kws.forEach(k => {
+    tl.to(k, { scale: 1.1, '--g': 1, duration: .15, ease: 'expo.out' }, p + A)
+      .to(k, { scale: 1, '--g': .35, duration: .2, ease: 'power2.inOut' }, p + A + .15);
+    if (k.classList.contains('kr')) tl.to(k, { keyframes: { x: [3, -3, 2, -2, 0] }, duration: .2, ease: 'none' }, p + A + .35);
+  });
+  tl.to(e, { opacity: 0, filter: 'blur(6px)', y: -6, duration: SUB_OUT, ease: 'power2.in' }, c.fadeAt)
+    .set(e, { autoAlpha: 0 }, c.fadeAt + SUB_OUT);
+}
+
+/* ---------------- 时间线小工具 ---------------- */
+const S = (tl, t, v, p) => tl.set(t, Object.assign({ immediateRender: false }, v), p);
+function fin(tl, el, p, o = {}) { tl.fromTo(el, { opacity: 0, y: o.dy ?? 10, x: o.dx ?? 0 }, { opacity: o.to ?? 1, y: 0, x: 0, duration: o.d ?? .5, ease: 'power3.out', immediateRender: false }, p); }
+function fout(tl, el, p, d = .4) { tl.to(el, { opacity: 0, duration: d, ease: 'power2.in' }, p); }
+function reveal(tl, el, p, st = .05, d = .5) {
+  S(tl, el, { opacity: 1 }, p);
+  tl.fromTo(el.chars, { opacity: 0, y: 16, filter: 'blur(8px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: d, ease: 'power3.out', stagger: st, immediateRender: false }, p);
+  return (el.chars.length - 1) * st + d;
+}
+const camTo = (P, a, b, v) => P.tl.to(cam, Object.assign({ duration: P.T(b) - P.T(a), ease: 'sine.inOut' }, v), P.T(a));
+/** 【冲击】 */
+function impact(tl, p, amt = .04) {
+  tl.to(cam, { imp: amt, duration: .12, ease: 'expo.out' }, p).to(cam, { imp: 0, duration: .5, ease: 'sine.inOut' }, p + .12);
+  tl.fromTo(cam, { shake: 1 }, { shake: 0, duration: .25, ease: 'expo.out', immediateRender: false }, p);
+}
+/** 【闪白】 */
+function flash(tl, p, a = .35) {
+  tl.fromTo(FLASH, { opacity: 0 }, { opacity: a, duration: .06, ease: 'power1.out', immediateRender: false }, p).to(FLASH, { opacity: 0, duration: .14, ease: 'power2.in' }, p + .06);
+}
+/** 【镜面扫光】 */
+function sweep(tl, p) {
+  tl.fromTo(SWEEP, { x: -920, y: -920, opacity: 1 }, { x: 920, y: 920, duration: .6, ease: 'power1.inOut', immediateRender: false }, p);
+  S(tl, SWEEP, { opacity: 0 }, p + .6);
+}
+/** 【色差】 */
+function chroma(tl, p) {
+  tl.fromTo(FXS, { chroma: 0 }, { chroma: 1, duration: .04, ease: 'none', immediateRender: false }, p).to(FXS, { chroma: 0, duration: .16, ease: 'power2.in' }, p + .04);
+}
+
+/* =====================================================================
+   共享对象
+   ===================================================================== */
+const H1 = $('h1'), H2 = $('h2'), H3 = $('h3'), HG = $('hg'), HOOK = $('hook');
+gsap.set([H1, H2, H3], { xPercent: -50, yPercent: -50, x: 0, y: 0 });
+const HK = { gc: 0 };   // 钩子金色发光 → 冷蓝
+
+const MLINE = fnObj((ctx, o) => {
+  ctx.globalAlpha *= .25 + .1 * Math.sin(clock * Math.PI);
+  ctx.strokeStyle = C.blue; ctx.shadowColor = C.blue; ctx.shadowBlur = 16; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(960, -60); ctx.lineTo(960, 1140); ctx.stroke();
+}, { alpha: 1, z: 1 });
+
+const hero = face({ x: 1320, y: 578, s: 1, prog: 0, hl: ['browL', 'browR', 'mouth', 'mole'], z: 10 });
+
+/* =====================================================================
+   第一幕｜钩子
+   ===================================================================== */
+function scene1() {
+  const P = plan(11, [
+    { type: 'sub', t: 6.5, text: '为什么镜子里还挺好看，' },
+    { type: 'sub', t: 9.0, text: '一拍照，就{r|丑得不认识}？' },
+  ]);
+  const { tl, T } = P, sb = P.subs[1];
+  const FRL = rect({ x: 600, y: 540, w: 520, h: 640 }), FRR = rect({ x: 1320, y: 540, w: 520, h: 640 });
+  G.phone = FRR;
+  const FACEL = face({ x: 600, y: 578, mirror: true, c1: C.blue, prog: 0 });
+  const LBM = txt({ x: 600, y: 180, html: '镜子里', f: 'sans', size: 36, color: C.blue, cls: 'lab' });
+  const LBP = txt({ x: 1320, y: 180, html: '照片里', f: 'sans', size: 36, color: C.gold, cls: 'lab' });
+
+  camTo(P, 0, 3.5, { s: 1.08 }); camTo(P, 5.6, 6.3, { s: 1.0 }); camTo(P, 6.3, 10.4, { s: 1.04 }); camTo(P, 10.4, 11, { s: 1.10, y: -40 });
+
+  tl.fromTo([H1, H2], { opacity: .7, filter: 'blur(4px)' }, { opacity: 1, filter: 'blur(0px)', duration: .3, ease: 'power3.out', immediateRender: false }, 0);
+  tl.fromTo(H3, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: .6, ease: 'power3.out', immediateRender: false }, T(2.0));
+
+  const f1 = T(3.5); sweep(tl, f1); BEAT('第一幕 · 文字镜像翻转开始', f1);
+  tl.to(HOOK, { rotationY: 180, duration: .9, ease: 'power3.inOut' }, f1);
+  tl.to([H1, H2, H3, HG], { color: C.blue, duration: .9, ease: 'power2.inOut' }, f1);
+  tl.to(HK, { gc: 1, duration: .9, ease: 'power2.inOut' }, f1);
+  const f2 = T(5.0);
+  tl.to(HOOK, { rotationY: 360, duration: .9, ease: 'power3.inOut' }, f2);
+  tl.to([H1, H2], { color: C.white, duration: .9, ease: 'power2.inOut' }, f2);
+  tl.to(HG, { color: C.gold, duration: .9, ease: 'power2.inOut' }, f2);
+  tl.to(H3, { color: C.g1, duration: .9, ease: 'power2.inOut' }, f2);
+  tl.to(HK, { gc: 0, duration: .9, ease: 'power2.inOut' }, f2);
+  impact(tl, T(5.9), .03); BEAT('第一幕 · 翻回完成', T(5.9));
+
+  tl.to(HOOK, { y: -30, opacity: 0, duration: .5, ease: 'power2.in' }, T(6.0));
+  tl.to(MLINE, { alpha: 0, duration: .8, ease: 'power2.in' }, T(6.0));
+
+  S(tl, [FRL, FRR], { alpha: .6 }, T(6.3));
+  tl.to([FRL, FRR], { prog: 1, duration: .8, ease: 'power3.out' }, T(6.3));
+  fin(tl, [LBM, LBP], T(6.6));
+  S(tl, [FACEL, hero], { alpha: 1 }, T(6.8));
+  tl.to([FACEL, hero], { prog: 1, duration: 1.5, ease: 'power2.inOut' }, T(6.8));
+  tl.to(hero, { hlAmt: 1, duration: .15, ease: 'expo.out' }, sb.start + .3).to(hero, { hlAmt: 0, duration: .6, ease: 'power2.in' }, sb.start + .9);
+
+  const x = T(10.4);
+  tl.to([FRL, FACEL], { alpha: 0, duration: .4, ease: 'power2.in' }, x);
+  fout(tl, [LBM, LBP], x, .35);
+  tl.to(FRR, { x: 960, y: 520, w: 420, h: 820, r: 48, lw: 1.5, alpha: 1, duration: .6, ease: 'power3.inOut' }, x);
+  tl.to(hero, { x: 960, y: 500, s: .7, duration: .6, ease: 'power3.inOut' }, x);
+  return P;
+}
+const G = {};
+
+/* =====================================================================
+   第二幕｜删了又拍
+   ===================================================================== */
+function scene2() {
+  const P = plan(15, [
+    { type: 'sub', t: .5, text: '照镜子：嗯，还行。' },
+    { type: 'sub', t: 3.0, text: '打开相机：{r|这是谁}？', pauseAt: 2.4 },
+    { type: 'sub', t: 6.5, text: '删掉，重拍，再删掉。', pauseAt: 6.0 },
+    { type: 'sub', t: 10.5, text: '问题可能根本{g|不在你的脸上}。' },
+  ]);
+  const { tl, T } = P, FRR = G.phone;
+  const PHX = fnObj((ctx, o) => {
+    ctx.strokeStyle = C.white; ctx.fillStyle = C.white; ctx.lineWidth = 1.5; ctx.lineCap = 'round'; ctx.shadowColor = C.white; ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.moveTo(930, 140); ctx.lineTo(990, 140); ctx.stroke();
+    ctx.beginPath(); ctx.arc(960, 862, 32, 0, TAU); ctx.stroke();
+    ctx.globalAlpha *= .8; ctx.beginPath(); ctx.arc(960, 862, 24 * o.press, 0, TAU); ctx.fill();
+  }, { press: 1, z: 6 });
+  const PHOTO = fnObj(ctx => { ctx.fillStyle = 'rgba(242,242,242,.035)'; ctx.beginPath(); ctx.roundRect(762, 172, 396, 640, 18); ctx.fill(); }, { z: 3 });
+  const fp = (x, y) => [960 + x * .7, 500 + y * .7];
+  const CIRCS = [[-97, -125, 40], [97, -110, 40], [-72, 118, 20], [72, 110, 20], [118, -36, 15]].map(([x, y, r]) => { const q = fp(x, y); return circ({ x: q[0], y: q[1], r, color: C.red, glow: 12 }); });
+  const RIPPLE = fnObj((ctx, o) => { ctx.strokeStyle = C.red; ctx.lineWidth = 2; ctx.shadowColor = C.red; ctx.shadowBlur = 14; ctx.beginPath(); ctx.arc(960, 500, o.r, 0, TAU); ctx.stroke(); }, { r: 200, z: 9 });
+  const STRIKE = fnObj((ctx, o) => { ctx.strokeStyle = C.red; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.shadowColor = C.red; ctx.shadowBlur = 16;
+    ctx.beginPath(); ctx.moveTo(762, 500); ctx.lineTo(762 + 396 * o.prog, 500 - 18 * o.prog); ctx.stroke(); }, { prog: 0, z: 14 });
+  const CTR = document.createElement('div'); CTR.className = 'ctr mono'; DOM.appendChild(CTR);
+  const VALS = ['第1张', '第2张', '第5张', '第12张', '第27张'];
+  const SP = VALS.map((v, i) => { const s = document.createElement('span'); s.textContent = v; if (i === 4) s.className = 'red'; CTR.appendChild(s); return s; });
+  gsap.set(CTR, { left: 1310, top: 180, xPercent: -50, yPercent: -50, opacity: 0 });
+  const HPTS = facePoints(960, 500, .7, false);
+  const press = p => tl.to(PHX, { press: .85, duration: .08, ease: 'power2.in' }, p).to(PHX, { press: 1, duration: .12, ease: 'power3.out' }, p + .08);
+  const shatter = (t0, life, seed) => burst({ t0, life, n: 200, seed,
+    init(p, r, i) {
+      let x, y;
+      if (i < 160) { const q = HPTS[(r() * HPTS.length) | 0]; x = q[0]; y = q[1]; } else { x = 960 + (r() * 2 - 1) * 190; y = 500 + (r() * 2 - 1) * 310; }
+      p.x = x; p.y = y; p.vx = (x - 960) * .9 + (r() * 2 - 1) * 70; p.vy = -60 - r() * 140; p.s = 8 + r() * 6; p.rot = r() * TAU; p.vr = (r() * 2 - 1) * 9;
+      p.a = i < 160 ? .55 + r() * .4 : .07 + r() * .1;
+    },
+    draw(ctx, ps, age) {
+      const k = age / life; ctx.fillStyle = C.white;
+      for (const p of ps) {
+        const x = p.x + p.vx * age, y = p.y + p.vy * age + 750 * age * age, a = p.rot + p.vr * age, c = Math.cos(a), s = Math.sin(a);
+        ctx.globalAlpha = p.a * (1 - k) * (1 - k);
+        ctx.setTransform(K * c, K * s, -K * s, K * c, K * x, K * y); ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s);
+      }
+      ctx.setTransform(K, 0, 0, K, 0, 0);
+    } });
+
+  camTo(P, 0, 6, { s: 1.0, y: -30 });
+  tl.to(PHX, { alpha: 1, duration: .5, ease: 'power3.out' }, 0);
+
+  const sh = T(2.5); press(sh); flash(tl, sh, .35);
+  tl.to(FRR, { glow: 28, duration: .08 }, sh).to(FRR, { glow: 0, duration: .5, ease: 'power2.out' }, sh + .08);
+  S(tl, PHOTO, { alpha: 1 }, sh);
+  CIRCS.forEach((c, i) => { const p = T(2.8) + i * .2; S(tl, c, { alpha: 1 }, p); tl.to(c, { prog: 1, duration: .3, ease: 'power2.out' }, p); });
+  tl.fromTo(RIPPLE, { r: 200, alpha: .3 }, { r: 400, alpha: 0, duration: .8, ease: 'power2.out', immediateRender: false }, T(2.8));
+  tl.to(CIRCS, { alpha: 0, duration: .35, ease: 'power2.in' }, T(5.6));
+
+  const starts = [6.0, 7.6, 8.9, 9.9, 10.7], gaps = [1.6, 1.3, 1.0, .8, .6], xs = [0, -5, 4, -3, 2];
+  starts.forEach((c, k) => {
+    const f = Math.min(1, gaps[k] / .95), p = T(c), d = p + .25 * f, q = d + .5 * f;
+    S(tl, STRIKE, { prog: 0, alpha: 1 }, p);
+    tl.to(STRIKE, { prog: 1, duration: .25 * f, ease: 'power2.out' }, p).to(STRIKE, { alpha: 0, duration: .12 }, d);
+    S(tl, [hero, PHOTO], { alpha: 0 }, d);
+    shatter(BUILD.start + d, .5 * f + .15, 101 + k * 7);
+    if (k === 0) { S(tl, CTR, { opacity: 1 }, d); }
+    else tl.to(SP[k - 1], { y: -76, opacity: 0, duration: .3, ease: 'power2.in' }, d);
+    tl.fromTo(SP[k], { y: 76, opacity: 0 }, { y: 0, opacity: 1, duration: .3, ease: 'power3.out', immediateRender: false }, d);
+    if (k === 4) { impact(tl, d, .05); BEAT('第二幕 · “第27张”', d); }
+    press(q); flash(tl, q, .35 - .0375 * k);
+    S(tl, [hero, PHOTO], { alpha: 1 }, q + .04); S(tl, hero, { x: 960 + xs[k] }, q + .04);
+    tl.fromTo(hero, { s: .67 }, { s: .7, duration: .35, ease: 'power3.out', immediateRender: false }, q + .04);
+    tl.to(cam, { s: 1 + .012 * (k + 1), duration: .5, ease: 'sine.inOut' }, p);
+  });
+
+  const x = T(14.4);
+  tl.to(FRR, { explode: 1, duration: .6, ease: 'power2.out' }, x); S(tl, FRR, { alpha: 0 }, x + .6);
+  tl.to([PHX, PHOTO], { alpha: 0, duration: .3, ease: 'power2.in' }, x);
+  fout(tl, CTR, x, .4);
+  tl.to(hero, { x: 960, y: 520, s: 1.3, duration: .6, ease: 'power3.inOut' }, x);
+  camTo(P, 14.4, 15, { s: 1.0, y: 0 });
+  return P;
+}
+
+/* =====================================================================
+   第三幕｜没有人的脸是对称的
+   ===================================================================== */
+function sparkle(p) { return fnObj((ctx, o) => {
+  const s = 26 * o.sc; if (s <= .5) return;
+  ctx.fillStyle = C.gold; ctx.shadowColor = C.gold; ctx.shadowBlur = 16;
+  ctx.beginPath(); ctx.moveTo(o.x, o.y - s); ctx.quadraticCurveTo(o.x, o.y, o.x + s * .28, o.y); ctx.quadraticCurveTo(o.x, o.y, o.x, o.y + s);
+  ctx.quadraticCurveTo(o.x, o.y, o.x - s * .28, o.y); ctx.quadraticCurveTo(o.x, o.y, o.x, o.y - s); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(o.x - s * .6, o.y); ctx.quadraticCurveTo(o.x, o.y, o.x, o.y + s * .14); ctx.quadraticCurveTo(o.x, o.y, o.x + s * .6, o.y);
+  ctx.quadraticCurveTo(o.x, o.y, o.x, o.y - s * .14); ctx.quadraticCurveTo(o.x, o.y, o.x - s * .6, o.y); ctx.fill();
+}, Object.assign({ sc: 0, z: 13 }, p)); }
+function popSparkle(tl, sp, p) { S(tl, sp, { alpha: 1 }, p); tl.fromTo(sp, { sc: 0 }, { sc: 1, duration: .18, ease: 'expo.out', immediateRender: false }, p).to(sp, { sc: 0, alpha: 0, duration: .45, ease: 'power2.in' }, p + .18); }
+
+function scene3() {
+  const P = plan(16.9, [
+    { type: 'sub', t: .5, text: '几乎没有人的脸，是{g|完全对称}的。' },
+    { type: 'sub', t: 6.9, text: '把左脸拼成一张，右脸拼成一张——' },
+    { type: 'sub', t: 11.4, text: '看起来，像{g|两个不同的人}。' },
+  ]);
+  const { tl, T } = P;
+  const fp = (x, y) => [960 + 1.3 * x, 520 + 1.3 * y];
+  const MID = L({ pts: [[960, 40], [960, 900]], lw: 2, glow: 12 });
+  const yBL = fp(0, -129)[1], yBR = fp(0, -113.5)[1], yML = fp(-72, 118)[1], yMR = fp(72, 110)[1];
+  const mole = fp(118, -36), part = fp(-47.5, -227.5);
+  const ann = [
+    { at: 1.2, sp: [fp(-97, -129)], lines: [L({ pts: [[640, yBL], [1290, yBL]], dash: [10, 9] }), L({ pts: [[640, yBR], [1290, yBR]], dash: [10, 9] }),
+        L({ pts: [[1266, yBL], [1266, yBR]], lw: 2 }), L({ pts: [[1258, yBL], [1274, yBL]], lw: 2 }), L({ pts: [[1258, yBR], [1274, yBR]], lw: 2 }), L({ pts: [[1261, (yBL + yBR) / 2], [1271, (yBL + yBR) / 2]], lw: 1.5 })],
+      lead: L({ pts: [[636, (yBL + yBR) / 2], [572, (yBL + yBR) / 2]], lw: 1.2, glow: 6 }),
+      lab: txt({ x: 562, y: (yBL + yBR) / 2, html: '眉毛高低不同', f: 'sans', size: 30, color: C.gold, align: 'right', cls: 'lab' }), dir: 1 },
+    { at: 2.1, sp: [fp(-72, 118), fp(72, 110)], lines: [L({ pts: [[720, yML], [1300, yML]], dash: [10, 9] }), L({ pts: [[720, yMR], [1300, yMR]], dash: [10, 9] })],
+      lead: L({ pts: [[1304, (yML + yMR) / 2], [1368, (yML + yMR) / 2]], lw: 1.2, glow: 6 }),
+      lab: txt({ x: 1378, y: (yML + yMR) / 2, html: '嘴角一高一低', f: 'sans', size: 30, color: C.gold, align: 'left', cls: 'lab' }), dir: -1 },
+    { at: 3.0, sp: [mole], lines: [circ({ x: mole[0], y: mole[1], r: 15 })],
+      lead: L({ pts: [[mole[0] + 17, mole[1]], [1368, mole[1]]], lw: 1.2, glow: 6 }),
+      lab: txt({ x: 1378, y: mole[1], html: '只有一边有痣', f: 'sans', size: 30, color: C.gold, align: 'left', cls: 'lab' }), dir: -1 },
+    { at: 3.9, sp: [part], lines: [circ({ x: part[0], y: part[1], r: 15 })],
+      lead: L({ pts: [[part[0] - 13, part[1] - 8], [700, 160]], lw: 1.2, glow: 6 }),
+      lab: txt({ x: 690, y: 152, html: '分缝偏向一侧', f: 'sans', size: 30, color: C.gold, align: 'right', cls: 'lab' }), dir: 1 },
+  ];
+  ann.forEach(a => a.sps = a.sp.map(q => sparkle({ x: q[0], y: q[1] })));
+
+  const HL = face({ x: 960, y: 520, s: 1.3, half: 'left', alpha: 0 }), HR = face({ x: 960, y: 520, s: 1.3, half: 'right', alpha: 0 });
+  const ML = face({ x: 560, y: 520, s: 1.1, half: 'left', sx: 0 }), MR = face({ x: 1360, y: 520, s: 1.1, half: 'right', sx: 0 });
+  const SEAM = [560, 1360].map(x => L({ pts: [[x, 120], [x, 840]], color: C.blue, lw: 2, glow: 18, prog: 1 }));
+  const LB1 = txt({ x: 560, y: 880, html: '左脸拼成的你', f: 'sans', size: 34, cls: 'lab' });
+  const LB2 = txt({ x: 1360, y: 880, html: '右脸拼成的你', f: 'sans', size: 34, cls: 'lab' });
+  const NEQ = txt({ x: 960, y: 520, html: '≠', size: 80, shadow: '0 0 18px rgba(242,242,242,.55)' });
+
+  camTo(P, 0, 5.9, { s: 1.06, y: -20 }); camTo(P, 5.9, 7.9, { s: .95, y: 0 }); camTo(P, 7.9, 16.3, { s: 1.02 }); camTo(P, 16.3, 16.9, { s: 1.0 });
+
+  S(tl, MID, { alpha: 1 }, T(.3)); tl.to(MID, { prog: 1, duration: .8, ease: 'power3.out' }, T(.3));
+  ann.forEach(a => {
+    const p = T(a.at);
+    a.sps.forEach(s => popSparkle(tl, s, p));
+    S(tl, a.lines, { alpha: 1 }, p); tl.to(a.lines, { prog: 1, duration: .5, ease: 'power3.out' }, p);
+    S(tl, a.lead, { alpha: 1 }, p + .2); tl.to(a.lead, { prog: 1, duration: .3, ease: 'power3.out' }, p + .2);
+    fin(tl, a.lab, p + .4, { dy: 0, dx: 8 * a.dir, d: .4 });
+  });
+
+  const sp = T(5.9);
+  const annObjs = ann.flatMap(a => [...a.lines, a.lead]);
+  tl.to(annObjs, { alpha: 0, duration: .4, ease: 'power2.in' }, sp);
+  fout(tl, ann.map(a => a.lab), sp, .4);
+  tl.to(MID, { alpha: 0, duration: .6, ease: 'power2.in' }, sp + .1);
+  S(tl, hero, { alpha: 0 }, sp); S(tl, [HL, HR], { alpha: 1 }, sp);
+  tl.to(HL, { x: 560, s: 1.1, duration: .9, ease: 'power3.inOut' }, sp);
+  tl.to(HR, { x: 1360, s: 1.1, duration: .9, ease: 'power3.inOut' }, sp);
+  BEAT('第三幕 · 人脸裂开', sp);
+  burst({ t0: BUILD.start + sp, life: 1.0, n: 160, seed: 77,
+    init(p, r) { p.x = 960; p.y = 60 + r() * 840; const dir = r() < .5 ? -1 : 1; p.vx = dir * (160 + r() * 520); p.vy = (r() * 2 - 1) * 90; p.l = .45 + r() * .5; p.w = 1 + r() * 1.6; },
+    draw(ctx, ps, age) {
+      ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = C.gold; ctx.lineCap = 'round';
+      const pos = (p, a) => [p.x + p.vx * (a - .3 * a * a), p.y + p.vy * a + 120 * a * a];
+      for (const p of ps) {
+        if (age > p.l) continue; const k = 1 - age / p.l; ctx.lineWidth = p.w;
+        for (let j = 0; j < 4; j++) {   // 运动拖尾：保留前 4 帧
+          const a1 = Math.max(0, age - j / 60), a0 = Math.max(0, age - (j + 1) / 60); if (a1 <= a0) break;
+          const A = pos(p, a1), B = pos(p, a0);
+          ctx.globalAlpha = k * (1 - j / 4); ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke();
+        }
+      }
+    } });
+
+  const mg = T(7.1); sweep(tl, mg);
+  S(tl, [ML, MR], { alpha: 1 }, mg); tl.to([ML, MR], { sx: -1, duration: .8, ease: 'power3.out' }, mg);
+  const done = T(7.9);
+  tl.fromTo(SEAM, { alpha: 0 }, { alpha: 1, duration: .1, ease: 'power2.out', immediateRender: false }, done - .05).to(SEAM, { alpha: 0, duration: .55, ease: 'power2.in' }, done + .05);
+  impact(tl, done, .04); BEAT('第三幕 · 左右拼脸完成', done);
+  fin(tl, [LB1, LB2], done);
+  fin(tl, NEQ, T(13.9), { dy: 0, d: .6 });
+
+  const x = T(16.3);
+  fout(tl, [LB1, LB2, NEQ], x, .3);
+  tl.to([ML, MR], { sx: 0, duration: .35, ease: 'power2.in' }, x); S(tl, [ML, MR], { alpha: 0 }, x + .35);
+  tl.to([HL, HR], { x: 760, y: 540, s: 1.1, duration: .6, ease: 'power3.inOut' }, x);
+  S(tl, hero, { x: 760, y: 540, s: 1.1, alpha: 1 }, x + .6); S(tl, [HL, HR], { alpha: 0 }, x + .6);
+  S(tl, G.mirror, { alpha: 1 }, x); tl.to(G.mirror, { rise: .55, duration: .6, ease: 'power2.out' }, x);
+  return P;
+}
+
+/* =====================================================================
+   第四幕｜镜子把你翻了过来
+   ===================================================================== */
+G.mirror = fnObj((ctx, o) => {
+  const x0 = o.x - o.w / 2, y0 = o.y - o.h / 2, top = y0 + o.h * (1 - o.rise);
+  ctx.save(); ctx.beginPath(); ctx.rect(x0 - 40, top, o.w + 80, y0 + o.h + 40 - top); ctx.clip();
+  if (o.fill > 0) {
+    const g = ctx.createLinearGradient(0, y0, 0, y0 + o.h); g.addColorStop(0, 'rgba(127,179,255,.08)'); g.addColorStop(1, 'rgba(127,179,255,.02)');
+    ctx.save(); ctx.globalAlpha *= o.fill; ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(x0, y0, o.w, o.h, 20); ctx.fill(); ctx.restore();
+  }
+  if (o.border > 0) {
+    ctx.globalAlpha *= o.border; ctx.strokeStyle = C.blue; ctx.lineWidth = 2; ctx.shadowColor = C.blue; ctx.shadowBlur = 16;
+    ctx.beginPath(); ctx.roundRect(x0, y0, o.w, o.h, 20); ctx.stroke();
+  }
+  ctx.restore();
+}, { x: 1160, y: 540, w: 440, h: 700, rise: 0, fill: 1, border: 1, z: 3 });
+G.stripes = fnObj((ctx, o) => {
+  ctx.save(); ctx.beginPath(); ctx.roundRect(o.cx, o.cy, o.cw, o.ch, o.r); ctx.clip();
+  const nx = .866, ny = .5, dx = .5, dy = -.866, Pd = 165, ws = [16, 5, 28, 8];
+  const pr = [[o.cx, o.cy], [o.cx + o.cw, o.cy], [o.cx, o.cy + o.ch], [o.cx + o.cw, o.cy + o.ch]].map(q => q[0] * nx + q[1] * ny);
+  const u0 = Math.min(...pr), u1 = Math.max(...pr), off = (clock * 14) % Pd;
+  ctx.strokeStyle = mix(C.white, C.blue, o.col); ctx.lineCap = 'butt';
+  let i = Math.floor((u0 - off) / Pd) - 1;
+  for (let u = i * Pd + off; u < u1 + Pd; u += Pd, i++) {
+    ctx.lineWidth = ws[((i % 4) + 4) % 4];
+    const px = nx * u, py = ny * u;
+    ctx.beginPath(); ctx.moveTo(px - dx * 3000, py - dy * 3000); ctx.lineTo(px + dx * 3000, py + dy * 3000); ctx.stroke();
+  }
+  ctx.restore();
+}, { cx: 940, cy: 190, cw: 440, ch: 700, r: 20, col: 0, z: 2 });
+
+function person(x, y, h, p) {
+  const k = h / 200, head = [];
+  for (let i = 0; i <= 48; i++) { const a = -Math.PI / 2 + TAU * i / 48; head.push([x + 34 * k * Math.cos(a), y - 62 * k + 34 * k * Math.sin(a)]); }
+  const body = [...cubicPts([x - 75 * k, y + 100 * k], [x - 72 * k, y + 28 * k], [x - 42 * k, y - 12 * k], [x, y - 14 * k]),
+    ...cubicPts([x, y - 14 * k], [x + 42 * k, y - 12 * k], [x + 72 * k, y + 28 * k], [x + 75 * k, y + 100 * k]).slice(1)];
+  return fnObj((ctx, o) => {
+    ctx.strokeStyle = C.white; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.shadowColor = C.white; ctx.shadowBlur = 8;
+    strokePoly(ctx, head, o.prog); strokePoly(ctx, body, o.prog);
+  }, Object.assign({ prog: 0, z: 8 }, p));
+}
+
+function scene4() {
+  const BT = '你和别人，看的是两张不同的脸。';
+  const P = plan(13.5, [
+    { type: 'sub', t: .5, text: '你每天在镜子里看到的，是{b|左右反过来}的你。' },
+    { type: 'sub', t: 7.0, text: '而别人每天看到的，是{g|没翻过来}的你。' },
+    { type: 'hold', from: 9.8, to: 12.9, need: bigA(BT) + 3 },
+  ]);
+  const { tl, T } = P, MI = G.mirror, ST = G.stripes;
+  const MF = face({ x: 1160, y: 540, s: 1, mirror: true, c1: C.blue, clip: [940, 190, 440, 700] });
+  const A1 = L({ pts: quadPts([738, 504], [890, 640], [1042, 504], 30), dash: [10, 9], flow: 36, arrow: true, glow: 10 });
+  const A2 = L({ pts: quadPts([572.5, 312.5], [890, 110], [1207.5, 312.5], 30), dash: [10, 9], flow: 36, arrow: true, glow: 10 });
+  const LA1 = txt({ x: 890, y: 618, html: '痣换到了另一边', f: 'sans', size: 30, color: C.gold, cls: 'lab' });
+  const LA2 = txt({ x: 890, y: 168, html: '分缝也换了方向', f: 'sans', size: 30, color: C.gold, cls: 'lab' });
+  const FR = person(260, 640, 220, {});
+  const LFR = txt({ x: 260, y: 790, html: '朋友', f: 'sans', size: 30, color: C.g1, cls: 'lab' });
+  const BM = add({ type: 'beam', x0: 276, y0: 557, x1: 474, y1: 505, w0: 2, w1: 6, color: C.gold, prog: 0, z: 9 });
+  const BTE = txt({ x: 960, y: 140, html: BT, size: 52, chars: true, cls: 'lab' });
+
+  camTo(P, 0, 6.5, { x: -40, s: 1.04 }); camTo(P, 6.5, 13.5, { x: -10, s: .98 });
+  tl.to(MI, { rise: 1, duration: .7, ease: 'power3.out' }, 0);
+  tl.to(hero, { x: 620, y: 540, s: 1.0, duration: 1.0, ease: 'power3.inOut' }, 0);
+  tl.to(MF, { alpha: .85, duration: .8, ease: 'power3.out' }, T(.3));
+  tl.to(ST, { alpha: .08, duration: .8, ease: 'power3.out' }, T(.4));
+  sweep(tl, T(1.0));
+  S(tl, [A1, A2], { alpha: 1 }, T(2.0)); tl.to([A1, A2], { prog: 1, duration: .7, ease: 'power3.out' }, T(2.0));
+  fin(tl, [LA1, LA2], T(2.4));
+
+  const f = T(6.5);
+  tl.to([A1, A2], { alpha: 0, duration: .4, ease: 'power2.in' }, f); fout(tl, [LA1, LA2], f, .4);
+  S(tl, FR, { alpha: 1 }, f); tl.to(FR, { prog: 1, duration: .7, ease: 'power3.out' }, f); fin(tl, LFR, f + .3);
+  S(tl, BM, { alpha: 1 }, T(7.0)); tl.to(BM, { prog: 1, duration: .5, ease: 'power3.out' }, T(7.0));
+  tl.to(hero, { cm: .55, glow: 16, duration: .2, ease: 'expo.out' }, T(7.0) + .45).to(hero, { cm: 0, glow: 8, duration: .9, ease: 'power2.inOut' }, T(7.0) + .65);
+  reveal(tl, BTE, T(9.8));
+
+  const x = T(12.9);
+  tl.to([FR, BM, hero], { alpha: 0, duration: .5, ease: 'power2.in' }, x); fout(tl, [LFR, BTE], x, .45);
+  tl.to(MI, { border: 0, fill: 0, duration: .5, ease: 'power2.in' }, x);
+  tl.to(MF, { s: .6, alpha: 0, duration: .55, ease: 'power2.in' }, x);
+  tl.to(ST, { cx: -200, cy: -200, cw: 2320, ch: 1480, r: 0, col: 1, alpha: .04, duration: .6, ease: 'power2.inOut' }, x);
+  return P;
+}
+
+/* =====================================================================
+   第五幕｜曝光效应
+   ===================================================================== */
+const RADICALS = [
+  [[[.06,.33],[.06,.7]], [[.06,.33],[.32,.33],[.32,.7]], [[.06,.68],[.32,.68]]],
+  [[[.08,.1],[.2,.2]], [[.04,.4],[.17,.5]], [[.03,.9],[.23,.6]]],
+  [[[.3,.04],[.05,.42]], [[.19,.26],[.19,.96]]],
+  [[[.02,.3],[.35,.28]], [[.18,.04],[.18,.96]], [[.18,.33],[.03,.72]], [[.2,.42],[.34,.56]]],
+  [[[.1,.07],[.21,.17]], [[.04,.37],[.18,.37],[.18,.88],[.31,.78]]],
+];
+function glyphStrokes(seed, rad) {
+  const r = rng(seed), out = RADICALS[rad].map(pts => ({ k: pts.length === 2 && pts[0][1] === pts[1][1] ? 'h' : 's', pts }));
+  const P = (u, v) => [.44 + u * .54, v], j = () => (r() - .5) * .06;
+  const hs = 2 + Math.floor(r() * 2);
+  for (let i = 0; i < hs; i++) { const v = .12 + (i + .5) / hs * .76 + j(); out.push({ k: 'h', pts: [P(.04 + r() * .2, v), P(.76 + r() * .22, v - .03)] }); }
+  const nv = 2;
+  for (let i = 0; i < nv; i++) { const u = nv === 1 ? .35 + r() * .3 : (i ? .8 : .2); out.push({ k: 's', pts: [P(u, .06 + r() * .12), P(u + j(), .82 + r() * .14)] }); }
+  const e0 = Math.floor(r() * 4);
+  for (const ex of [e0, (e0 + 1 + Math.floor(r() * 3)) % 4])
+  if (ex === 0) out.push({ k: 'p', pts: quadPts(P(.62, .44), P(.45, .76), P(.04, .95), 10) });
+  else if (ex === 1) out.push({ k: 'n', pts: quadPts(P(.4, .5), P(.6, .8), P(.98, .94), 10) });
+  else if (ex === 2) out.push({ k: 'z', pts: [P(.14, .17), P(.86, .17), P(.8, .56)] });
+  else out.push({ k: 'd', pts: [P(.46, .01), P(.58, .1)] });
+  return out;
+}
+function scene5() {
+  const P = plan(22, [
+    { type: 'hold', from: .9, to: 3.5, need: 3.0 },
+    { type: 'sub', t: 4.0, text: '科学家给看不懂中文的人，看一些‘汉字’。' },
+    { type: 'sub', t: 10.6, text: '看的次数{g|越多}，越觉得它的意思是{g|好的}。' },
+    { type: 'sub', t: 14.5, text: '大脑会把‘{b|熟悉}’，当成‘{g|好看}’。', pauseAt: 14.0 },
+    { type: 'sub', t: 18.5, text: '而你最熟悉的，是{b|镜子里}那张反过来的脸。' },
+  ]);
+  const { tl, T } = P, ST = G.stripes;
+  const TT = txt({ x: 960, y: 520, html: '曝光效应', size: 100, color: C.gold, chars: true, shadow: '0 0 26px rgba(232,194,122,.45)' });
+  const UL = fnObj((ctx, o) => {
+    ctx.strokeStyle = C.gold; ctx.lineWidth = 2; ctx.shadowColor = C.gold; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.moveTo(960 - o.w / 2, 610); ctx.lineTo(960 + o.w / 2, 610); ctx.stroke();
+    if (o.da > 0) { ctx.globalAlpha *= o.da; ctx.fillStyle = '#fff'; ctx.shadowColor = C.gold; ctx.shadowBlur = 22;
+      for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(960 + s * 300 * o.d, 610, 4, 0, TAU); ctx.fill(); } }
+  }, { w: 0, d: 0, da: 0, z: 6 });
+  const SRC1 = txt({ x: 960, y: 120, html: '扎荣茨 · 1968', f: 'sans', size: 32, color: C.g1 });
+  const SRC2 = txt({ x: 960, y: 120, html: '给看不懂中文的人看‘汉字’', f: 'sans', size: 32, color: C.white });
+  const YS = [330, 450, 570, 690, 810], NS = [1, 2, 5, 10, 25], WS = [120, 200, 320, 440, 600];
+  const GLY = [11, 23, 37, 58, 71].map((sd, i) => glyphStrokes(sd, i));
+  const CH = YS.map(() => ({ b: .4 }));
+  const GL = fnObj((ctx, o) => {
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = C.white; ctx.fillStyle = C.white; ctx.shadowColor = C.white;
+    YS.forEach((y, k) => {
+      const b = CH[k].b, s = 90, ox = 420 - s / 2, oy = y - s / 2;
+      ctx.save(); ctx.globalAlpha *= b; ctx.shadowBlur = 4 + 20 * Math.max(0, (b - .4) / .6); ctx.lineWidth = 2.5;
+      for (const st of GLY[k]) {
+        const pts = st.pts.map(q => [ox + q[0] * s, oy + q[1] * s]);
+        strokePoly(ctx, pts, 1);
+        const a = pts[0];   // 衬线感：起笔顿点
+        ctx.beginPath(); ctx.arc(a[0], a[1], 2.2, 0, TAU); ctx.fill();
+        if (st.k === 'h') { const e = pts[pts.length - 1]; ctx.beginPath(); ctx.moveTo(e[0] - 4, e[1] - 3); ctx.lineTo(e[0] + 1, e[1] + 4); ctx.stroke(); }
+      }
+      ctx.restore();
+    });
+  }, { z: 6 });
+  const CN = YS.map((y, k) => txt({ x: 490, y, html: '×' + NS[k], f: 'mono', size: 36, color: C.g1, align: 'left' }));
+  const BW = YS.map(() => ({ w: 0 }));
+  const BR = fnObj(ctx => {
+    YS.forEach((y, k) => {
+      const w = BW[k].w; if (w < .5) return;
+      const c = mix(C.g3, C.gold, k / 4);
+      ctx.save(); ctx.fillStyle = c; ctx.shadowColor = C.gold; ctx.shadowBlur = k === 4 ? 18 : 0;
+      ctx.beginPath(); ctx.roundRect(640, y - 9, w, 18, 9); ctx.fill(); ctx.restore();
+    });
+  }, { z: 6 });
+  const BL = txt({ x: 940, y: 260, html: '猜它的意思是好是坏', f: 'sans', size: 30, color: C.g1 });
+  const F5 = face({ x: 960, y: 480, s: 1.1, mirror: true, c1: C.blue, prog: 0 });
+  const RV = ['×100', '×100', '×100', '×1000', '×1000', '×1000', '×10000', '×10000', '×10000'];
+  const RA = [-150, -30, 90, -95, 25, 160, -120, 0, 200];
+  const RG = RV.map((v, i) => { const a = RA[i] * Math.PI / 180; return txt({ x: 960 + 430 * Math.cos(a), y: 480 + 330 * Math.sin(a), html: v, f: 'mono', size: 34, color: C.blue }); });
+  const FL = txt({ x: 960, y: 838, html: '每天照镜子 × 无数次', f: 'sans', size: 34, color: C.blue, cls: 'lab' });
+  const FB = face({ x: 960, y: 480, s: 1.1, mirror: true, c1: C.blue, c2: C.white });
+  G.polL = polaroid({ x: 700, y: 480, mirror: true, fc: C.blue, label: '镜像版', lc: C.blue, bcol: C.blue });
+  G.polR = polaroid({ x: 1220, y: 480, mirror: false, fc: C.white, label: '原图版', lc: C.gold, bcol: C.gold });
+
+  camTo(P, 0, 3.5, { s: 1.05 }); camTo(P, 3.5, 14, { x: -60, s: 1.02 }); camTo(P, 14, 22, { x: 0, s: 1.06 });
+
+  S(tl, TT, { opacity: 1 }, 0);
+  tl.fromTo(TT.chars, { opacity: 0, scale: 1.15, filter: 'blur(6px)' }, { opacity: 1, scale: 1, filter: 'blur(0px)', duration: .6, ease: 'power3.out', stagger: .08, immediateRender: false }, 0);
+  S(tl, UL, { alpha: 1 }, .2); tl.to(UL, { w: 600, duration: .8, ease: 'power3.out' }, .2);
+  S(tl, UL, { da: 1 }, .2); tl.to(UL, { d: 1, duration: .8, ease: 'power3.out' }, .2).to(UL, { da: 0, duration: .3 }, 1.0);
+  fin(tl, SRC1, .3);
+
+  const a = T(3.5);
+  tl.to(TT, { top: 200, scale: .6, opacity: .4, duration: .7, ease: 'power3.inOut' }, a);
+  tl.to(UL, { alpha: 0, duration: .4, ease: 'power2.in' }, a); tl.to(ST, { alpha: 0, duration: 1.0, ease: 'power2.in' }, a);
+  fout(tl, SRC1, a, .3); fin(tl, SRC2, a + .3);
+  S(tl, GL, { alpha: 0 }, a);
+  tl.to(GL, { alpha: 1, duration: .5, ease: 'power3.out' }, a + .1);
+  CN.forEach((c, k) => fin(tl, c, a + .15 + k * .06, { dy: 0, dx: -8, d: .4 }));
+
+  let lastFlash = 0;
+  NS.forEach((n, k) => {
+    const ts = Array.from({ length: n }, (_, i) => 4.0 + 4.8 * Math.sqrt(i / n));
+    ts.forEach((t, i) => {
+      const gap = (i < n - 1 ? ts[i + 1] : 9.0) - t, up = Math.min(.08, gap * .35), dn = Math.min(.35, gap * .6), p = T(t);
+      tl.to(CH[k], { b: 1, duration: up, ease: 'power2.out' }, p).to(CH[k], { b: .4, duration: dn, ease: 'power2.in' }, p + up);
+      if (k === 4 && i === n - 1) lastFlash = p;
+    });
+  });
+  tl.to(CN[4], { color: C.gold, duration: .25 }, lastFlash);
+  BEAT('第五幕 · “×25”最后一次闪现', lastFlash);
+  fin(tl, BL, T(8.8));
+  BW.forEach((b, k) => tl.to(b, { w: WS[k], duration: .8, ease: 'power3.out' }, T(8.8) + k * .25));
+  S(tl, BR, { alpha: 1 }, T(8.8));
+  BEAT('第五幕 · 最长好感度条长完', T(8.8) + 1.8);
+
+  const b = T(14.0);
+  tl.to([GL, BR], { alpha: 0, duration: .5, ease: 'power2.in' }, b); fout(tl, [...CN, BL, TT, SRC2], b, .5);
+  S(tl, F5, { alpha: 1 }, T(14.4)); tl.to(F5, { prog: 1, duration: .9, ease: 'power2.inOut' }, T(14.4));
+  RG.forEach((e, i) => {
+    const p = T(14.6) + i * .2, ang = RA[i] * Math.PI / 180;
+    tl.fromTo(e, { opacity: 0, scale: .8, x: 0, y: 0 }, { opacity: 1, scale: 1, duration: .15, ease: 'expo.out', immediateRender: false }, p)
+      .to(e, { opacity: 0, x: 60 * Math.cos(ang), y: 60 * Math.sin(ang), duration: .6, ease: 'power2.in' }, p + .2);
+  });
+  fin(tl, FL, T(14.6) + 9 * .2);
+
+  const x = T(21.4);
+  fout(tl, FL, x, .3);
+  S(tl, FB, { alpha: 1, prog: 1 }, x);
+  tl.to(F5, { x: 700, y: 474, s: .59, duration: .6, ease: 'power3.inOut' }, x);
+  tl.to(FB, { x: 1220, y: 474, s: .59, sx: -1, cm: 1, duration: .6, ease: 'power3.inOut' }, x);
+  tl.to([G.polL, G.polR], { alpha: 1, duration: .45, ease: 'power3.out' }, x + .1);
+  S(tl, [F5, FB], { alpha: 0 }, x + .6); S(tl, [G.polL, G.polR], { fa: 1 }, x + .6);
+  return P;
+}
+function polaroid(p) {
+  return fnObj((ctx, o) => {
+    ctx.save(); ctx.translate(o.x, o.y); ctx.scale(o.s, o.s);
+    const bc = mix(C.white, o.bcol, o.bc);
+    ctx.strokeStyle = bc; ctx.lineWidth = 1.5; ctx.shadowColor = bc; ctx.shadowBlur = o.glow;
+    ctx.beginPath(); ctx.roundRect(-180, -230, 360, 460, 4); ctx.stroke();
+    ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(242,242,242,.22)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.rect(-162, -212, 324, 362); ctx.stroke();
+    if (o.fa > 0) { ctx.save(); ctx.globalAlpha *= o.fa; drawFace(ctx, 0, -6, .59, { mirror: o.mirror, color: o.fc, clip: [-162, -212, 324, 362] }); ctx.restore(); }
+    ctx.fillStyle = o.lc; ctx.font = '500 32px "Noto Sans SC", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.shadowColor = o.lc; ctx.shadowBlur = 6; ctx.fillText(o.label, 0, 191);
+    ctx.restore();
+  }, Object.assign({ s: 1, bc: 0, glow: 0, fa: 0, z: 7 }, p));
+}
+
+/* =====================================================================
+   第六幕｜1977镜像实验
+   ===================================================================== */
+function check(x, y, color) { return L({ pts: [[x - 24, y + 1], [x - 7, y + 18], [x + 26, y - 20]], color, lw: 4, glow: 14 }); }
+function scene6() {
+  const B1 = '你觉得照片丑，不是因为它丑。', B2 = '是因为它‘陌生’。';
+  const P = plan(21.5, [
+    { type: 'sub', t: .5, text: '科学家给每个人看两张自己的照片。' },
+    { type: 'sub', t: 3.0, text: '一张是镜像版，一张是原图版。' },
+    { type: 'sub', t: 7.6, text: '本人，更喜欢{b|镜像版}。' },
+    { type: 'sub', t: 11.6, text: '而他们的好朋友，更喜欢{g|原图版}。' },
+    { type: 'after', t: 17.7, pauseAt: 15.0 },
+    { type: 'hold', from: 17.7, to: 20.9, need: bigA(B2, .04, .45) + 4 },
+  ]);
+  const { tl, T } = P, PL = G.polL, PR = G.polR;
+  const SRC = txt({ x: 960, y: 120, html: '镜像照片实验 · 1977', f: 'sans', size: 32, color: C.g1 });
+  const P1 = person(300, 750, 200, {}), P2 = person(1620, 750, 200, {});
+  const L1 = txt({ x: 300, y: 890, html: '本人', f: 'sans', size: 32, cls: 'lab' }), L2 = txt({ x: 1620, y: 890, html: '好朋友', f: 'sans', size: 32, cls: 'lab' });
+  const QM = txt({ x: 300, y: 600, html: '？', size: 48 }); G.qm = QM;
+  const BM1 = add({ type: 'beam', x0: 328, y0: 676, x1: 530, y1: 560, w0: 2, w1: 6, color: C.blue, prog: 0, z: 9 });
+  const BM2 = add({ type: 'beam', x0: 1592, y0: 676, x1: 1390, y1: 560, w0: 2, w1: 6, color: C.gold, prog: 0, z: 9 });
+  const CK1 = check(700, 772, C.blue), CK2 = check(1220, 772, C.gold);
+  const BT1 = txt({ x: 960, y: 300, html: B1, size: 72, chars: true, cls: 'lab' });
+  const BT2 = txt({ x: 960, y: 440, html: B2, size: 88, color: C.gold, chars: true, shadow: '0 0 40px rgba(232,194,122,.7)' });
+
+  camTo(P, 0, 10.2, { s: 1.04 }); camTo(P, 10.2, 15.0, { x: -30 }); camTo(P, 15.0, 21.5, { x: 0, y: 70, s: 1.12 });
+  fin(tl, SRC, .2);
+
+  const p5 = T(5.5);
+  S(tl, P1, { alpha: 1 }, p5); tl.to(P1, { prog: 1, duration: .7, ease: 'power3.out' }, p5); fin(tl, L1, p5 + .3); fin(tl, QM, p5 + .5, { dy: 8 });
+  const p6 = T(6.5);
+  fout(tl, QM, p6, .25);
+  S(tl, BM1, { alpha: 1 }, p6); tl.to(BM1, { prog: 1, duration: .45, ease: 'power3.out' }, p6);
+  tl.to(PL, { bc: 1, glow: 16, duration: .4, ease: 'power3.out' }, p6 + .35); tl.to(PR, { alpha: .5, duration: .4 }, p6 + .35);
+  S(tl, CK1, { alpha: 1 }, T(7.0)); tl.to(CK1, { prog: 1, duration: .4, ease: 'power2.out' }, T(7.0));
+
+  const p11 = T(10.2);
+  tl.to(PR, { alpha: 1, duration: .4 }, p11);
+  S(tl, P2, { alpha: 1 }, p11); tl.to(P2, { prog: 1, duration: .7, ease: 'power3.out' }, p11); fin(tl, L2, p11 + .3);
+  S(tl, BM2, { alpha: 1 }, T(10.8)); tl.to(BM2, { prog: 1, duration: .45, ease: 'power3.out' }, T(10.8));
+  tl.to(PR, { bc: 1, glow: 30, duration: .4, ease: 'power3.out' }, T(10.8) + .35);
+  S(tl, CK2, { alpha: 1 }, T(11.2)); tl.to(CK2, { prog: 1, duration: .4, ease: 'power2.out' }, T(11.2));
+  impact(tl, T(11.6), .05); BEAT('第六幕 · 金色对勾', T(11.6));
+
+  const p15 = T(15.0);
+  tl.to([P1, P2, BM1, BM2, CK1, CK2], { alpha: 0, duration: .5, ease: 'power2.in' }, p15); fout(tl, [L1, L2], p15, .5);
+  tl.to(PL, { x: 820, y: 760, s: .75, alpha: .35, glow: 0, duration: .8, ease: 'power3.inOut' }, p15);
+  tl.to(PR, { x: 1100, y: 760, s: .75, alpha: .35, glow: 0, duration: .8, ease: 'power3.inOut' }, p15);
+  reveal(tl, BT1, T(15.5));
+  const p18 = T(17.7);
+  reveal(tl, BT2, p18, .04, .45); flash(tl, p18, .35);
+  BEAT('第六幕 · “是因为它‘陌生’”出现', p18);
+
+  const x = T(20.9);
+  fout(tl, [BT1, BT2, SRC], x, .4);
+  tl.to([PL, PR], { x: 960, alpha: 0, duration: .5, ease: 'power2.in' }, x);
+  S(tl, hero, { x: 1100, y: 755.5, s: .4425, alpha: .35, cm: 0, glow: 8, hlAmt: 0, prog: 1 }, x);
+  tl.to(hero, { x: 900, y: 520, s: 1, alpha: 1, duration: .6, ease: 'power3.inOut' }, x);
+  S(tl, G.phoneIcon, { alpha: 1, x: -80 }, x + .2); tl.to(G.phoneIcon, { x: 120, duration: .4, ease: 'power3.out' }, x + .2);
+  return P;
+}
+
+/* =====================================================================
+   第七幕｜还有一个凶手：离得太近
+   ===================================================================== */
+G.phoneIcon = fnObj((ctx, o) => {
+  ctx.strokeStyle = C.white; ctx.lineWidth = 1.8; ctx.lineJoin = 'round'; ctx.shadowColor = C.white; ctx.shadowBlur = 8;
+  ctx.beginPath(); ctx.roundRect(o.x - 30, o.y - 60, 60, 120, 10); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(o.x + 30, o.y - 48, 6, 16, 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(o.x - 12, o.y + 50); ctx.lineTo(o.x + 12, o.y + 50); ctx.stroke();
+}, { x: -80, y: 740, z: 9 });
+function scene7() {
+  const P = plan(12, [
+    { type: 'sub', t: .2, text: '前置摄像头离脸太近，也会让你变样。' },
+    { type: 'sub', t: 4.8, text: '30厘米自拍，鼻子会被{r|放大约三成}。', pauseAt: 1.0 },
+    { type: 'sub', t: 7.5, text: '所以，手机{g|拿远一点}，再放大拍。', pauseAt: 7.0 },
+  ]);
+  const { tl, T } = P, PI = G.phoneIcon;
+  const SRC = txt({ x: 960, y: 120, html: '罗格斯大学 · 2018', f: 'sans', size: 32, color: C.g1 });
+  const RY = 860;
+  const RU = fnObj((ctx, o) => {
+    ctx.strokeStyle = C.white; ctx.lineWidth = 1; ctx.globalAlpha *= .85;
+    const xe = 260 + 1400 * o.prog;
+    ctx.beginPath(); ctx.moveTo(260, RY); ctx.lineTo(xe, RY);
+    for (let i = 0; i <= 20; i++) { const x = 260 + i * 70; if (x > xe + .5) break; const h = i % 5 === 0 ? 18 : 9; ctx.moveTo(x, RY); ctx.lineTo(x, RY - h); }
+    ctx.stroke();
+  }, { prog: 0, z: 5 });
+  const RL1 = txt({ x: 260, y: 826, html: '1.5米', f: 'mono', size: 36, color: C.g1 });
+  const RL2 = txt({ x: 780, y: 826, html: '30厘米', f: 'mono', size: 36, color: C.g1 });
+  const PS = fnObj((ctx, o) => {
+    const lx = PI.x + 36, ly = PI.y - 40;
+    ctx.strokeStyle = C.white; ctx.lineWidth = 1; ctx.globalAlpha *= .3;
+    for (const [fx, fy] of [[0, -250], [-185, -150], [-200, -20], [0, 58], [-150, 150], [0, 260]]) {
+      const q = facePt(hero, fx * (fx === 0 && fy === 58 ? hero.ns : hero.outline), fy * (fy === 58 ? 1 : hero.outline));
+      ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(q[0], q[1]); ctx.stroke();
+    }
+  }, { z: 6 });
+  const LBN = txt({ x: 1190, y: 520, html: '约+30%', f: 'mono', size: 48, color: C.red, shadow: '0 0 18px rgba(229,72,77,.55)', align: 'left' });
+  const LDN = L({ pts: [[1056, 528], [1180, 520]], color: C.red, lw: 1.5, glow: 10 });
+  const CARD = document.createElement('div'); CARD.className = 'card';
+  CARD.innerHTML = '<div class="ct">拍照小技巧</div>' +
+    '<div class="it"><svg viewBox="0 0 40 40"><path d="M7 21 L16 30 L33 11"/></svg><span>手机拿远一点</span></div>' +
+    '<div class="it"><svg viewBox="0 0 40 40"><path d="M7 21 L16 30 L33 11"/></svg><span>用后置镜头，放大两倍拍</span></div>';
+  DOM.appendChild(CARD); gsap.set(CARD, { left: 1500, top: 500, xPercent: -50, yPercent: -50, opacity: 0 });
+  const ITEMS = [...CARD.querySelectorAll('.it')], PATHS = [...CARD.querySelectorAll('path')];
+  gsap.set(ITEMS, { opacity: 0 });
+
+  camTo(P, 0, .5, { y: -30 }); camTo(P, .5, 4.5, { s: 1.08 }); camTo(P, 4.5, 7, { s: 1.10 }); camTo(P, 7, 8.5, { s: 1.0 }); camTo(P, 8.5, 11.4, { s: 1.03 }); camTo(P, 11.4, 12, { s: 1.0, y: 0 });
+  fin(tl, SRC, .1);
+  tl.to(hero, { x: 1000, y: 500, duration: .8, ease: 'power3.inOut' }, 0);
+  S(tl, RU, { alpha: 1 }, .1); tl.to(RU, { prog: 1, duration: .9, ease: 'power3.out' }, .1);
+  fin(tl, [RL1, RL2], .4);
+  tl.to(PI, { x: 260, duration: .6, ease: 'power3.out' }, 0);
+  tl.to(PS, { alpha: 1, duration: .5 }, T(1.0));
+  const m = T(1.0);
+  tl.to(PI, { x: 780, duration: 3.5, ease: 'power2.inOut' }, m);
+  tl.to(hero, { ns: 1.3, noseMix: 1, outline: .94, duration: 3.5, ease: 'power2.inOut' }, m);
+  const hit = T(4.5);
+  S(tl, LDN, { alpha: 1 }, hit); tl.to(LDN, { prog: 1, duration: .25, ease: 'expo.out' }, hit);
+  fin(tl, LBN, hit, { dy: 0, dx: -10, d: .35 });
+  impact(tl, hit, .04); chroma(tl, hit); BEAT('第七幕 · “约+30%”出现', hit);
+
+  const back = T(7.0);
+  tl.to(PI, { x: 260, duration: 1.5, ease: 'power2.inOut' }, back);
+  tl.to(hero, { ns: 1, noseMix: 0, outline: 1, duration: 1.5, ease: 'power2.inOut' }, back);
+  tl.to(LDN, { alpha: 0, duration: .4, ease: 'power2.in' }, back); fout(tl, LBN, back, .4);
+  fin(tl, CARD, T(8.0), { dy: 0, dx: 60, d: .6 });
+  [8.6, 9.4].forEach((t, i) => { fin(tl, ITEMS[i], T(t), { dy: 8, d: .4 }); tl.to(PATHS[i], { strokeDashoffset: 0, duration: .4, ease: 'power2.out' }, T(t) + .05); });
+
+  const x = T(11.4);
+  fout(tl, [CARD, SRC, RL1, RL2], x, .5);
+  tl.to([PI, RU, PS], { alpha: 0, duration: .5, ease: 'power2.in' }, x);
+  tl.to(hero, { x: 960, y: 500, duration: .6, ease: 'power3.inOut' }, x);
+  tl.to('#dawn', { opacity: .12, duration: .6, ease: 'sine.inOut' }, x);
+  return P;
+}
+
+/* =====================================================================
+   第八幕｜结尾
+   ===================================================================== */
+function scene8() {
+  const T1 = '照片里那个让你别扭的人——', T2 = '正是朋友们每天看到、也{g|更喜欢的你}。', T3 = '致每一个，{g|删过自己照片}的人。';
+  const ST8 = .035;
+  const P = plan(10.5, [
+    { type: 'hold', from: 1.0, to: 4.0, need: bigA(T1, ST8) + 3 },
+    { type: 'hold', from: 4.0, to: 7.5, need: .4 + bigA(T2, ST8) + 3 },
+    { type: 'hold', from: 7.5, to: 10.5, need: .4 + bigA(T3, ST8) + 3 },
+  ]);
+  const { tl, T } = P;
+  const SH = '0 2px 16px rgba(0,0,0,.55)';
+  const E1 = txt({ x: 960, y: 720, html: T1, size: 60, chars: true, shadow: SH });
+  const E2 = txt({ x: 960, y: 720, html: T2, size: 64, chars: true, shadow: SH });
+  const E3 = txt({ x: 960, y: 720, html: T3, size: 56, chars: true, shadow: SH });
+  const TITLE = txt({ x: 960, y: 780, html: '《镜像》', f: 'sans', size: 28, color: 'rgba(242,242,242,.7)', ls: '.5em', shadow: SH });
+  const HALO = fnObj((ctx, o) => {
+    const r = 300 * hero.s, g = ctx.createRadialGradient(hero.x, hero.y - 20, 0, hero.x, hero.y - 20, r);
+    g.addColorStop(0, 'rgba(232,194,122,.15)'); g.addColorStop(1, 'rgba(232,194,122,0)');
+    ctx.fillStyle = g; ctx.fillRect(hero.x - r, hero.y - 20 - r, 2 * r, 2 * r);
+  }, { z: 9 });
+
+  camTo(P, 0, 10.5, { s: 1.06, y: 20 });
+  tl.to('#dawn', { opacity: 1, duration: 3, ease: 'sine.inOut' }, 0);
+  tl.to('#horizon', { opacity: .4, duration: 3, ease: 'sine.inOut' }, 0);
+  tl.to(amb, { warm: 1, up: 1, duration: 3, ease: 'sine.inOut' }, 0);
+  tl.to(hero, { cm: 1, glow: 12, duration: 2, ease: 'sine.inOut' }, 0);
+  tl.to(HALO, { alpha: 1, duration: 2, ease: 'sine.inOut' }, 0);
+  tl.to(hero, { y: 380, s: .8, duration: 1.3, ease: 'power3.inOut' }, 0);
+  reveal(tl, E1, T(1.0), ST8);
+  const a = T(4.0);
+  tl.to(E1, { opacity: 0, filter: 'blur(6px)', duration: .35, ease: 'power2.in' }, a);
+  reveal(tl, E2, a + .4, ST8);
+  const b = T(7.5);
+  tl.to(E2, { opacity: 0, filter: 'blur(6px)', duration: .35, ease: 'power2.in' }, b);
+  reveal(tl, E3, b + .4, ST8);
+  fin(tl, TITLE, b + 1.2, { d: .8 });
+  return P;
+}
+
+/* =====================================================================
+   主时间线
+   ===================================================================== */
+const master = gsap.timeline({ paused: true });
+const STARTS = [];
+[scene1, scene2, scene3, scene4, scene5, scene6, scene7, scene8].forEach((fn, i) => {
+  STARTS[i] = BUILD.start;
+  const P = fn();
+  master.add(P.tl, STARTS[i]);
+  BUILD.start += P.dur;
+});
+OBJS.sort((a, b) => a.z - b.z);
+const TOTAL = BUILD.start;
+
+/* ---------------- 渲染循环 ---------------- */
+let lastNow = performance.now();
+function render() {
+  const now = performance.now(), dt = Math.min(.05, (now - lastNow) / 1000); lastNow = now; clock += dt;
+  const cs = camState();
+  camEl.style.transform = `translate(${cs.x.toFixed(2)}px,${cs.y.toFixed(2)}px) scale(${cs.s.toFixed(4)})`;
+  drawFar(dt, cs.x, cs.y, cs.s);
+
+  const ctx = xMain;
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cvMain.width, cvMain.height);
+  ctx.setTransform(K, 0, 0, K, 0, 0);
+  for (const o of OBJS) {
+    if (o.alpha <= .003) continue;
+    ctx.save(); ctx.globalAlpha = Math.min(1, o.alpha); DRAW[o.type](ctx, o); ctx.restore();
+  }
+  drawBursts(ctx, master.time());
+  if (FXS.chroma > .15) {   // 【色差】横向撕裂条纹
+    const n = 2 + (Math.random() * 2 | 0);
+    for (let i = 0; i < n; i++) {
+      const y = 80 + Math.random() * 920, h = 3 + Math.random() * 5, off = (10 + Math.random() * 20) * (Math.random() < .5 ? -1 : 1);
+      ctx.drawImage(cvMain, 0, y * K, cvMain.width, h * K, off, y, 1920, h);
+      ctx.fillStyle = rgba(i % 2 ? C.blue : C.red, .22); ctx.fillRect(0, y, 1920, h);
+    }
+  }
+  if (FXS.chroma > .01) { const d = (4 * FXS.chroma).toFixed(2); FOR.setAttribute('dx', -d); FOB.setAttribute('dx', d); stage.style.filter = 'url(#rgbsplit)'; }
+  else if (stage.style.filter) stage.style.filter = '';
+
+  drawNear(dt, cs.x, cs.y, cs.s);
+  drawGrain();
+
+  const gi = .6 + .4 * (.5 + .5 * Math.sin(clock * TAU / 1.4));
+  const gcol = mix(C.gold, C.blue, HK.gc), gv = rgbOf(gcol);
+  HG.style.textShadow = `0 0 24px rgba(${gv[0]},${gv[1]},${gv[2]},${(.6 * gi).toFixed(3)})`;
+  if (G.qm && +G.qm.style.opacity > 0) gsap.set(G.qm, { rotation: 10 * Math.sin(clock * 3.2) });
+}
+gsap.ticker.add(render);
+
+/* ---------------- 键盘：空格重播，1–8 跳幕 ---------------- */
+addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); master.restart(); return; }
+  const k = parseInt(e.key, 10);
+  if (k >= 1 && k <= 8) { master.seek(STARTS[k - 1], false); master.play(); }
+});
+
+/* ---------------- 卡点表 ---------------- */
+console.log('%c《镜像》卡点时间表（全片绝对时间，秒）', 'color:#E8C27A;font-weight:bold');
+console.table(BEATS.map(b => ({ 卡点: b.name, 时间: b.t })));
+console.log('各幕开始：' + STARTS.map((s, i) => `第${i + 1}幕 ${s.toFixed(2)}s`).join('  ·  ') + `  ·  总时长 ${TOTAL.toFixed(2)}s`);
+window.__mirror = { master, STARTS, BEATS, TOTAL };
+
+/* ---------------- 启动：字体就绪后立即播放 ---------------- */
+const fontsReady = Promise.all([
+  document.fonts.load('700 72px "Noto Serif SC"', '镜子里的你从来不是别人眼里'),
+  document.fonts.load('500 32px "Noto Sans SC"', '镜像版原图版'),
+  document.fonts.load('500 36px "JetBrains Mono"', '0123456789'),
+]).then(() => document.fonts.ready);
+Promise.race([fontsReady, new Promise(r => setTimeout(r, 3000))]).then(() => master.play(0));
+})();
+</script>
+</body>
+</html>
