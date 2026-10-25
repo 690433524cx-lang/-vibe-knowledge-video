@@ -28,6 +28,10 @@ canvas{display:block}
 .sans{font-family:'Noto Sans SC',sans-serif;font-weight:500}
 .mono{font-family:'JetBrains Mono','Noto Sans SC',monospace;font-weight:500}
 .c{display:inline-block}
+.qo{margin-left:-.42em}
+.qc{margin-right:-.42em}
+.serif .qo{margin-left:-.34em}
+.serif .qc{margin-right:-.34em}
 .lab{text-shadow:0 2px 10px rgba(0,0,0,.85)}
 .kg,.kb,.kr{display:inline-block;--g:0}
 .kg{color:#E8C27A;text-shadow:0 0 calc(8px + 18px*var(--g)) rgba(232,194,122,calc(.35 + .55*var(--g))),0 2px 12px rgba(0,0,0,.8)}
@@ -39,10 +43,10 @@ canvas{display:block}
 .ctr{position:absolute;width:320px;height:76px;overflow:hidden}
 .ctr span{position:absolute;left:0;top:0;width:100%;text-align:center;line-height:76px;font-size:56px;color:#F2F2F2;opacity:0}
 .ctr span.red{color:#E5484D;text-shadow:0 0 18px rgba(229,72,77,.6)}
-.card{position:absolute;width:480px;padding:36px;border:1px solid rgba(242,242,242,.9);border-radius:16px;background:rgba(5,5,5,.55)}
-.card .ct{font-family:'Noto Sans SC',sans-serif;font-weight:500;font-size:38px;color:#E8C27A;margin-bottom:26px;line-height:1.2}
-.card .it{display:flex;align-items:center;gap:12px;font-family:'Noto Sans SC',sans-serif;font-weight:500;font-size:34px;color:#F2F2F2;line-height:1.5;margin-top:14px;white-space:nowrap}
-.card svg{width:38px;height:38px;flex:none;overflow:visible}
+.card{position:absolute;width:672px;padding:50px;border:1.4px solid rgba(242,242,242,.9);border-radius:22px;background:rgba(5,5,5,.55)}
+.card .ct{font-family:'Noto Sans SC',sans-serif;font-weight:500;font-size:44px;color:#E8C27A;margin-bottom:36px;line-height:1.2}
+.card .it{display:flex;align-items:center;gap:17px;font-family:'Noto Sans SC',sans-serif;font-weight:500;font-size:38px;color:#F2F2F2;line-height:1.5;margin-top:20px;white-space:nowrap}
+.card svg{width:53px;height:53px;flex:none;overflow:visible}
 .card path{fill:none;stroke:#E8C27A;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:44;stroke-dashoffset:44;filter:drop-shadow(0 0 6px rgba(232,194,122,.7))}
 #vig{position:absolute;inset:0;background:radial-gradient(ellipse 75% 75% at 50% 50%,rgba(0,0,0,0) 52%,rgba(0,0,0,.4) 100%)}
 #sweep{position:absolute;left:860px;top:-1000px;width:200px;height:3080px;opacity:0;transform:rotate(45deg);
@@ -95,7 +99,7 @@ canvas{display:block}
      第二幕  “第27张” 26.34
      第三幕  人脸裂开 36.38              左右拼脸完成 38.38
      第五幕  “×25”最后一次闪现 71.50     最长好感度条长完 73.40
-     第六幕  金色对勾 102.98             “是因为它‘陌生’”出现 109.08
+     第六幕  金色对勾 102.98             “陌生”一句出现 109.08
      第七幕  “约+30%”出现 119.66
      总时长 143.5 秒（字幕阅读时间规则自动顺延后的结果）
    ===================================================================== */
@@ -398,7 +402,9 @@ function camState() {
 /* =====================================================================
    文字工具
    ===================================================================== */
-const markup = s => s.replace(/\{([gbr])\|([^}]*)\}/g, (m, c, t) => `<span class="k${c}">${t}</span>`);
+/* 中文引号去掉字形自带的半格空白，使引号与前后文字、句号紧贴 */
+const markup = s => s.replace(/\{([gbr])\|([^}]*)\}/g, (m, c, t) => `<span class="k${c}">${t}</span>`)
+  .replace(/“/g, '<span class="qo">“</span>').replace(/”/g, '<span class="qc">”</span>');
 const plain = s => s.replace(/\{[gbr]\||\}/g, '');
 function splitChars(e) {
   const out = [];
@@ -541,8 +547,8 @@ function scene1() {
   const FRL = rect({ x: 600, y: 540, w: 520, h: 640 }), FRR = rect({ x: 1320, y: 540, w: 520, h: 640 });
   G.phone = FRR;
   const FACEL = face({ x: 600, y: 578, mirror: true, c1: C.blue, prog: 0 });
-  const LBM = txt({ x: 600, y: 180, html: '镜子里', f: 'sans', size: 36, color: C.blue, cls: 'lab' });
-  const LBP = txt({ x: 1320, y: 180, html: '照片里', f: 'sans', size: 36, color: C.gold, cls: 'lab' });
+  const LBM = txt({ x: 600, y: 180, html: '镜子里', f: 'sans', size: 40, color: C.blue, cls: 'lab' });
+  const LBP = txt({ x: 1320, y: 180, html: '照片里', f: 'sans', size: 40, color: C.gold, cls: 'lab' });
 
   camTo(P, 0, 3.5, { s: 1.08 }); camTo(P, 5.6, 6.3, { s: 1.0 }); camTo(P, 6.3, 10.4, { s: 1.04 }); camTo(P, 10.4, 11, { s: 1.10, y: -40 });
 
@@ -849,34 +855,72 @@ function scene4() {
 /* =====================================================================
    第五幕｜曝光效应
    ===================================================================== */
-const RADICALS = [
-  [[[.06,.33],[.06,.7]], [[.06,.33],[.32,.33],[.32,.7]], [[.06,.68],[.32,.68]]],
-  [[[.08,.1],[.2,.2]], [[.04,.4],[.17,.5]], [[.03,.9],[.23,.6]]],
-  [[[.3,.04],[.05,.42]], [[.19,.26],[.19,.96]]],
-  [[[.02,.3],[.35,.28]], [[.18,.04],[.18,.96]], [[.18,.33],[.03,.72]], [[.2,.42],[.34,.56]]],
-  [[[.1,.07],[.21,.17]], [[.04,.37],[.18,.37],[.18,.88],[.31,.78]]],
-];
-function glyphStrokes(seed, rad) {
-  const r = rng(seed), out = RADICALS[rad].map(pts => ({ k: pts.length === 2 && pts[0][1] === pts[1][1] ? 'h' : 's', pts }));
-  const P = (u, v) => [.44 + u * .54, v], j = () => (r() - .5) * .06;
-  const hs = 2 + Math.floor(r() * 2);
-  for (let i = 0; i < hs; i++) { const v = .12 + (i + .5) / hs * .76 + j(); out.push({ k: 'h', pts: [P(.04 + r() * .2, v), P(.76 + r() * .22, v - .03)] }); }
-  const nv = 2;
-  for (let i = 0; i < nv; i++) { const u = nv === 1 ? .35 + r() * .3 : (i ? .8 : .2); out.push({ k: 's', pts: [P(u, .06 + r() * .12), P(u + j(), .82 + r() * .14)] }); }
-  const e0 = Math.floor(r() * 4);
-  for (const ex of [e0, (e0 + 1 + Math.floor(r() * 3)) % 4])
-  if (ex === 0) out.push({ k: 'p', pts: quadPts(P(.62, .44), P(.45, .76), P(.04, .95), 10) });
-  else if (ex === 1) out.push({ k: 'n', pts: quadPts(P(.4, .5), P(.6, .8), P(.98, .94), 10) });
-  else if (ex === 2) out.push({ k: 'z', pts: [P(.14, .17), P(.86, .17), P(.8, .56)] });
-  else out.push({ k: 'd', pts: [P(.46, .01), P(.58, .1)] });
+/* 伪汉字：把互不相干的部件强行拼合（含非标准部件“鸟字头”与额外一撇），
+   生成后与真实汉字结构表比对，命中即重新生成。
+   REAL_IDS 来自 Unicode 汉字结构描述库（cjkvi-ids，约 8.9 万字）中所有可由下列部件拼出的真实汉字。 */
+const COMP = {
+  '氵': [[[.25,.1],[.45,.24]], [[.15,.4],[.38,.52]], [[.12,.92],[.42,.6]]],
+  '亻': [[[.62,.04],[.15,.5]], [[.42,.3],[.42,.97]]],
+  '口': [[[.15,.2],[.15,.85]], [[.15,.2],[.85,.2],[.85,.85]], [[.15,.82],[.85,.82]]],
+  '日': [[[.2,.08],[.2,.94]], [[.2,.08],[.8,.08],[.8,.94]], [[.2,.5],[.8,.5]], [[.2,.92],[.8,.92]]],
+  '目': [[[.22,.05],[.22,.96]], [[.22,.05],[.78,.05],[.78,.96]], [[.22,.36],[.78,.36]], [[.22,.65],[.78,.65]], [[.22,.94],[.78,.94]]],
+  '土': [[[.2,.36],[.8,.36]], [[.5,.08],[.5,.86]], [[.06,.88],[.94,.85]]],
+  '又': [[[.15,.14],[.82,.14],[.58,.52],[.1,.94]], [[.3,.4],[.94,.94]]],
+  '山': [[[.5,.06],[.5,.86]], [[.12,.34],[.12,.86],[.88,.86]], [[.88,.34],[.88,.86]]],
+  '女': [[[.46,.06],[.24,.56],[.84,.92]], [[.7,.3],[.55,.66],[.12,.95]], [[.04,.48],[.96,.43]]],
+  '木': [[[.06,.3],[.94,.28]], [[.5,.04],[.5,.97]], [[.5,.32],[.08,.8]], [[.52,.36],[.94,.78]]],
+  '火': [[[.2,.3],[.3,.5]], [[.82,.24],[.68,.47]], [[.5,.04],[.48,.55],[.08,.95]], [[.5,.55],[.94,.95]]],
+  '舟': [[[.46,.02],[.32,.17]], [[.22,.2],[.12,.96]], [[.22,.2],[.84,.2],[.84,.9],[.72,.84]], [[.44,.34],[.52,.44]], [[.44,.62],[.54,.7]], [[.04,.55],[.96,.52]]],
+  '鸟头': [[[.5,.02],[.35,.17]], [[.24,.2],[.24,.78]], [[.24,.2],[.82,.2],[.82,.74],[.7,.68]], [[.48,.38],[.57,.5]], [[.08,.84],[.92,.8]]],
+};
+const ALIAS = { '氵': '水', '亻': '人' };
+const REAL_IDS = new Set(["⿰⿰人人人", "⿰⿱人人⿱人人", "⿰⿱人人水", "⿰⿱又又⿱又又", "⿰⿱又口⿱又口", "⿰⿱口口⿱口口", "⿰⿱口木⿱口木", "⿰⿱土⿻土⿰人人⿱土⿻土⿰人人", "⿰⿱土土又", "⿰⿱日日⿱日日", "⿰⿱日日⿱火火", "⿰⿱日木⿱日木", "⿰⿱水水⿱水水", "⿰⿻日木⿻日木", "⿰⿻日木⿻木⿰人人", "⿰⿻木⿰人人⿻木⿰人人", "⿰人人", "⿰亻⿰亻人", "⿰亻⿰女又", "⿰亻⿰女口", "⿰亻⿰日⿱火火", "⿰亻⿰木木", "⿰亻⿰木目", "⿰亻⿰水水", "⿰亻⿱⿰又又⿰又又", "⿰亻⿱⿱⿰人人⿰人人日", "⿰亻⿱⿱人人口", "⿰亻⿱⿱口⿰口口木", "⿰亻⿱人⿰人人", "⿰亻⿱人山", "⿰亻⿱口⿰口口", "⿰亻⿱口又", "⿰亻⿱口口", "⿰亻⿱口木", "⿰亻⿱土土", "⿰亻⿱日女", "⿰亻⿱日日", "⿰亻⿱日木", "⿰亻⿱木⿰木木", "⿰亻⿱木口", "⿰亻⿱水日", "⿰亻⿱火口", "⿰亻⿱火火", "⿰亻⿻土⿰人人", "⿰亻⿻日木", "⿰亻⿻木⿰人人", "⿰亻人", "⿰亻又", "⿰亻口", "⿰亻女", "⿰亻山", "⿰亻日", "⿰亻木", "⿰亻水", "⿰亻火", "⿰亻目", "⿰亻舟", "⿰又又", "⿰口⿰人人", "⿰口⿰亻⿱口木", "⿰口⿰亻木", "⿰口⿰女又", "⿰口⿰木⿱土土", "⿰口⿰木土", "⿰口⿰木木", "⿰口⿰木目", "⿰口⿰氵⿱火火", "⿰口⿰氵又", "⿰口⿰氵女", "⿰口⿱⿰又又⿰又又", "⿰口⿱⿰木木女", "⿰口⿱⿰木木火", "⿰口⿱⿱又⿰又又木", "⿰口⿱⿱口⿰口口木", "⿰口⿱⿻木⿰人人日", "⿰口⿱人山", "⿰口⿱人水", "⿰口⿱又土", "⿰口⿱口木", "⿰口⿱土土", "⿰口⿱日土", "⿰口⿱日日", "⿰口⿱木⿰木木", "⿰口⿱水日", "⿰口⿱火火", "⿰口⿺土人", "⿰口⿻土⿰人人", "⿰口⿻日木", "⿰口⿻木⿰人人", "⿰口人", "⿰口又", "⿰口口", "⿰口土", "⿰口女", "⿰口山", "⿰口日", "⿰口木", "⿰口火", "⿰口舟", "⿰土⿰人人", "⿰土⿰亻⿱口木", "⿰土⿰木木", "⿰土⿰氵⿱火火", "⿰土⿱⿰又又⿰又又", "⿰土⿱⿱又⿰又又木", "⿰土⿱⿱口⿰口口木", "⿰土⿱口木", "⿰土⿱土土", "⿰土⿱日土", "⿰土⿱日女", "⿰土⿱日山", "⿰土⿱日日", "⿰土⿱木⿰木木", "⿰土⿱水日", "⿰土⿱火火", "⿰土⿻土⿰人人", "⿰土⿻日木", "⿰土人", "⿰土又", "⿰土口", "⿰土土", "⿰土山", "⿰土日", "⿰土木", "⿰土水", "⿰土目", "⿰女⿰亻⿱口木", "⿰女⿰亻木", "⿰女⿰又又", "⿰女⿰木木", "⿰女⿰木目", "⿰女⿱⿰又又⿰又又", "⿰女⿱⿰目目女", "⿰女⿱⿱又⿰又又木", "⿰女⿱⿱口⿰口口木", "⿰女⿱又口", "⿰女⿱口木", "⿰女⿱土土", "⿰女⿱日日", "⿰女⿱日目", "⿰女⿱木口", "⿰女⿱水日", "⿰女⿱火火", "⿰女⿻土⿰人人", "⿰女⿻日木", "⿰女⿻木⿰人人", "⿰女又", "⿰女口", "⿰女土", "⿰女女", "⿰女山", "⿰女日", "⿰女水", "⿰女目", "⿰山⿰木山", "⿰山⿰木木", "⿰山⿱⿰木木木", "⿰山⿱⿱又⿰又又木", "⿰山⿱水日", "⿰山⿻土⿰人人", "⿰山⿻日木", "⿰山⿻木⿰人人", "⿰山又", "⿰山山", "⿰山水", "⿰山火", "⿰日⿰亻木", "⿰日⿰木木", "⿰日⿰氵女", "⿰日⿱⿰又又⿰又又", "⿰日⿱⿱又⿰又又木", "⿰日⿱⿱口⿰口口木", "⿰日⿱人目", "⿰日⿱土土", "⿰日⿱日日", "⿰日⿱日木", "⿰日⿱木口", "⿰日⿱木日", "⿰日⿱火火", "⿰日⿻日木", "⿰日⿻木⿰人人", "⿰日人", "⿰日女", "⿰日日", "⿰日火", "⿰日舟", "⿰木⿰人人", "⿰木⿰亻⿱口木", "⿰木⿰亻又", "⿰木⿰亻木", "⿰木⿰亻目", "⿰木⿰女又", "⿰木⿰木目", "⿰木⿰氵木", "⿰木⿰氵目", "⿰木⿱⿰又又⿰又又", "⿰木⿱⿰木木火", "⿰木⿱⿰目目木", "⿰木⿱⿱又⿰又又木", "⿰木⿱⿱口⿰口口木", "⿰木⿱又⿰又又", "⿰木⿱又土", "⿰木⿱口⿰口口", "⿰木⿱口口", "⿰木⿱口木", "⿰木⿱土土", "⿰木⿱日⿰日日", "⿰木⿱日日", "⿰木⿱日目", "⿰木⿱木⿰木木", "⿰木⿱木口", "⿰木⿱水口", "⿰木⿱水日", "⿰木⿱火火", "⿰木⿱目木", "⿰木⿻土⿰人人", "⿰木⿻日木", "⿰木⿻木⿰人人", "⿰木人", "⿰木又", "⿰木口", "⿰木土", "⿰木女", "⿰木山", "⿰木日", "⿰木木", "⿰木水", "⿰木火", "⿰木目", "⿰木舟", "⿰水⿻土⿰人人", "⿰水水", "⿰氵⿰亻⿱口⿰口口", "⿰氵⿰亻⿱口木", "⿰氵⿰亻⿱土土", "⿰氵⿰亻山", "⿰氵⿰亻木", "⿰氵⿰女口", "⿰氵⿰木⿱土土", "⿰氵⿰木土", "⿰氵⿰木木", "⿰氵⿰木目", "⿰氵⿰氵⿰木木", "⿰氵⿱⿰又又⿰又又", "⿰氵⿱⿰木木土", "⿰氵⿱⿰木木女", "⿰氵⿱⿰木木日", "⿰氵⿱⿰木木水", "⿰氵⿱⿱又⿰又又木", "⿰氵⿱⿱口⿰口口山", "⿰氵⿱⿱口⿰口口木", "⿰氵⿱又⿰又又", "⿰氵⿱又土", "⿰氵⿱口又", "⿰氵⿱口口", "⿰氵⿱口土", "⿰氵⿱口木", "⿰氵⿱土土", "⿰氵⿱山又", "⿰氵⿱山火", "⿰氵⿱日⿰日日", "⿰氵⿱日又", "⿰氵⿱日土", "⿰氵⿱日日", "⿰氵⿱日目", "⿰氵⿱木⿰木木", "⿰氵⿱木口", "⿰氵⿱木日", "⿰氵⿱水口", "⿰氵⿱水日", "⿰氵⿱水水", "⿰氵⿱火火", "⿰氵⿻土⿰人人", "⿰氵⿻日人", "⿰氵⿻日木", "⿰氵⿻木⿰人人", "⿰氵人", "⿰氵又", "⿰氵口", "⿰氵土", "⿰氵女", "⿰氵山", "⿰氵日", "⿰氵木", "⿰氵水", "⿰氵火", "⿰氵目", "⿰氵舟", "⿰火⿰亻木", "⿰火⿰木木", "⿰火⿱⿱⿰人人⿰人人日", "⿰火⿱⿱又⿰又又木", "⿰火⿱⿱口⿰口口木", "⿰火⿱又土", "⿰火⿱口⿰口口", "⿰火⿱口口", "⿰火⿱口日", "⿰火⿱土土", "⿰火⿱山⿰山山", "⿰火⿱日山", "⿰火⿱日日", "⿰火⿱日火", "⿰火⿱日目", "⿰火⿱木⿰木木", "⿰火⿱火火", "⿰火⿻土⿰人人", "⿰火⿻日木", "⿰火土", "⿰火山", "⿰火日", "⿰火木", "⿰火水", "⿰火火", "⿰火舟", "⿰目⿰女口", "⿰目⿰木⿱土土", "⿰目⿰木木", "⿰目⿰氵⿱火火", "⿰目⿱⿰又又⿰又又", "⿰目⿱⿱口⿰口口木", "⿰目⿱又目", "⿰目⿱口木", "⿰目⿱土土", "⿰目⿱日木", "⿰目⿱日火", "⿰目⿱日目", "⿰目⿱木口", "⿰目⿱火火", "⿰目⿻土⿰人人", "⿰目⿻日木", "⿰目⿻木⿰人人", "⿰目人", "⿰目又", "⿰目土", "⿰目木", "⿰目火", "⿰目目", "⿰舟⿱口又", "⿰舟⿱日目", "⿰舟⿱火火", "⿰舟⿻木⿰人人", "⿰舟人", "⿰舟山", "⿰舟日", "⿰舟目", "⿱⿰⿰木木⿰木木⿰⿰木木⿰木木", "⿱⿰⿱人人口女", "⿱⿰⿻日木⿻日木⿰⿻日木⿻日木", "⿱⿰人人⿰人人", "⿱⿰人人⿻人⿰人人", "⿱⿰亻⿱口木土", "⿱⿰亻⿱口木木", "⿱⿰亻⿱口木火", "⿱⿰亻木火", "⿱⿰又又⿰又又", "⿱⿰又又⿰口口", "⿱⿰又又女", "⿱⿰又又木", "⿱⿰口又土", "⿱⿰口口⿰口口", "⿱⿰口口⿱口⿰口口", "⿱⿰口口土", "⿱⿰口口女", "⿱⿰口口山", "⿱⿰口口木", "⿱⿰女⿱土土木", "⿱⿰女又目", "⿱⿰女口木", "⿱⿰女口火", "⿱⿰日日⿰日日", "⿱⿰日日火", "⿱⿰木木⿰⿰木木⿰木木", "⿱⿰木木口", "⿱⿰木木土", "⿱⿰木木女", "⿱⿰木木山", "⿱⿰木木日", "⿱⿰木木木", "⿱⿰木木火", "⿱⿰木目水", "⿱⿰水水⿰水水", "⿱⿰氵木土", "⿱⿰火火⿰火火", "⿱⿰火火木", "⿱⿰目又火", "⿱⿰目目又", "⿱⿰目目木", "⿱⿰目目火", "⿱⿱⿰人人⿰人人⿱日日", "⿱⿱⿰人人⿰人人日", "⿱⿱⿰又又⿰又又土", "⿱⿱人人口", "⿱⿱又⿰又又口", "⿱⿱又⿰又又木", "⿱⿱口⿰口口又", "⿱⿱口⿰口口土", "⿱⿱口⿰口口山", "⿱⿱口⿰口口木", "⿱⿱山⿰山山⿱日日", "⿱⿱山⿰山山土", "⿱⿱山水土", "⿱⿱山火日", "⿱⿱日⿰日日日", "⿱⿱日日又", "⿱⿱木⿰木木口", "⿱⿱木日火", "⿱⿱火火土", "⿱⿲人亻人口", "⿱⿲口口口⿻土⿰人人", "⿱⿻日木⿰⿻日木⿻日木", "⿱⿻木⿰人人⿻木⿰人人", "⿱人⿰人人", "⿱人⿱⿻日木⿰⿻日木⿻日木", "⿱人⿱土口", "⿱人⿱土土", "⿱人⿱火火", "⿱人人", "⿱人山", "⿱人水", "⿱人火", "⿱人目", "⿱又⿰又又", "⿱又又", "⿱又口", "⿱又土", "⿱又女", "⿱又火", "⿱口⿰口口", "⿱口又", "⿱口口", "⿱口日", "⿱口木", "⿱口水", "⿱土⿰土土", "⿱土口", "⿱土土", "⿱土女", "⿱土木", "⿱土水", "⿱土火", "⿱女⿰女女", "⿱女女", "⿱山⿰人人", "⿱山⿰山山", "⿱山⿰木木", "⿱山⿰氵⿰木木", "⿱山⿰火火", "⿱山⿱口⿰口口", "⿱山⿱口木", "⿱山⿱土土", "⿱山⿱火火", "⿱山⿻土⿰人人", "⿱山人", "⿱山女", "⿱山山", "⿱山日", "⿱山木", "⿱山水", "⿱山火", "⿱日⿰日日", "⿱日⿰木木", "⿱日⿻土⿰人人", "⿱日口", "⿱日土", "⿱日女", "⿱日山", "⿱日日", "⿱日木", "⿱日水", "⿱日火", "⿱日目", "⿱木⿰又又", "⿱木⿰木木", "⿱木⿱口⿰口口", "⿱木⿲口口口", "⿱木⿻土⿰人人", "⿱木口", "⿱木土", "⿱木日", "⿱木水", "⿱木火", "⿱水⿰木木", "⿱水⿰水水", "⿱水⿰火火", "⿱水⿱人山", "⿱水人", "⿱水口", "⿱水土", "⿱水日", "⿱水火", "⿱火⿰火火", "⿱火又", "⿱火口", "⿱火土", "⿱火木", "⿱火水", "⿱火火", "⿱目⿰目目", "⿱目木", "⿱舟木", "⿲口口口", "⿲女木女", "⿲木⿱又土木", "⿲木又木", "⿲水木水", "⿲水水水", "⿲火⿱土土⿱土土", "⿳⿰口口山⿰口口", "⿳⿲口口口⿲口口口土", "⿳山人土", "⿳山木山", "⿳山火⿱日火", "⿻⿰口人土", "⿻亻⿰人人", "⿻亻⿱⿰人人⿰人人", "⿻土⿰人人", "⿻土⿰口口", "⿻日人", "⿻日木", "⿻木⿰人人", "⿻木⿰目目"]);
+const LAYOUT = {
+  '⿰⿱': [[0, 0, .34, 1], [.4, 0, .6, .47], [.4, .53, .6, .47]],
+  '⿱⿰': [[.12, 0, .76, .42], [0, .48, .46, .52], [.54, .48, .46, .52]],
+  '⿲': [[0, 0, .3, 1], [.35, 0, .3, 1], [.7, 0, .3, 1]],
+};
+const idsOf = (lay, c) => lay === '⿰⿱' ? `⿰${c[0]}⿱${c[1]}${c[2]}` : lay === '⿱⿰' ? `⿱${c[0]}⿰${c[1]}${c[2]}` : `⿲${c[0]}${c[1]}${c[2]}`;
+/** 自检：该结构（含 氵/水、亻/人 等异体写法，以及去掉额外一撇后的基本结构）是否是真实汉字 */
+function isRealGlyph(g) {
+  const vars = [g.comps];
+  g.comps.forEach((c, i) => { if (ALIAS[c]) vars.slice().forEach(v => { const w = v.slice(); w[i] = ALIAS[c]; vars.push(w); }); });
+  return vars.some(v => REAL_IDS.has(idsOf(g.layout, v)));
+}
+function makePseudoGlyphs(n, seed) {
+  const r = rng(seed), names = Object.keys(COMP), lays = Object.keys(LAYOUT), out = [], used = new Set();
+  let tries = 0;
+  while (out.length < n && tries++ < 5000) {
+    const layout = lays[out.length % lays.length];
+    const comps = []; while (comps.length < 3) { const c = names[(r() * names.length) | 0]; if (!comps.includes(c)) comps.push(c); }
+    if (layout === '⿰⿱' && !['氵', '亻', '口', '木', '火', '女', '土'].includes(comps[0])) continue;
+    const g = { layout, comps, extra: r() < .6 };
+    const key = comps.slice().sort().join('');
+    if (used.has(key)) continue;
+    if (isRealGlyph(g)) continue;          // 命中真实汉字 → 重新生成
+    used.add(key); g.ids = idsOf(layout, comps) + (g.extra ? '+丿' : ''); out.push(g);
+  }
+  console.log('伪汉字自检：' + out.map(g => g.ids).join('  ') + '  —— 均不在真实汉字结构表中');
+  return out;
+}
+function glyphStrokes(g) {
+  const out = [];
+  g.comps.forEach((c, i) => {
+    const [bx, by, bw, bh] = LAYOUT[g.layout][i];
+    for (const pts of COMP[c]) {
+      const q = pts.map(([u, v]) => [bx + u * bw, by + v * bh]);
+      out.push({ k: q.length === 2 && Math.abs(q[0][1] - q[1][1]) < .02 ? 'h' : 's', pts: q });
+    }
+  });
+  if (g.extra) out.push({ k: 'p', pts: quadPts([.97, .02], [.86, .12], [.7, .26], 8) });
   return out;
 }
 function scene5() {
   const P = plan(22, [
     { type: 'hold', from: .9, to: 3.5, need: 3.0 },
-    { type: 'sub', t: 4.0, text: '科学家给看不懂中文的人，看一些‘汉字’。' },
+    { type: 'sub', t: 4.0, text: '科学家给看不懂中文的人，看一些“汉字”。' },
     { type: 'sub', t: 10.6, text: '看的次数{g|越多}，越觉得它的意思是{g|好的}。' },
-    { type: 'sub', t: 14.5, text: '大脑会把‘{b|熟悉}’，当成‘{g|好看}’。', pauseAt: 14.0 },
+    { type: 'sub', t: 14.5, text: '大脑会把“{b|熟悉}”，当成“{g|好看}”。', pauseAt: 14.0 },
     { type: 'sub', t: 18.5, text: '而你最熟悉的，是{b|镜子里}那张反过来的脸。' },
   ]);
   const { tl, T } = P, ST = G.stripes;
@@ -887,47 +931,49 @@ function scene5() {
     if (o.da > 0) { ctx.globalAlpha *= o.da; ctx.fillStyle = '#fff'; ctx.shadowColor = C.gold; ctx.shadowBlur = 22;
       for (const s of [-1, 1]) { ctx.beginPath(); ctx.arc(960 + s * 300 * o.d, 610, 4, 0, TAU); ctx.fill(); } }
   }, { w: 0, d: 0, da: 0, z: 6 });
-  const SRC1 = txt({ x: 960, y: 120, html: '扎荣茨 · 1968', f: 'sans', size: 32, color: C.g1 });
-  const SRC2 = txt({ x: 960, y: 120, html: '给看不懂中文的人看‘汉字’', f: 'sans', size: 32, color: C.white });
-  const YS = [330, 450, 570, 690, 810], NS = [1, 2, 5, 10, 25], WS = [120, 200, 320, 440, 600];
-  const GLY = [11, 23, 37, 58, 71].map((sd, i) => glyphStrokes(sd, i));
+  const SRC1 = txt({ x: 960, y: 120, html: '扎荣茨 · 1968', f: 'sans', size: 36, color: '#D0D0D0' });
+  const SRC2 = txt({ x: 960, y: 120, html: '给看不懂中文的人看“汉字”', f: 'sans', size: 32, color: C.white });
+  // 整组（伪汉字 130px · 计数 40px · 好感度条 24px/最长 800px）水平居中于 420–1500，垂直居中于画面中部
+  const GX = 485, CX = 580, BX = 700;
+  const YS = [300, 432, 564, 696, 828], NS = [1, 2, 5, 10, 25], WS = [160, 267, 427, 587, 800];
+  const GLY = makePseudoGlyphs(5, 1977).map(glyphStrokes);
   const CH = YS.map(() => ({ b: .4 }));
   const GL = fnObj((ctx, o) => {
     ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = C.white; ctx.fillStyle = C.white; ctx.shadowColor = C.white;
     YS.forEach((y, k) => {
-      const b = CH[k].b, s = 90, ox = 420 - s / 2, oy = y - s / 2;
-      ctx.save(); ctx.globalAlpha *= b; ctx.shadowBlur = 4 + 20 * Math.max(0, (b - .4) / .6); ctx.lineWidth = 2.5;
+      const b = CH[k].b, s = 130 * .86, ox = GX - s / 2, oy = y - s / 2;   // 130px 字号，字面约占 86%
+      ctx.save(); ctx.globalAlpha *= b; ctx.shadowBlur = 4 + 20 * Math.max(0, (b - .4) / .6); ctx.lineWidth = 3;
       for (const st of GLY[k]) {
         const pts = st.pts.map(q => [ox + q[0] * s, oy + q[1] * s]);
         strokePoly(ctx, pts, 1);
         const a = pts[0];   // 衬线感：起笔顿点
-        ctx.beginPath(); ctx.arc(a[0], a[1], 2.2, 0, TAU); ctx.fill();
-        if (st.k === 'h') { const e = pts[pts.length - 1]; ctx.beginPath(); ctx.moveTo(e[0] - 4, e[1] - 3); ctx.lineTo(e[0] + 1, e[1] + 4); ctx.stroke(); }
+        ctx.beginPath(); ctx.arc(a[0], a[1], 2.6, 0, TAU); ctx.fill();
+        if (st.k === 'h') { const e = pts[pts.length - 1]; ctx.beginPath(); ctx.moveTo(e[0] - 5, e[1] - 4); ctx.lineTo(e[0] + 1, e[1] + 5); ctx.stroke(); }
       }
       ctx.restore();
     });
   }, { z: 6 });
-  const CN = YS.map((y, k) => txt({ x: 490, y, html: '×' + NS[k], f: 'mono', size: 36, color: C.g1, align: 'left' }));
+  const CN = YS.map((y, k) => txt({ x: CX, y, html: '×' + NS[k], f: 'mono', size: 40, color: C.g1, align: 'left' }));
   const BW = YS.map(() => ({ w: 0 }));
   const BR = fnObj(ctx => {
     YS.forEach((y, k) => {
       const w = BW[k].w; if (w < .5) return;
       const c = mix(C.g3, C.gold, k / 4);
       ctx.save(); ctx.fillStyle = c; ctx.shadowColor = C.gold; ctx.shadowBlur = k === 4 ? 18 : 0;
-      ctx.beginPath(); ctx.roundRect(640, y - 9, w, 18, 9); ctx.fill(); ctx.restore();
+      ctx.beginPath(); ctx.roundRect(BX, y - 12, w, 24, 12); ctx.fill(); ctx.restore();
     });
   }, { z: 6 });
-  const BL = txt({ x: 940, y: 260, html: '猜它的意思是好是坏', f: 'sans', size: 30, color: C.g1 });
+  const BL = txt({ x: 1180, y: 252, html: '猜它的意思是好是坏', f: 'sans', size: 30, color: C.g1 });
   const F5 = face({ x: 960, y: 480, s: 1.1, mirror: true, c1: C.blue, prog: 0 });
   const RV = ['×100', '×100', '×100', '×1000', '×1000', '×1000', '×10000', '×10000', '×10000'];
   const RA = [-150, -30, 90, -95, 25, 160, -120, 0, 200];
   const RG = RV.map((v, i) => { const a = RA[i] * Math.PI / 180; return txt({ x: 960 + 430 * Math.cos(a), y: 480 + 330 * Math.sin(a), html: v, f: 'mono', size: 34, color: C.blue }); });
   const FL = txt({ x: 960, y: 838, html: '每天照镜子 × 无数次', f: 'sans', size: 34, color: C.blue, cls: 'lab' });
   const FB = face({ x: 960, y: 480, s: 1.1, mirror: true, c1: C.blue, c2: C.white });
-  G.polL = polaroid({ x: 700, y: 480, mirror: true, fc: C.blue, label: '镜像版', lc: C.blue, bcol: C.blue });
-  G.polR = polaroid({ x: 1220, y: 480, mirror: false, fc: C.white, label: '原图版', lc: C.gold, bcol: C.gold });
+  G.polL = polaroid({ x: 680, y: 480, s: 1.4, mirror: true, fc: C.blue, label: '镜像版', lc: C.blue, bcol: C.blue });
+  G.polR = polaroid({ x: 1240, y: 480, s: 1.4, mirror: false, fc: C.white, label: '原图版', lc: C.gold, bcol: C.gold });
 
-  camTo(P, 0, 3.5, { s: 1.05 }); camTo(P, 3.5, 14, { x: -60, s: 1.02 }); camTo(P, 14, 22, { x: 0, s: 1.06 });
+  camTo(P, 0, 3.5, { s: 1.05 }); camTo(P, 3.5, 14, { x: -40, s: 1.02 }); camTo(P, 14, 22, { x: 0, s: 1.06 });
 
   S(tl, TT, { opacity: 1 }, 0);
   tl.fromTo(TT.chars, { opacity: 0, scale: 1.15, filter: 'blur(6px)' }, { opacity: 1, scale: 1, filter: 'blur(0px)', duration: .6, ease: 'power3.out', stagger: .08, immediateRender: false }, 0);
@@ -936,7 +982,7 @@ function scene5() {
   fin(tl, SRC1, .3);
 
   const a = T(3.5);
-  tl.to(TT, { top: 200, scale: .6, opacity: .4, duration: .7, ease: 'power3.inOut' }, a);
+  tl.to(TT, { top: 192, scale: .6, opacity: .4, duration: .7, ease: 'power3.inOut' }, a);
   tl.to(UL, { alpha: 0, duration: .4, ease: 'power2.in' }, a); tl.to(ST, { alpha: 0, duration: 1.0, ease: 'power2.in' }, a);
   fout(tl, SRC1, a, .3); fin(tl, SRC2, a + .3);
   S(tl, GL, { alpha: 0 }, a);
@@ -972,8 +1018,8 @@ function scene5() {
   const x = T(21.4);
   fout(tl, FL, x, .3);
   S(tl, FB, { alpha: 1, prog: 1 }, x);
-  tl.to(F5, { x: 700, y: 474, s: .59, duration: .6, ease: 'power3.inOut' }, x);
-  tl.to(FB, { x: 1220, y: 474, s: .59, sx: -1, cm: 1, duration: .6, ease: 'power3.inOut' }, x);
+  tl.to(F5, { x: 680, y: 471.6, s: .826, duration: .6, ease: 'power3.inOut' }, x);
+  tl.to(FB, { x: 1240, y: 471.6, s: .826, sx: -1, cm: 1, duration: .6, ease: 'power3.inOut' }, x);
   tl.to([G.polL, G.polR], { alpha: 1, duration: .45, ease: 'power3.out' }, x + .1);
   S(tl, [F5, FB], { alpha: 0 }, x + .6); S(tl, [G.polL, G.polR], { fa: 1 }, x + .6);
   return P;
@@ -987,7 +1033,7 @@ function polaroid(p) {
     ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(242,242,242,.22)'; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.rect(-162, -212, 324, 362); ctx.stroke();
     if (o.fa > 0) { ctx.save(); ctx.globalAlpha *= o.fa; drawFace(ctx, 0, -6, .59, { mirror: o.mirror, color: o.fc, clip: [-162, -212, 324, 362] }); ctx.restore(); }
-    ctx.fillStyle = o.lc; ctx.font = '500 32px "Noto Sans SC", sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = o.lc; ctx.font = `500 ${(36 / 1.4).toFixed(2)}px "Noto Sans SC", sans-serif`;   // 放大 1.4 倍时为 36px ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.shadowColor = o.lc; ctx.shadowBlur = 6; ctx.fillText(o.label, 0, 191);
     ctx.restore();
   }, Object.assign({ s: 1, bc: 0, glow: 0, fa: 0, z: 7 }, p));
@@ -998,7 +1044,7 @@ function polaroid(p) {
    ===================================================================== */
 function check(x, y, color) { return L({ pts: [[x - 24, y + 1], [x - 7, y + 18], [x + 26, y - 20]], color, lw: 4, glow: 14 }); }
 function scene6() {
-  const B1 = '你觉得照片丑，不是因为它丑。', B2 = '是因为它‘陌生’。';
+  const B1 = '你觉得照片丑，不是因为它丑。', B2 = '是因为它“陌生”。';
   const P = plan(21.5, [
     { type: 'sub', t: .5, text: '科学家给每个人看两张自己的照片。' },
     { type: 'sub', t: 3.0, text: '一张是镜像版，一张是原图版。' },
@@ -1008,13 +1054,13 @@ function scene6() {
     { type: 'hold', from: 17.7, to: 20.9, need: bigA(B2, .04, .45) + 4 },
   ]);
   const { tl, T } = P, PL = G.polL, PR = G.polR;
-  const SRC = txt({ x: 960, y: 120, html: '镜像照片实验 · 1977', f: 'sans', size: 32, color: C.g1 });
+  const SRC = txt({ x: 960, y: 120, html: '镜像照片实验 · 1977', f: 'sans', size: 36, color: '#D0D0D0' });
   const P1 = person(300, 750, 200, {}), P2 = person(1620, 750, 200, {});
-  const L1 = txt({ x: 300, y: 890, html: '本人', f: 'sans', size: 32, cls: 'lab' }), L2 = txt({ x: 1620, y: 890, html: '好朋友', f: 'sans', size: 32, cls: 'lab' });
+  const L1 = txt({ x: 300, y: 890, html: '本人', f: 'sans', size: 36, cls: 'lab' }), L2 = txt({ x: 1620, y: 890, html: '好朋友', f: 'sans', size: 36, cls: 'lab' });
   const QM = txt({ x: 300, y: 600, html: '？', size: 48 }); G.qm = QM;
-  const BM1 = add({ type: 'beam', x0: 328, y0: 676, x1: 530, y1: 560, w0: 2, w1: 6, color: C.blue, prog: 0, z: 9 });
-  const BM2 = add({ type: 'beam', x0: 1592, y0: 676, x1: 1390, y1: 560, w0: 2, w1: 6, color: C.gold, prog: 0, z: 9 });
-  const CK1 = check(700, 772, C.blue), CK2 = check(1220, 772, C.gold);
+  const BM1 = add({ type: 'beam', x0: 328, y0: 676, x1: 436, y1: 600, w0: 2, w1: 6, color: C.blue, prog: 0, z: 9 });
+  const BM2 = add({ type: 'beam', x0: 1592, y0: 676, x1: 1484, y1: 600, w0: 2, w1: 6, color: C.gold, prog: 0, z: 9 });
+  const CK1 = check(680, 852, C.blue), CK2 = check(1240, 852, C.gold);
   const BT1 = txt({ x: 960, y: 300, html: B1, size: 72, chars: true, cls: 'lab' });
   const BT2 = txt({ x: 960, y: 440, html: B2, size: 88, color: C.gold, chars: true, shadow: '0 0 40px rgba(232,194,122,.7)' });
 
@@ -1044,7 +1090,7 @@ function scene6() {
   reveal(tl, BT1, T(15.5));
   const p18 = T(17.7);
   reveal(tl, BT2, p18, .04, .45); flash(tl, p18, .35);
-  BEAT('第六幕 · “是因为它‘陌生’”出现', p18);
+  BEAT('第六幕 · “陌生”一句出现', p18);
 
   const x = T(20.9);
   fout(tl, [BT1, BT2, SRC], x, .4);
@@ -1071,7 +1117,7 @@ function scene7() {
     { type: 'sub', t: 7.5, text: '所以，手机{g|拿远一点}，再放大拍。', pauseAt: 7.0 },
   ]);
   const { tl, T } = P, PI = G.phoneIcon;
-  const SRC = txt({ x: 960, y: 120, html: '罗格斯大学 · 2018', f: 'sans', size: 32, color: C.g1 });
+  const SRC = txt({ x: 960, y: 120, html: '罗格斯大学 · 2018', f: 'sans', size: 36, color: '#D0D0D0' });
   const RY = 860;
   const RU = fnObj((ctx, o) => {
     ctx.strokeStyle = C.white; ctx.lineWidth = 1; ctx.globalAlpha *= .85;
@@ -1080,8 +1126,8 @@ function scene7() {
     for (let i = 0; i <= 20; i++) { const x = 260 + i * 70; if (x > xe + .5) break; const h = i % 5 === 0 ? 18 : 9; ctx.moveTo(x, RY); ctx.lineTo(x, RY - h); }
     ctx.stroke();
   }, { prog: 0, z: 5 });
-  const RL1 = txt({ x: 260, y: 826, html: '1.5米', f: 'mono', size: 36, color: C.g1 });
-  const RL2 = txt({ x: 780, y: 826, html: '30厘米', f: 'mono', size: 36, color: C.g1 });
+  const RL1 = txt({ x: 260, y: 826, html: '1.5米', f: 'mono', size: 40, color: C.g1 });
+  const RL2 = txt({ x: 780, y: 826, html: '30厘米', f: 'mono', size: 40, color: C.g1 });
   const PS = fnObj((ctx, o) => {
     const lx = PI.x + 36, ly = PI.y - 40;
     ctx.strokeStyle = C.white; ctx.lineWidth = 1; ctx.globalAlpha *= .3;
@@ -1090,13 +1136,13 @@ function scene7() {
       ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(q[0], q[1]); ctx.stroke();
     }
   }, { z: 6 });
-  const LBN = txt({ x: 1190, y: 520, html: '约+30%', f: 'mono', size: 48, color: C.red, shadow: '0 0 18px rgba(229,72,77,.55)', align: 'left' });
-  const LDN = L({ pts: [[1056, 528], [1180, 520]], color: C.red, lw: 1.5, glow: 10 });
+  const LBN = txt({ x: 1190, y: 520, html: '约+30%', f: 'mono', size: 56, color: C.red, shadow: '0 0 18px rgba(229,72,77,.55)', align: 'left' });
+  const LDN = L({ pts: [[1056, 528], [1178, 522]], color: C.red, lw: 1.5, glow: 10 });
   const CARD = document.createElement('div'); CARD.className = 'card';
   CARD.innerHTML = '<div class="ct">拍照小技巧</div>' +
     '<div class="it"><svg viewBox="0 0 40 40"><path d="M7 21 L16 30 L33 11"/></svg><span>手机拿远一点</span></div>' +
     '<div class="it"><svg viewBox="0 0 40 40"><path d="M7 21 L16 30 L33 11"/></svg><span>用后置镜头，放大两倍拍</span></div>';
-  DOM.appendChild(CARD); gsap.set(CARD, { left: 1500, top: 500, xPercent: -50, yPercent: -50, opacity: 0 });
+  DOM.appendChild(CARD); gsap.set(CARD, { left: 1490, top: 500, xPercent: -50, yPercent: -50, opacity: 0 });
   const ITEMS = [...CARD.querySelectorAll('.it')], PATHS = [...CARD.querySelectorAll('path')];
   gsap.set(ITEMS, { opacity: 0 });
 
@@ -1118,6 +1164,7 @@ function scene7() {
   const back = T(7.0);
   tl.to(PI, { x: 260, duration: 1.5, ease: 'power2.inOut' }, back);
   tl.to(hero, { ns: 1, noseMix: 0, outline: 1, duration: 1.5, ease: 'power2.inOut' }, back);
+  tl.to(hero, { x: 820, duration: 1.5, ease: 'power2.inOut' }, back);
   tl.to(LDN, { alpha: 0, duration: .4, ease: 'power2.in' }, back); fout(tl, LBN, back, .4);
   fin(tl, CARD, T(8.0), { dy: 0, dx: 60, d: .6 });
   [8.6, 9.4].forEach((t, i) => { fin(tl, ITEMS[i], T(t), { dy: 8, d: .4 }); tl.to(PATHS[i], { strokeDashoffset: 0, duration: .4, ease: 'power2.out' }, T(t) + .05); });
@@ -1146,7 +1193,7 @@ function scene8() {
   const E1 = txt({ x: 960, y: 720, html: T1, size: 60, chars: true, shadow: SH });
   const E2 = txt({ x: 960, y: 720, html: T2, size: 64, chars: true, shadow: SH });
   const E3 = txt({ x: 960, y: 720, html: T3, size: 56, chars: true, shadow: SH });
-  const TITLE = txt({ x: 960, y: 780, html: '《镜像》', f: 'sans', size: 28, color: 'rgba(242,242,242,.7)', ls: '.5em', shadow: SH });
+  const TITLE = txt({ x: 960, y: 780, html: '《镜像》', f: 'sans', size: 32, color: 'rgba(242,242,242,.7)', ls: '.5em', shadow: SH });
   const HALO = fnObj((ctx, o) => {
     const r = 300 * hero.s, g = ctx.createRadialGradient(hero.x, hero.y - 20, 0, hero.x, hero.y - 20, r);
     g.addColorStop(0, 'rgba(232,194,122,.15)'); g.addColorStop(1, 'rgba(232,194,122,0)');
