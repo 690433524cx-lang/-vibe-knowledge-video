@@ -8,23 +8,25 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&family=Noto+Sans+SC:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <!--
-  《预支》 · 七幕动态知识短片 · 1920×1080 · 约144秒
+  《预支》 · 七幕动态知识短片 · 1920×1080 · 约134.3秒
   空格：从头重播　数字键1–7：跳到对应幕
 
+  七幕起点（秒）：0 / 12.5 / 43.1 / 60.1 / 85.0 / 108.5 / 120.5，全片结束 134.3
+
   卡点时间表（全片绝对时间，秒）——同样会在控制台打印：
-    第一幕  2.20  色差（“一百遍”抖动）
-    第一幕  3.00  钩子句碎裂
-    第一幕  6.50  光点爆开 · 红色裂纹
-    第二幕 26.00  网络拉远揭示
-    第二幕 36.00  时间冻结
-    第三幕 51.00  最强心跳
-    第三幕 57.10  “× 100”砸下
-    第四幕 67.95 / 70.50 / 71.35 / 73.05  翻到蛇
-    第四幕 77.85  50%柱子猛涨
-    第五幕 92.00  纸条爆开
-    第五幕 105.95 89%静止（0.6秒）
-    第五幕 106.75 91%砸出
-    第六幕 126.10 对勾画完
+    第一幕   2.20  色差（“一百遍”抖动）
+    第一幕   3.00  钩子句碎裂
+    第一幕   6.50  光点爆开 · 红色裂纹
+    第二幕  28.50  网络拉远揭示
+    第二幕  38.50  时间冻结
+    第三幕  50.10  最强心跳
+    第三幕  55.65  “× 100”砸下
+    第四幕  65.75 / 67.70 / 68.10 / 68.90  翻到蛇
+    第四幕  73.85  50%柱子猛涨
+    第五幕  85.00  纸条爆开
+    第五幕  98.45  89%静止（0.6秒）
+    第五幕  99.25  91%砸出
+    第六幕 116.10  对勾画完
 -->
 <style>
 :root{--gold:#E8C27A;--red:#E5484D;--green:#9BE37A;--white:#F2F2F2;--gray:#8A8A8A;--dark:#3A3A3A}
@@ -39,14 +41,15 @@ html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden;cursor
 #bg{filter:blur(2px)}
 #cam{transform-origin:0 0;overflow:visible}
 #cam .abs,#hudx .abs{position:absolute}
-#subs{position:absolute;left:0;bottom:120px;width:1920px;height:64px;pointer-events:none}
-.subline{position:absolute;left:0;bottom:0;width:1920px;text-align:center;white-space:nowrap;font:500 42px 'Noto Sans SC',sans-serif;letter-spacing:.08em;color:#F2F2F2;line-height:64px}
+#subs{position:absolute;left:0;bottom:90px;width:1920px;height:80px;pointer-events:none}
+.subline{position:absolute;left:0;bottom:0;width:1920px;text-align:center;white-space:nowrap;font:500 56px 'Noto Sans SC',sans-serif;letter-spacing:.08em;color:#F2F2F2;line-height:80px}
 .ch{display:inline-block;white-space:pre;will-change:transform,opacity,filter}
 .kw{display:inline-block;--g:.7}
 .kw.red{color:#E5484D;text-shadow:0 0 calc(var(--g)*10px) rgba(229,72,77,.95),0 0 calc(var(--g)*26px) rgba(229,72,77,.55)}
 .kw.gold{color:#E8C27A;text-shadow:0 0 calc(var(--g)*10px) rgba(232,194,122,.95),0 0 calc(var(--g)*26px) rgba(232,194,122,.5)}
-#ts{position:absolute;left:80px;top:70px;font:400 22px 'JetBrains Mono','Noto Sans SC',monospace;color:#8A8A8A;white-space:nowrap;opacity:0;line-height:30px;height:30px}
-.slot{display:inline-block;position:relative;overflow:hidden;height:30px;vertical-align:top}
+#ts{position:absolute;left:80px;top:70px;font:400 36px 'JetBrains Mono','Noto Sans SC',monospace;color:#BDBDBD;white-space:nowrap;opacity:0;line-height:46px;height:46px;transition:color .25s,text-shadow .25s}
+#ts.roll{color:#fff;text-shadow:0 0 12px rgba(255,255,255,.85),0 0 30px rgba(255,255,255,.4)}
+.slot{display:inline-block;position:relative;overflow:hidden;height:46px;vertical-align:top}
 .slot i{position:absolute;left:0;top:0;width:100%;text-align:center;font-style:normal}
 .hookl{position:absolute;left:0;width:1920px;text-align:center;color:#F2F2F2;white-space:nowrap;font-family:'Noto Serif SC',serif;font-weight:700}
 .hk{display:inline-block;color:#E5484D;--g:1}
@@ -54,27 +57,28 @@ html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden;cursor
 .bubble{width:320px;height:68px;border-radius:16px;background:#9BE37A;color:#050505;font:500 28px 'Noto Sans SC',sans-serif;line-height:68px;text-align:center;white-space:nowrap;box-shadow:0 0 22px rgba(155,227,122,.45),0 0 60px rgba(155,227,122,.18)}
 .bubble span{display:inline-block;white-space:pre}
 .nl{white-space:nowrap;font-family:'Noto Sans SC',sans-serif;color:#F2F2F2;text-shadow:0 0 8px rgba(229,72,77,.55);line-height:1}
-.card{position:absolute;left:0;top:0;width:360px;height:200px;border:1px solid #F2F2F2;border-bottom:none;background:#090909;color:#F2F2F2;box-shadow:0 14px 40px rgba(0,0,0,.7)}
+.card{position:absolute;left:0;top:0;width:480px;height:260px;border:1px solid #F2F2F2;border-bottom:none;background:#090909;color:#F2F2F2;box-shadow:0 14px 40px rgba(0,0,0,.7)}
 .card .ct{position:absolute;left:22px;top:16px;font:400 16px 'Noto Sans SC',sans-serif;color:#8A8A8A;letter-spacing:.3em}
 .card .sep{position:absolute;left:22px;right:22px;top:48px;border-top:1px dashed #3A3A3A}
-.card .cn{position:absolute;left:0;right:0;top:78px;text-align:center;font:500 50px 'JetBrains Mono',monospace;white-space:nowrap}
-.card .cn em{font:500 44px 'Noto Sans SC',sans-serif;font-style:normal;margin-right:10px}
-.card svg{position:absolute;left:-1px;bottom:-7px;width:362px;height:8px;overflow:visible}
+.card .cn{position:absolute;left:0;right:0;top:104px;text-align:center;font:500 48px 'JetBrains Mono',monospace;white-space:nowrap}
+.card .cn em{font:500 48px 'Noto Sans SC',sans-serif;font-style:normal;margin-right:10px}
+.card svg{position:absolute;left:-1px;bottom:-7px;width:482px;height:8px;overflow:visible}
 .card.redc{border-color:#E5484D;box-shadow:0 0 30px rgba(229,72,77,.45),0 14px 40px rgba(0,0,0,.7)}
 .card.redc .cn{color:#E5484D;text-shadow:0 0 14px rgba(229,72,77,.9)}
 .card.redc .ct{color:#E5484D}
-.ttl{font:700 80px 'Noto Serif SC',serif;color:#E8C27A;white-space:nowrap;text-shadow:0 0 18px rgba(232,194,122,.55),0 0 50px rgba(232,194,122,.25)}
+.ttl{font:700 100px 'Noto Serif SC',serif;color:#E8C27A;white-space:nowrap;text-shadow:0 0 18px rgba(232,194,122,.55),0 0 50px rgba(232,194,122,.25)}
 .ttl span{display:inline-block}
 .gray22{font:400 22px 'Noto Sans SC',sans-serif;color:#8A8A8A;white-space:nowrap;letter-spacing:.12em}
+.src32{font:400 32px 'Noto Sans SC',sans-serif;white-space:nowrap;letter-spacing:.12em;line-height:44px}
 .stone{width:160px;height:100px;transform-origin:50% 0%}
 .stone svg{width:160px;height:100px;overflow:visible}
-.mono28{font:400 28px 'JetBrains Mono',monospace;color:#F2F2F2;white-space:nowrap}
+.mono28{font:400 40px 'JetBrains Mono',monospace;color:#F2F2F2;white-space:nowrap}
 .big91{font:500 160px 'JetBrains Mono',monospace;color:#E8C27A;white-space:nowrap;line-height:1;text-shadow:0 0 30px rgba(232,194,122,.55),0 0 80px rgba(232,194,122,.25)}
-.quote{font:700 56px 'Noto Serif SC',serif;color:#E8C27A;white-space:nowrap;text-shadow:0 0 16px rgba(232,194,122,.6),0 0 46px rgba(232,194,122,.28)}
+.quote{font:700 64px 'Noto Serif SC',serif;color:#E8C27A;white-space:nowrap;text-shadow:0 0 16px rgba(232,194,122,.6),0 0 46px rgba(232,194,122,.28)}
 .quote span,.endl span{display:inline-block;white-space:pre}
 .endl{font-family:'Noto Serif SC',serif;font-weight:700;color:#F2F2F2;white-space:nowrap}
-.bpm{font:500 40px 'JetBrains Mono',monospace;color:#F2F2F2;white-space:nowrap}
-.bpm small{font:400 26px 'Noto Sans SC',sans-serif;color:#8A8A8A;margin-left:10px}
+.bpm{font:500 56px 'JetBrains Mono',monospace;color:#F2F2F2;white-space:nowrap}
+.bpm small{font:400 30px 'Noto Sans SC',sans-serif;color:#8A8A8A;margin-left:10px}
 #vig{background:radial-gradient(ellipse 72% 72% at 50% 50%,rgba(0,0,0,0) 45%,rgba(0,0,0,.22) 70%,rgba(0,0,0,.42) 90%,rgba(0,0,0,.5) 100%)}
 #redvig{background:radial-gradient(ellipse 70% 70% at 50% 50%,rgba(110,6,12,0) 40%,rgba(110,6,12,.42) 72%,rgba(140,10,18,.82) 100%);opacity:0}
 #grain{width:1920px;height:1080px;opacity:.045}
@@ -106,8 +110,8 @@ html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden;cursor
         <!-- 第0帧的钩子句（字体就绪后由第一幕原样接管） -->
         <div id="camdom" class="layer">
           <div class="abs" id="hookStatic" style="left:0;top:0;width:1920px;height:1080px;opacity:.75;filter:blur(4px)">
-            <div class="hookl" style="top:442px;font-size:72px;line-height:72px">事情还没发生，</div>
-            <div class="hookl" style="top:546px;font-size:92px;line-height:92px">你已经痛过<span class="hk"><b>一百遍</b></span>了。</div>
+            <div class="hookl" style="top:417px;font-size:96px;line-height:96px">事情还没发生，</div>
+            <div class="hookl" style="top:555px;font-size:120px;line-height:120px">你已经痛过<span class="hk"><b>一百遍</b></span>了。</div>
           </div>
         </div>
       </div>
@@ -135,8 +139,16 @@ html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden;cursor
    0. 常量 · 工具
    ===================================================================== */
 const W = 1920, H = 1080, CX = 960, CY = 540;
-const ACT = [0, 10, 42, 62, 92, 117, 132];       // 七幕在全片中的起点（秒）
-const END = 144;
+const ACT = [0, 12.5, 43.1, 60.1, 85.0, 108.5, 120.5];   // 七幕在全片中的起点（秒）
+const END = 134.3;
+// 各幕内部的关键时刻（幕内秒数），卡点表与时间轴共用
+const A2_REVEAL = 16, A2_FREEZE = 26;      // 网络拉远揭示 / 时间冻结
+const A3_PEAK = 7.0, A3_X100 = 12.55;      // 最强心跳 / “× 100”砸下
+const FLIP4 = i => i < 3 ? 4.5 + i * .85 : 6.9 + (i - 3) * .4;   // 第 i 块石头翻开（前3块正常，后5块连翻）
+const SNAKES = [1, 4, 5, 7];               // 第2、5、6、8块
+const SURGE = 13.75;                       // 50% 柱子猛涨
+const FREEZE89 = 13.45, SLAM91 = 14.25;    // 89%静止 / 91%砸出
+const CHECK6 = 7.6;                        // 对勾画完
 const C = {
   gold: [232, 194, 122], red: [229, 72, 77], green: [155, 227, 122],
   white: [242, 242, 242], gray: [138, 138, 138], dark: [58, 58, 58]
@@ -297,8 +309,8 @@ function resetS() {
 }
 resetS();
 const MOD = { pulse: 0, redVig: 0 };               // 每帧由各幕叠加的程序化调制
-const FREEZE_DUST = [[36, 42], [105.95, 106.55]];  // 微尘 / 光斑 定格区间
-const FREEZE_CAM = [[105.95, 106.55]];             // 呼吸运镜 定格区间（89%）
+const FREEZE_DUST = [[ACT[1] + A2_FREEZE, ACT[2]], [ACT[4] + FREEZE89, ACT[4] + FREEZE89 + .6]];  // 微尘 / 光斑 定格区间
+const FREEZE_CAM = [[ACT[4] + FREEZE89, ACT[4] + FREEZE89 + .6]];                                    // 呼吸运镜 定格区间（89%）
 function frozenClock(T, list) { let t = T; for (const [a, b] of list) if (T > a) t -= Math.min(T, b) - a; return t; }
 function hb(T) { const ph = mod(T, .9) / .9; return Math.max(gauss(ph, .06, .05), .6 * gauss(ph, .3, .05)); }   // 0.9秒心跳
 
@@ -420,7 +432,7 @@ const TS = { k: 0, el: $('ts'), slots: [], last: '' };
   const s0 = TS_LIST[0];
   for (let i = 0; i < s0.length; i++) {
     const ch = s0[i], wide = /[一-鿿]/.test(ch);
-    const slot = el('span', 'slot', TS.el, { width: wide ? '22px' : ch === ' ' ? '13px' : '13.2px' });
+    const slot = el('span', 'slot', TS.el, { width: wide ? '36px' : ch === ' ' ? '21px' : '21.6px' });
     const a = el('i', '', slot), b = el('i', '', slot);
     TS.slots.push([a, b]);
   }
@@ -432,7 +444,9 @@ function tsRender() {
   TS.last = key;
   const i = Math.min(Math.floor(k), TS_LIST.length - 1), f = k - i;
   const cur = TS_LIST[i], nxt = TS_LIST[Math.min(i + 1, TS_LIST.length - 1)];
-  const blur = Math.sin(Math.PI * f) * 1.8;
+  const blur = Math.sin(Math.PI * f) * 2.4;
+  const roll = f > .001;                          // 滚动时短暂变白发光
+  if (roll !== TS.roll) { TS.el.classList.toggle('roll', roll); TS.roll = roll; }
   for (let j = 0; j < TS.slots.length; j++) {
     const [a, b] = TS.slots[j];
     if (f > .001 && cur[j] !== nxt[j]) {
@@ -476,10 +490,17 @@ function punchKw(tl, k, t) {
   tl.to(k.el, { scale: 1, '--g': .7, duration: .23, ease: 'power2.inOut' }, t + .12);
   if (k.c === 'red') tl.to(k.el, { keyframes: { x: [3, -3, 2, -2, 0] }, duration: .2, ease: 'none' }, t + .35);
 }
+// 阅读时间：逐字出现结束后至少停留 max(2.5, 1.2 + 字数 × 0.18) 秒；前一句消失 0.05 秒后下一句才开始
+const readHold = text => Math.max(2.5, 1.2 + text.length * .18);
+let lastSubEnd = -1;
 function sub(tl, tin, tout, text, keys = [], punchAt) {
   const line = el('div', 'subline', SUBS);
   const { chars, kws } = splitChars(line, text, keys);
   const done = charsIn(tl, chars, tin);
+  const tin0 = ACT_BASE + tin;
+  if (tin0 < lastSubEnd - 1e-6) console.warn('字幕重叠：', text, tin0.toFixed(2), '<', lastSubEnd.toFixed(2));
+  if (tout < done + readHold(text) - 1e-6) { console.warn('阅读时间不足，已自动延长：', text); tout = done + readHold(text); }
+  lastSubEnd = ACT_BASE + tout + .4;
   kws.forEach(k => punchKw(tl, k, punchAt != null ? punchAt : done));
   tl.to(line, { opacity: 0, filter: 'blur(6px)', y: -6, duration: .35, ease: 'power2.in' }, tout);
   return { line, kws };
@@ -545,7 +566,7 @@ const NET = (() => {
   const leaves = nodes.filter(n => !n.kids.length);
   const all = [];                                   // 所有曲线上的点（粒子重连目标）
   nodes.forEach(n => { for (let i = 0; i < n.pts.length; i += 2) all.push([n.pts[i], n.pts[i + 1]]); });
-  return { root, nodes, leaves, all, FS: [0, 18, 16, 14, 12] };
+  return { root, nodes, leaves, all, FS: [0, 28, 20, 14, 12] };
 })();
 
 const NETCOL = [null, null, [236, 128, 96], [229, 80, 80], [214, 66, 72]];
@@ -610,6 +631,7 @@ function makeLabels(parent) {
   const box = el('div', 'abs', parent, { left: 0, top: 0, width: '1920px', height: '1080px' });
   const labs = NET.nodes.map(n => {
     const d = el('div', 'nl abs', box, { left: (n.x + 8) + 'px', top: n.y + 'px', fontSize: NET.FS[n.lv] + 'px' }, n.text);
+    if (n.lv === 1) d.style.textShadow = '0 0 10px rgba(229,72,77,.75),0 0 22px rgba(229,72,77,.3)';
     gsap.set(d, { yPercent: -50, opacity: 0, scale: .5, transformOrigin: '0% 50%' });
     return d;
   });
@@ -644,29 +666,29 @@ function drawGoldDot(ctx, x, y, t, sc, flare, orbitA, col = C.gold) {
    ===================================================================== */
 function act1() {
   const tl = gsap.timeline({ defaults: { immediateRender: false } });
-  const A = { crack: 0, shat: 0, dot: 0, dotSc: 1, flare: 0, orbit: 0, retract: 0, morph: 0, green: 0, hide: 0 };
+  const A = { crack: 0, shat: 0, dot: 0, dotSc: 1, flare: 0, orbit: 0, retract: 0, morph: 0, green: 0, hide: 0, surge: 0 };
   const R = rng(101);
   // —— DOM：钩子句 ——
   const hook = el('div', 'abs', CAMDOM, { left: 0, top: 0, width: '1920px', height: '1080px' });
-  el('div', 'hookl', hook, { top: '442px', fontSize: '72px', lineHeight: '72px' }, '事情还没发生，');
-  const l2 = el('div', 'hookl', hook, { top: '546px', fontSize: '92px', lineHeight: '92px' }, '你已经痛过<span class="hk"><b>一百遍</b></span>了。');
+  el('div', 'hookl', hook, { top: '417px', fontSize: '96px', lineHeight: '96px' }, '事情还没发生，');
+  const l2 = el('div', 'hookl', hook, { top: '555px', fontSize: '120px', lineHeight: '120px' }, '你已经痛过<span class="hk"><b>一百遍</b></span>了。');
   const hk = l2.querySelector('.hk'), hkb = hk.querySelector('b');
   gsap.set(hook, { opacity: .75, filter: 'blur(4px)' });
   tl.to(hook, { opacity: 1, filter: 'blur(0px)', duration: .3, ease: 'power2.out' }, 0);
 
   // 文字像素采样（碎裂粒子）
-  const F1 = "700 72px 'Noto Serif SC'", F2 = "700 92px 'Noto Serif SC'";
-  const smp = sampleText([{ text: '事情还没发生，', font: F1, x: CX, y: 478 }, { text: '你已经痛过一百遍了。', font: F2, x: CX, y: 592 }], 2, [380, 400, 1540, 660]);
+  const F1 = "700 96px 'Noto Serif SC'", F2 = "700 120px 'Noto Serif SC'";
+  const smp = sampleText([{ text: '事情还没发生，', font: F1, x: CX, y: 465 }, { text: '你已经痛过一百遍了。', font: F2, x: CX, y: 615 }], 2, [300, 395, 1620, 690]);
   const sx = smp.ctx; sx.font = F2;
   const wAll = sx.measureText('你已经痛过一百遍了。').width, wPre = sx.measureText('你已经痛过').width, wKw = sx.measureText('一百遍').width;
-  const kx0 = CX - wAll / 2 + wPre, kx1 = kx0 + wKw, KO = [(kx0 + kx1) / 2, 592];
+  const kx0 = CX - wAll / 2 + wPre, kx1 = kx0 + wKw, KO = [(kx0 + kx1) / 2, 615];
   const PTS = shuffle(smp.pts, R).slice(0, 1500).map(([x, y]) => {
-    const red = x >= kx0 && x <= kx1 && y > 540;
+    const red = x >= kx0 && x <= kx1 && y > 548;
     const a = Math.atan2(y - 535, x - CX) + (R() - .5) * 1.2, d = (red ? 220 : 140) + R() * 300;
     return { x, y, ex: x + Math.cos(a) * d, ey: y + Math.sin(a) * d * .8, c: red ? C.red : C.white, spin: (2.4 + R() * 1.2) * Math.PI, d0: R() * .08, w: 1.6 + R() * 1 };
   });
   // 碎裂前的细裂纹（从“一百遍”爬满整句）
-  const BOX = [400, 420, 1520, 650];
+  const BOX = [320, 400, 1600, 690];
   const SC = [];
   for (let i = 0; i < 16; i++) {
     let x = KO[0] + (R() - .5) * 40, y = KO[1] + (R() - .5) * 20, ang = i / 16 * TAU + R() * .3;
@@ -730,7 +752,7 @@ function act1() {
   tl.to(A, { orbit: 1, duration: 1, ease: 'sine.out' }, 4.3);
   tl.to(TS.el, { opacity: 1, duration: .6, ease: 'power2.out' }, 4.2);
   cam(tl, 4.2, { s: 1.13 }, 2.3, 'sine.inOut');
-  sub(tl, 4.4, 7.0, '明天的事还没来。');
+  sub(tl, 4.4, 7.75, '明天的事还没来。');
   // 6.5s 收缩→爆开【冲击】【闪白】【色差】
   tl.to(A, { dotSc: .5, duration: .15, ease: 'power2.in' }, 6.35);
   tl.to(A, { dotSc: 2.2, duration: .08, ease: 'power2.out' }, 6.5);
@@ -739,18 +761,20 @@ function act1() {
   tl.to(A, { orbit: 0, duration: .2 }, 6.5);
   impact(tl, 6.5, 1); flashFx(tl, 6.5, .35); rgbFx(tl, 6.5, 5, .3);
   cam(tl, 6.5, { s: 1.0 }, .7, 'power3.out');
-  cam(tl, 7.2, { s: 1.05 }, 2.2, 'sine.inOut');
-  // 7.5–10s【红色压迫】
-  sub(tl, 7.5, 9.35, '你已经替它，痛了一整晚。', [{ w: '痛了一整晚', c: 'red' }]);
+  cam(tl, 7.2, { s: 1.06 }, 4.7, 'sine.inOut');
+  // 7.5–12.5s【红色压迫】（为满足阅读时间，本段由2.5秒延长到5秒）
+  sub(tl, 8.15, 12.35, '你已经替它，痛了一整晚。', [{ w: '痛了一整晚', c: 'red' }]);
+  tl.fromTo(A, { surge: 1 }, { surge: 0, duration: 1.1, ease: 'power2.out' }, 9.9);    // 裂纹再次发烫
+  microPunch(tl, 9.9, .012); redFlash(tl, 9.9, .35, .6);
   tl.to(S, { redVig: .62, duration: .8, ease: 'sine.out' }, 7.5);
   tl.set(S, { redPulse: 1 }, 7.5);
-  // 9.4–10s 转场：裂纹收回 → 光点变绿 → 拉伸成气泡
-  tl.to(A, { retract: 1, duration: .35, ease: 'power2.in' }, 9.4);
-  tl.to(A, { green: 1, duration: .2, ease: 'none' }, 9.45);
-  tl.to(A, { morph: 1, duration: .4, ease: 'power3.inOut' }, 9.6);
-  tl.to(S, { redVig: .12, duration: .6 }, 9.4);
-  tl.set(S, { redPulse: 0 }, 10);
-  cam(tl, 9.4, { s: 1.0, x: 760, y: 522 }, .6, 'power3.inOut');
+  // 11.9–12.5s 转场：裂纹收回 → 光点变绿 → 拉伸成气泡
+  tl.to(A, { retract: 1, duration: .35, ease: 'power2.in' }, 11.9);
+  tl.to(A, { green: 1, duration: .2, ease: 'none' }, 11.95);
+  tl.to(A, { morph: 1, duration: .4, ease: 'power3.inOut' }, 12.1);
+  tl.to(S, { redVig: .12, duration: .6 }, 11.9);
+  tl.set(S, { redPulse: 0 }, 12.5);
+  cam(tl, 11.9, { s: 1.0, x: 760, y: 522 }, .6, 'power3.inOut');
 
   tl.update = t => {
     if (t < 3.3) {                                                     // 心跳
@@ -794,7 +818,7 @@ function act1() {
       pFlush(ctx);
     }
     // 金色光点 / 绿色气泡变形
-    if (A.dot > 0 && t < 10) {
+    if (A.dot > 0 && t < 12.5) {
       if (A.morph <= 0) {
         const col = mixC(C.gold, C.green, A.green);
         drawGoldDot(ctx, CX, CY, t, A.dotSc, A.flare, A.orbit, col);
@@ -815,8 +839,9 @@ function act1() {
       ctx.shadowColor = HEX.red; ctx.shadowBlur = 10;
       const tips = [];
       for (let g = 0; g < 4; g++) {
-        const fl = heat ? .72 + .28 * Math.sin(t * 13 + g * 1.7) * Math.sin(t * 5.3 + g) : 1;
-        ctx.strokeStyle = rgba([240, 80, 84], .95 * fl); ctx.lineWidth = 1.3; ctx.beginPath();
+        const fl = (heat ? .72 + .28 * Math.sin(t * 13 + g * 1.7) * Math.sin(t * 5.3 + g) : 1) + .6 * A.surge;
+        ctx.strokeStyle = rgba(mixC([240, 80, 84], [255, 170, 150], A.surge), Math.min(1, .95 * fl));
+        ctx.shadowBlur = 10 + 14 * A.surge; ctx.lineWidth = 1.3; ctx.beginPath();
         for (const c of BIG) {
           if (c.g !== g) continue;
           const len = E.expo(seg(t, 6.5, 6.5 + c.D)) * c.L[c.L.length - 1] * keep;
@@ -848,7 +873,7 @@ function act1() {
       pFlush(ctx);
     }
   };
-  tl.from = 0; tl.to_ = 10;
+  tl.from = 0; tl.to_ = 12.5;
   return tl;
 }
 
@@ -871,7 +896,7 @@ function act2() {
   tl.to(bub, { scale: 1, duration: .32, ease: 'power2.inOut' }, .14);
   microPunch(tl, .02, .012);
   tl.to(chars, { opacity: 1, duration: .25, ease: 'power2.out', stagger: .045 }, .12);
-  sub(tl, .3, 4.4, '明天上午十点，你要汇报。');
+  sub(tl, .3, 4.5, '明天上午十点，你要汇报。');
   cam(tl, 0, { s: 1.05, x: 700, y: 515 }, 4);
 
   // 4–16s 焦虑网络生长
@@ -887,7 +912,7 @@ function act2() {
   cam(tl, 12, { s: .92, x: 1010, y: 490 }, 4, 'power3.inOut');                // 揭示镜头
   tl.to(S, { redVig: .55, duration: 4, ease: 'sine.in' }, 12);
   tl.set(S, { redPulse: 1 }, 12);
-  impact(tl, 16.0, .8);                                                         // 拉远完成【冲击】
+  impact(tl, A2_REVEAL, .8);                                                    // 拉远完成【冲击】
 
   // 16–26s 呼吸 · 电流 · 时间跳动
   for (const [t, k] of [[16.5, 2], [21, 3]]) {
@@ -898,21 +923,21 @@ function act2() {
   sub(tl, 16.5, 25.6, '每一种，都像真的。');
   cam(tl, 16, { s: .96, r: .8 }, 10);
 
-  // 26–32s 时间冻结
+  // 26–30.6s 时间冻结（由6秒缩短到4.6秒）
   flashFx(tl, 26, .14);
   tl.to(A, { dim: 1, duration: .3, ease: 'power2.out' }, 26);
-  tl.to(A, { blur: 4, duration: 3, ease: 'sine.inOut' }, 26.3);
+  tl.to(A, { blur: 4, duration: 2.5, ease: 'sine.inOut' }, 26.3);
   tl.to(S, { redVig: .18, duration: 1 }, 26);
   tl.set(S, { redPulse: 0 }, 26);
-  cam(tl, 26, { s: 1.15, x: 420, y: 500, r: .3 }, 5.4);
-  sub(tl, 26.4, 31.3, '可是，它们一个都还没发生。', [{ w: '一个都还没发生', c: 'gold' }]);
-  // 31.4–32s 转场：曲线拉直成心电图基线
-  tl.to(A, { straight: 1, duration: .6, ease: 'power2.inOut' }, 31.4);
-  tl.to(A, { blur: 0, dim: 0, duration: .5, ease: 'power2.out' }, 31.4);
-  tl.to(box, { opacity: 0, duration: .25 }, 31.4);
-  tl.to(bub, { scale: .3, opacity: 0, duration: .5, ease: 'power2.in' }, 31.4);
-  tl.to(S, { redVig: 0, duration: .6 }, 31.4);
-  cam(tl, 31.4, { s: 1, x: CX, y: CY, r: 0 }, .6, 'power2.inOut');
+  cam(tl, 26, { s: 1.15, x: 420, y: 500, r: .3 }, 4.0);
+  sub(tl, 26.1, 30.55, '可是，它们一个都还没发生。', [{ w: '一个都还没发生', c: 'gold' }]);
+  // 30.0–30.6s 转场：曲线拉直成心电图基线
+  tl.to(A, { straight: 1, duration: .6, ease: 'power2.inOut' }, 30.0);
+  tl.to(A, { blur: 0, dim: 0, duration: .5, ease: 'power2.out' }, 30.0);
+  tl.to(box, { opacity: 0, duration: .25 }, 30.0);
+  tl.to(bub, { scale: .3, opacity: 0, duration: .5, ease: 'power2.in' }, 30.0);
+  tl.to(S, { redVig: 0, duration: .6 }, 30.0);
+  cam(tl, 30.0, { s: 1, x: CX, y: CY, r: 0 }, .6, 'power2.inOut');
 
   // 闪烁标签 & 电流（确定性时间表）
   const R = rng(202);
@@ -956,7 +981,7 @@ function act2() {
       ctx.restore();
     }
   };
-  tl.from = 0; tl.to_ = 33;
+  tl.from = 0; tl.to_ = 31.6;
   return tl;
 }
 
@@ -972,8 +997,8 @@ function act3() {
   const FL = polyLen(front), BL = polyLen(back);
   // 心跳时间表：越来越快、越来越高
   const beats = [];
-  for (let t = 1.0; t < 8.62;) { const u = (t - 1) / 7.6; beats.push({ t, amp: lerp(55, 230, Math.pow(u, 1.3)), heat: clamp((t - 2.6) / 5.4) }); t += lerp(1.15, .36, Math.pow(u, 1.1)); }
-  beats.push({ t: 9.0, amp: 330, heat: 1, last: true });
+  for (let t = 1.0; t < A3_PEAK - .38;) { const u = (t - 1) / (A3_PEAK - 1.4); beats.push({ t, amp: lerp(55, 230, Math.pow(u, 1.3)), heat: clamp((t - 2.0) / 4.2) }); t += lerp(1.0, .34, Math.pow(u, 1.1)); }
+  beats.push({ t: A3_PEAK, amp: 330, heat: 1, last: true });
   const sig = tau => {
     let y = 0;
     for (const b of beats) {
@@ -985,81 +1010,82 @@ function act3() {
   const env = t => { let k = 0, kk = 0; for (const b of beats) { const u = t - b.t; if (u < -.03 || u > .5) continue; const e = Math.exp(-Math.max(0, u) / .11) * (u < 0 ? 1 + u / .03 : 1); const s = (b.last ? 3.5 : .6 + 1.6 * b.amp / 230) * e; if (s > k) { k = s; kk = b.heat; } } return [k, kk]; };
 
   // DOM：心率数字
-  const bpm = el('div', 'bpm abs', CAMDOM, { left: '1500px', top: '300px' }, '<span>72</span><small>次/分</small>');
+  const bpm = el('div', 'bpm abs', CAMDOM, { left: '1460px', top: '280px' }, '<span>72</span><small>次/分</small>');
   const bnum = bpm.querySelector('span');
   gsap.set(bpm, { opacity: 0 });
   // DOM：焦虑账单
   const stack = el('div', 'abs', CAMDOM, { left: CX + 'px', top: CY + 'px', width: 0, height: 0 });
-  const zz = c => { let s = ''; for (let i = 0; i <= 36; i++) s += `${i * 10},${i % 2 ? 7 : 0} `; return `<svg viewBox="0 0 360 8" preserveAspectRatio="none"><polyline points="0,0 ${s}360,0" fill="#090909" stroke="${c}" stroke-width="1"/></svg>`; };
+  const zz = c => { let s = ''; for (let i = 0; i <= 48; i++) s += `${i * 10},${i % 2 ? 7 : 0} `; return `<svg viewBox="0 0 480 8" preserveAspectRatio="none"><polyline points="0,0 ${s}480,0" fill="#090909" stroke="${c}" stroke-width="1"/></svg>`; };
   const NUMS = ['1', '2', '3', '10', '50', '100'];
   const R = rng(303);
   const cards = NUMS.map((n, i) => {
     const red = i === 5;
     const c = el('div', 'card' + (red ? ' redc' : ''), stack, null, `<div class="ct">账单</div><div class="sep"></div><div class="cn"><em>焦虑</em>× ${n}</div>${zz(red ? HEX.red : HEX.white)}`);
-    gsap.set(c, { xPercent: -50, yPercent: -50, x: i * 8, y: i * 8, rotation: i ? (R() - .5) * 6 : 0, scale: red ? 1.2 : 1, opacity: 0 });
+    gsap.set(c, { xPercent: -50, yPercent: -50, x: i * 10, y: i * 10, rotation: i ? (R() - .5) * 6 : 0, scale: red ? 1.2 : 1, opacity: 0 });
     return c;
   });
-  const LAND = [0, 12.0, 13.1, 13.95, 14.6, 15.1];
+  const LAND = [0, 9.8, 10.75, 11.5, 12.1, A3_X100];      // 落下间隔略微加快
 
   // —— 时间轴 ——
   tl.to(TS.el, { opacity: 0, duration: .5 }, 0);
   tl.to(A, { person: 1, duration: 1.5, ease: 'power2.inOut' }, 0);
   tl.to(bpm, { opacity: 1, duration: .5 }, 1.2);
-  tl.to(A, { bpm: 96, duration: 8, ease: 'sine.in' }, 1);
-  cam(tl, 0, { s: 1.1, x: 1010, y: 560 }, 9);
-  sub(tl, 1.0, 9.6, '你只是想了想，身体却当真了。', [{ w: '当真了', c: 'red' }]);
-  impact(tl, 9.0, .9); rgbFx(tl, 9.0, 4.5, .25);                               // 最强心跳
-  // 10–10.4s 吸入中心点
-  tl.to(A, { suck: 1, duration: .4, ease: 'power2.in' }, 10.0);
-  tl.to(bpm, { opacity: 0, scale: .4, duration: .3 }, 10.0);
-  cam(tl, 10.0, { s: 1.0, x: CX, y: CY }, .5, 'power2.inOut');
-  // 10.4s 打印第一张账单
-  tl.set(cards[0], { opacity: 1, clipPath: 'inset(0% 0% 100% 0%)' }, 10.4);
-  tl.to(cards[0], { clipPath: 'inset(0% 0% -12% 0%)', duration: .7, ease: 'steps(14)' }, 10.4);
-  tl.fromTo(A, { slot: 1 }, { slot: 0, duration: .9, ease: 'power2.in' }, 10.35);
-  cam(tl, 10.5, { s: 1.06 }, 4.6);
-  sub(tl, 11.0, 19.3, '真正发生，痛一次。提前焦虑，痛一百次。', [{ w: '痛一次', c: 'gold' }, { w: '痛一百次', c: 'red' }]);
+  tl.to(A, { bpm: 96, duration: A3_PEAK - 1, ease: 'sine.in' }, 1);
+  cam(tl, 0, { s: 1.1, x: 1010, y: 560 }, A3_PEAK);
+  sub(tl, 1.0, 7.6, '你只是想了想，身体却当真了。', [{ w: '当真了', c: 'red' }]);
+  impact(tl, A3_PEAK, .9); rgbFx(tl, A3_PEAK, 4.5, .25);                       // 最强心跳
+  // 8.0–8.4s 吸入中心点（心电图段由10秒缩短到8秒）
+  tl.to(A, { suck: 1, duration: .4, ease: 'power2.in' }, 8.0);
+  tl.to(bpm, { opacity: 0, scale: .4, duration: .3 }, 8.0);
+  cam(tl, 8.0, { s: 1.0, x: CX, y: CY }, .5, 'power2.inOut');
+  // 8.4s 打印第一张账单（账单段由10秒缩短到9秒）
+  tl.set(cards[0], { opacity: 1, clipPath: 'inset(0% 0% 100% 0%)' }, 8.4);
+  tl.to(cards[0], { clipPath: 'inset(0% 0% -12% 0%)', duration: .7, ease: 'steps(14)' }, 8.4);
+  tl.fromTo(A, { slot: 1 }, { slot: 0, duration: .9, ease: 'power2.in' }, 8.35);
+  cam(tl, 8.5, { s: 1.04 }, 4.0);
+  sub(tl, 9.0, 15.6, '真正发生，痛一次。提前焦虑，痛一百次。', [{ w: '痛一次', c: 'gold' }, { w: '痛一百次', c: 'red' }]);
   // 卡片砸下：间隔越来越短，冲击越来越强
   for (let i = 1; i < 6; i++) {
     const red = i === 5, fall = red ? .42 : .32, t = LAND[i];
-    tl.set(cards[i], { opacity: 1, y: i * 8 - (red ? 1300 : 900) }, t - fall);
-    tl.to(cards[i], { y: i * 8, duration: fall, ease: 'power3.in' }, t - fall);
+    tl.set(cards[i], { opacity: 1, y: i * 10 - (red ? 1300 : 900) }, t - fall);
+    tl.to(cards[i], { y: i * 10, duration: fall, ease: 'power3.in' }, t - fall);
     tl.to(stack, { y: red ? 22 : 4 + i * 1.5, duration: .07, ease: 'power2.out' }, t);
     tl.to(stack, { y: 0, duration: red ? .6 : .35, ease: 'power2.out' }, t + .07);
     if (red) { impact(tl, t, 1); flashFx(tl, t, .35); rgbFx(tl, t, 5, .3); redFlash(tl, t, .9, .6); tl.to(S, { redVig: .38, duration: .5 }, t); tl.set(S, { redPulse: 1 }, t); }
     else microPunch(tl, t, .008 + i * .006), tl.fromTo(S, { shake: 2 + i }, { shake: 0, duration: .22 }, t);
   }
-  cam(tl, 15.1, { s: 1.12 }, 4.3);
-  tl.to(cards[5], { keyframes: { x: [43, 37, 42, 38, 40] }, duration: .22, ease: 'none' }, 17.5);   // 余震
-  microPunch(tl, 17.5, .012); redFlash(tl, 17.5, .35, .5);
-  // 19.4–20.3s 转场：卡片向镜头飞散
+  cam(tl, A3_X100, { s: 1.1 }, 3.85);
+  // “× 100”落定后保持清晰静止约1.85秒，再来一次余震
+  tl.to(cards[5], { keyframes: { x: [53, 47, 52, 48, 50] }, duration: .22, ease: 'none' }, 14.4);
+  microPunch(tl, 14.4, .012); redFlash(tl, 14.4, .35, .5);
+  // 16.4–17.3s 转场：卡片向镜头飞散
   cards.forEach((c, i) => {
     const a = (i / 6) * TAU + .5 + (R() - .5) * .6;
-    tl.to(c, { x: Math.cos(a) * 1500, y: Math.sin(a) * 900, scale: 4 + R() * 2, rotation: (R() - .5) * 70, opacity: 0, duration: .9, ease: 'power2.in' }, 19.4 + i * .025);
+    tl.to(c, { x: Math.cos(a) * 1500, y: Math.sin(a) * 900, scale: 4 + R() * 2, rotation: (R() - .5) * 70, opacity: 0, duration: .9, ease: 'power2.in' }, 16.4 + i * .025);
   });
-  tl.to(S, { redVig: 0, duration: .8 }, 19.4);
-  tl.set(S, { redPulse: 0 }, 20.2);
-  cam(tl, 19.4, { s: 1.0 }, .6, 'power2.in');
+  tl.to(S, { redVig: 0, duration: .8 }, 16.4);
+  tl.set(S, { redPulse: 0 }, 17.2);
+  cam(tl, 16.4, { s: 1.0 }, .6, 'power2.in');
 
   // 灰尘（每次落下）
   const dusts = [];
   for (let i = 1; i < 6; i++) {
-    const n = i === 5 ? 220 : 50 + i * 10, cx = CX + i * 8, cy = CY + i * 8, k = i === 5 ? 1.8 : 1;
+    const n = i === 5 ? 220 : 50 + i * 10, cx = CX + i * 10, cy = CY + i * 10, k = i === 5 ? 1.8 : 1;
     for (let j = 0; j < n; j++) {
-      const side = R(), x0 = side < .6 ? cx + (R() - .5) * 360 * (i === 5 ? 1.2 : 1) : cx + (R() < .5 ? -1 : 1) * 180 * (i === 5 ? 1.2 : 1);
-      const y0 = side < .6 ? cy + 100 * (i === 5 ? 1.2 : 1) : cy + (R() - .3) * 200;
+      const side = R(), x0 = side < .6 ? cx + (R() - .5) * 480 * (i === 5 ? 1.2 : 1) : cx + (R() < .5 ? -1 : 1) * 240 * (i === 5 ? 1.2 : 1);
+      const y0 = side < .6 ? cy + 130 * (i === 5 ? 1.2 : 1) : cy + (R() - .3) * 260;
       const a = side < .6 ? (R() < .5 ? Math.PI + R() * .5 : -R() * .5) : (x0 < cx ? Math.PI : 0) + (R() - .5) * 1.2;
       const sp = (120 + R() * 260) * k;
       dusts.push({ t0: LAND[i], x: x0, y: y0, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp * .5 - 40 * R() * k, life: .6 + R() * .7 * k, w: .8 + R() * 1.2 });
     }
   }
   tl.update = t => {
-    if (t > 1 && t < 10.4) {
+    if (t > 1 && t < 8.4) {
       const v = Math.round(A.bpm); bnum.textContent = v;
       if (v > 85) { bpm.style.color = HEX.red; bnum.style.textShadow = '0 0 14px rgba(229,72,77,.8)'; bnum.style.display = 'inline-block'; bnum.style.transform = `translate(${(Math.sin(t * 91) * 1.6).toFixed(1)}px,${(Math.sin(t * 73) * 1.2).toFixed(1)}px)`; }
       else { bpm.style.color = HEX.white; bnum.style.textShadow = 'none'; }
     }
-    if (t < 10) {
+    if (t < 8) {
       const [k, heat] = env(t);
       MOD.pulse += .008 * k;
       MOD.redVig += (.05 + .25 * heat) * Math.min(1, k / 2);
@@ -1069,7 +1095,7 @@ function act3() {
     if (A.suck < 1) {
       const sk = A.suck;
       const tr = (x, y) => { if (sk <= 0) return [x, y]; const dn = Math.hypot(x - SUCK[0], y - SUCK[1]) / 1150, w = Math.pow(clamp(sk * 1.8 - dn * .8), 2); return [lerp(x, SUCK[0], w), lerp(y, SUCK[1], w)]; };
-      const [k, heatNow] = t < 10 ? env(t) : [0, 0];
+      const [k, heatNow] = t < 8 ? env(t) : [0, 0];
       ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
       // 人物剪影
       ctx.strokeStyle = HEX.white; ctx.lineWidth = 1.4; ctx.shadowColor = 'rgba(242,242,242,.7)'; ctx.shadowBlur = 8;
@@ -1089,7 +1115,7 @@ function act3() {
       let x = CHEST[0];
       while (x < 1960) {
         const tauMid = t - (x + CH * STEP / 2 - CHEST[0]) / V;
-        const heat = clamp((tauMid - 2.6) / 5.4);
+        const heat = clamp((tauMid - 2.0) / 4.2);
         const col = mixC(C.white, C.red, heat);
         ctx.strokeStyle = rgba(col, 1 - sk * .5); ctx.shadowColor = rgba(col, .9); ctx.shadowBlur = 6 + 10 * heat;
         ctx.lineWidth = 1.4;
@@ -1112,7 +1138,7 @@ function act3() {
         glow(ctx, gx, gy, 26 + b.amp * .12, mixC(C.white, C.red, b.heat), .55 * (1 - sk));
       }
       // 胸口闪光 · 环形光晕
-      if (t < 10) {
+      if (t < 8) {
         glow(ctx, CHEST[0], CHEST[1] - 20, 60 + 30 * k, mixC([255, 230, 220], C.red, heatNow), Math.min(1, .15 + .35 * k) * (1 - sk));
         for (const b of beats) {
           const u = t - b.t; if (u < 0 || u > 1.4) continue;
@@ -1123,18 +1149,18 @@ function act3() {
       ctx.restore();
     }
     // 吸入后中心闪光 / 打印口
-    if (t > 10.2 && t < 11.3) {
+    if (t > 8.2 && t < 9.3) {
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      glow(ctx, SUCK[0], SUCK[1] - 100, 80, C.white, (1 - seg(t, 10.4, 11.2)) * .9);
+      glow(ctx, SUCK[0], SUCK[1] - 130, 80, C.white, (1 - seg(t, 8.4, 9.2)) * .9);
       ctx.restore();
     }
     if (A.slot > 0) {
       fx.save(); fx.globalCompositeOperation = 'lighter'; fx.globalAlpha = A.slot;
       fx.strokeStyle = HEX.white; fx.shadowColor = '#fff'; fx.shadowBlur = 12; fx.lineWidth = 1.5;
-      fx.beginPath(); fx.moveTo(CX - 195, CY - 100); fx.lineTo(CX + 195, CY - 100); fx.stroke(); fx.restore();
+      fx.beginPath(); fx.moveTo(CX - 255, CY - 130); fx.lineTo(CX + 255, CY - 130); fx.stroke(); fx.restore();
     }
     // 灰尘
-    if (t > 11.9 && t < 18) {
+    if (t > 9.6 && t < 15.2) {
       for (const d of dusts) {
         const tau = t - d.t0; if (tau < 0 || tau > d.life) continue;
         const f = q => { const k = (1 - Math.exp(-3 * q)) / 3; return [d.x + d.vx * k, d.y + d.vy * k + 30 * q * q]; };
@@ -1144,36 +1170,34 @@ function act3() {
       pFlush(fx, 'source-over');
     }
   };
-  tl.from = 0; tl.to_ = 21;
+  tl.from = 0; tl.to_ = 17.5;
   return tl;
 }
 
 /* =====================================================================
    第四幕｜不确定性实验（62–92s）
    ===================================================================== */
-const FLIP4 = i => 4.8 + i * .85;          // 第 i 块石头翻开的时间
-const SNAKES = [1, 4, 5, 7];               // 第2、5、6、8块
-const SURGE = 15.85;                        // 50% 柱子猛涨
 function act4() {
   const tl = gsap.timeline({ defaults: { immediateRender: false } });
   const A = { line: 0, lineA: 1, h0: 0, h100: 0, h50: 0, red: 0, dimO: 0, topFlare: 0, crumble: 0, sand: 0, dot: 0, flare: 0, dotSc: 1, orbit: 0, stonesA: 1, barsA: 1 };
   const R = rng(404);
-  // 标题卡
+  // 标题卡（0–3.9s：标题完全出现后清晰停留3秒）
   const title = el('div', 'ttl abs', CAMDOM, { left: CX + 'px', top: '480px' });
   const tchars = '不确定性实验'.split('').map(c => el('span', '', title, null, c));
   gsap.set(title, { xPercent: -50, yPercent: -50 });
-  const subl = el('div', 'gray22 abs', CAMDOM, { left: CX + 'px', top: '561px' }, '伦敦大学学院 · 2016');
-  gsap.set(subl, { xPercent: -50, yPercent: -50, opacity: 0 });
+  const subl = el('div', 'src32 abs', HUDX, { left: CX + 'px', top: '70px', color: '#BDBDBD' }, '伦敦大学学院 · 2016');
+  gsap.set(subl, { xPercent: -50, opacity: 0 });
   gsap.set(tchars, { opacity: 0, scale: 1.15, filter: 'blur(12px)' });
-  tl.to(tchars, { opacity: 1, scale: 1, filter: 'blur(0px)', duration: 1.0, ease: 'power3.out', stagger: .07 }, .05);
-  tl.to(subl, { opacity: 1, duration: .7, ease: 'power2.out' }, .9);
-  tl.to(A, { line: 1, duration: 1.2, ease: 'expo.out' }, .9);
-  microPunch(tl, .9, .006);
-  cam(tl, 0, { s: 1.06 }, 4);
-  tl.to([title, subl], { y: -70, opacity: 0, filter: 'blur(6px)', duration: .6, ease: 'power2.in' }, 4.0);
-  tl.to(A, { lineA: 0, duration: .5 }, 4.0);
+  tl.to(tchars, { opacity: 1, scale: 1, filter: 'blur(0px)', duration: .6, ease: 'power3.out', stagger: .04 }, .05);
+  tl.to(subl, { opacity: 1, duration: .6, ease: 'power2.out' }, .9);
+  tl.to(subl, { opacity: 0, duration: .5, ease: 'power2.in' }, 4.5);
+  tl.to(A, { line: 1, duration: 1.2, ease: 'expo.out' }, .7);
+  microPunch(tl, .7, .006);
+  cam(tl, 0, { s: 1.06 }, 3.9);
+  tl.to(title, { y: -70, opacity: 0, filter: 'blur(6px)', duration: .6, ease: 'power2.in' }, 3.85);
+  tl.to(A, { lineA: 0, duration: .5 }, 3.85);
 
-  // 石头
+  // 石头（3.9–9.9s：前3块正常翻开，后5块以0.4秒间隔连翻）
   const SX = i => 290 + i * 191, SY = 540;
   const wrap = el('div', 'abs', CAMDOM, { left: 0, top: 0, width: '1920px', height: '1080px', perspective: '900px', perspectiveOrigin: '50% 10%' });
   const stones = [];
@@ -1188,32 +1212,32 @@ function act4() {
     gsap.set(st, { rotationX: 28, opacity: 0, y: 50 });
     gsap.set(sh, { opacity: 0 });
     stones.push({ st, sh });
-    tl.to(st, { opacity: 1, y: 0, duration: .5, ease: 'power3.out' }, 4.25 + i * .05);
-    tl.to(sh, { opacity: 1, duration: .5 }, 4.25 + i * .05);
+    tl.to(st, { opacity: 1, y: 0, duration: .5, ease: 'power3.out' }, 3.9 + i * .05);
+    tl.to(sh, { opacity: 1, duration: .5 }, 3.9 + i * .05);
     const tf = FLIP4(i);
-    tl.to(st, { rotationX: 150, y: -40, opacity: 0, duration: .6, ease: 'power2.inOut' }, tf);
+    tl.to(st, { rotationX: 150, y: -40, opacity: 0, duration: i < 3 ? .6 : .45, ease: 'power2.inOut' }, tf);
     if (SNAKES.includes(i)) {
       const tz = tf + .3;
       impact(tl, tz, .55); flashFx(tl, tz, .35); redFlash(tl, tz, .85, .2);
     } else microPunch(tl, tf + .25, .004);
   }
-  cam(tl, 4.3, { s: 1.1, x: 380, y: 540 }, .9, 'power2.inOut');
-  cam(tl, 5.2, { x: 1540 }, 6.6, 'sine.inOut');
-  sub(tl, 4.5, 11.8, '翻到蛇，就会被电一下。');
-  // 12s 石头沉下
-  tl.to(stones.map(s => s.st).concat(stones.map(s => s.sh)), { y: '+=260', opacity: 0, duration: .6, ease: 'power2.in', stagger: .02 }, 12.0);
-  tl.to(A, { stonesA: 0, duration: .5 }, 12.0);
-  cam(tl, 12.0, { s: 1.0, x: CX, y: CY }, 1.2, 'power2.inOut');
+  cam(tl, 3.9, { s: 1.1, x: 380, y: 540 }, .6, 'power2.inOut');
+  cam(tl, 4.5, { x: 1540 }, 4.4, 'sine.inOut');
+  sub(tl, 4.2, 9.3, '翻到蛇，就会被电一下。');
+  // 9.9s 石头沉下
+  tl.to(stones.map(s => s.st).concat(stones.map(s => s.sh)), { y: '+=260', opacity: 0, duration: .6, ease: 'power2.in', stagger: .02 }, 9.9);
+  tl.to(A, { stonesA: 0, duration: .5 }, 9.9);
+  cam(tl, 9.9, { s: 1.0, x: CX, y: CY }, 1.2, 'power2.inOut');
 
-  // 柱状图
+  // 柱状图（9.9–19.9s，时长不变）
   const BX = [700, 960, 1220], BASE = 680;
-  const cap = el('div', 'gray22 abs', CAMDOM, { left: CX + 'px', top: '130px', fontSize: '24px' }, '被电击的概率 → 压力有多大');
-  const bl = ['0%', '50%', '100%'].map((s, i) => el('div', 'mono28 abs', CAMDOM, { left: BX[i] + 'px', top: '722px' }, s));
+  const cap = el('div', 'gray22 abs', CAMDOM, { left: CX + 'px', top: '130px', fontSize: '30px' }, '被电击的概率 → 压力有多大');
+  const bl = ['0%', '50%', '100%'].map((s, i) => el('div', 'mono28 abs', CAMDOM, { left: BX[i] + 'px', top: '726px' }, s));
   gsap.set([cap, ...bl], { xPercent: -50, yPercent: -50, opacity: 0 });
-  tl.to([cap, ...bl], { opacity: 1, duration: .6, stagger: .08 }, 12.4);
-  tl.to(A, { h0: 80, duration: .8, ease: 'power3.out' }, 12.6);
-  tl.to(A, { h100: 260, duration: 1.0, ease: 'power3.out' }, 13.6);
-  tl.to(A, { h50: 255, duration: .8, ease: 'power3.out' }, 14.6);
+  tl.to([cap, ...bl], { opacity: 1, duration: .6, stagger: .08 }, 10.3);
+  tl.to(A, { h0: 80, duration: .8, ease: 'power3.out' }, 10.5);
+  tl.to(A, { h100: 260, duration: 1.0, ease: 'power3.out' }, 11.5);
+  tl.to(A, { h50: 255, duration: .8, ease: 'power3.out' }, 12.5);
   tl.to(A, { h50: 420, duration: .6, ease: 'expo.out' }, SURGE);
   tl.to(A, { red: 1, duration: .45, ease: 'power2.in' }, SURGE);
   tl.fromTo(A, { topFlare: 1.3 }, { topFlare: .45, duration: 1.2, ease: 'power2.out' }, SURGE + .35);
@@ -1221,39 +1245,40 @@ function act4() {
   tl.to(bl[1], { color: HEX.red, duration: .4 }, SURGE + .3);
   impact(tl, SURGE, .85); rgbFx(tl, SURGE, 4.5, .28);
   cam(tl, SURGE, { s: 1.12, y: 440 }, .8, 'power3.out');
-  sub(tl, 13.0, 21.9, '最折磨人的，不是坏结果。是不知道。', [{ w: '不知道', c: 'red' }]);
-  tl.fromTo(A, { topFlare: 1.1 }, { topFlare: .45, duration: .9, ease: 'power2.out' }, 19.0);
-  microPunch(tl, 19.0, .01);
-  cam(tl, 16.8, { s: 1.16 }, 5.2);
+  sub(tl, 10.9, 19.8, '最折磨人的，不是坏结果。是不知道。', [{ w: '不知道', c: 'red' }]);
+  // 50%柱子到顶后清晰静止约2.3秒，再脉冲一次
+  tl.fromTo(A, { topFlare: 1.1 }, { topFlare: .45, duration: .9, ease: 'power2.out' }, 16.9);
+  microPunch(tl, 16.9, .01);
+  cam(tl, 16.9, { s: 1.16 }, 3.0);
 
-  // 22–30s 碎裂成沙 → 螺旋汇聚成金色光点
-  tl.to(A, { crumble: 1, duration: 1.4, ease: 'none' }, 22.0);
-  tl.to(A, { sand: 1, duration: 1.2, ease: 'power1.in' }, 22.0);
-  tl.to([cap, ...bl], { opacity: 0, duration: .6 }, 22.0);
-  cam(tl, 22, { s: 1.0, x: CX, y: CY, r: 3 }, 3.2);
-  cam(tl, 25.2, { r: 0 }, 2.8);
-  sub(tl, 22.5, 29.3, '让你失眠的，是‘可能’。', [{ w: '可能', c: 'gold' }]);
-  tl.set(A, { dot: 1 }, 27.5);
-  tl.fromTo(A, { flare: 1 }, { flare: 0, duration: .6 }, 27.5);
-  microPunch(tl, 27.5, .01);
-  tl.to(A, { orbit: 1, duration: .8 }, 27.6);
-  cam(tl, 27.6, { s: 1.08 }, 2.3);
-  tl.to(A, { dotSc: .55, duration: .5, ease: 'power2.in' }, 29.4);
-  tl.to(A, { orbit: 0, duration: .4 }, 29.4);
+  // 19.9–24.9s 碎裂成沙 → 螺旋汇聚成金色光点 → 停留2秒
+  tl.to(A, { crumble: 1, duration: 1.4, ease: 'none' }, 19.9);
+  tl.to(A, { sand: 1, duration: 1.2, ease: 'power1.in' }, 19.9);
+  tl.to([cap, ...bl], { opacity: 0, duration: .6 }, 19.9);
+  cam(tl, 19.9, { s: 1.0, x: CX, y: CY, r: 3 }, 1.6);
+  cam(tl, 21.5, { r: 0 }, 1.4);
+  sub(tl, 20.3, 24.5, '让你失眠的，是‘可能’。', [{ w: '可能', c: 'gold' }]);
+  tl.set(A, { dot: 1 }, 22.9);
+  tl.fromTo(A, { flare: 1 }, { flare: 0, duration: .6 }, 22.9);
+  microPunch(tl, 22.9, .01);
+  tl.to(A, { orbit: 1, duration: .8 }, 23.0);
+  cam(tl, 23.0, { s: 1.08 }, 1.9);
+  tl.to(A, { dotSc: .55, duration: .5, ease: 'power2.in' }, 24.3);
+  tl.to(A, { orbit: 0, duration: .4 }, 24.3);
 
   // 粒子
   const RED = [];
   for (let i = 0; i < 620; i++) {
     const x = 912 + R() * 96, y = 260 + R() * 420;
-    RED.push({ x, y, te: 22 + 1.4 * (y - 260) / 420, vx: (R() - .5) * 140, vy: -(120 + R() * 200), spin: (2 + R() * 1.4) * Math.PI, arr: 26.6 + R() * .9, w: 1.4 + R() });
+    RED.push({ x, y, te: 19.9 + 1.4 * (y - 260) / 420, vx: (R() - .5) * 140, vy: -(120 + R() * 200), spin: (2 + R() * 1.4) * Math.PI, arr: 22.3 + R() * .6, w: 1.4 + R() });
   }
   const GRAY = [];
   for (let i = 0; i < 360; i++) {
     const b = i % 2 ? 0 : 2, h = b === 0 ? 80 : 260;
-    GRAY.push({ x: BX[b] - 48 + R() * 96, y: BASE - R() * h, t0: 22 + R() * .9, vx: (R() - .5) * 60, w: 1 + R() * 1.2, h: b === 0 ? 80 : 260 });
+    GRAY.push({ x: BX[b] - 48 + R() * 96, y: BASE - R() * h, t0: 19.9 + R() * .9, vx: (R() - .5) * 60, w: 1 + R() * 1.2, h: b === 0 ? 80 : 260 });
   }
   const SP = [];
-  for (let i = 0; i < 220; i++) { const a = -Math.PI / 2 + (R() - .5) * 2.4, sp = 160 + R() * 460; SP.push({ t0: (i < 150 ? SURGE + .1 + R() * .6 : 19.0 + R() * .3), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: .5 + R() * .6, x: 912 + R() * 96 }); }
+  for (let i = 0; i < 220; i++) { const a = -Math.PI / 2 + (R() - .5) * 2.4, sp = 160 + R() * 460; SP.push({ t0: (i < 150 ? SURGE + .1 + R() * .6 : 16.9 + R() * .3), vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: .5 + R() * .6, x: 912 + R() * 96 }); }
   const PUFF = [];
   for (let i = 0; i < 8; i++) if (!SNAKES.includes(i)) for (let j = 0; j < 26; j++) PUFF.push({ t0: FLIP4(i) + .25 + R() * .15, x: SX(i) + (R() - .5) * 110, y: SY + 20 + (R() - .5) * 20, vx: (R() - .5) * 60, vy: -(20 + R() * 60), life: .8 + R() * .6 });
 
@@ -1294,15 +1319,15 @@ function act4() {
     if (A.line > 0 && A.lineA > 0) {
       const w = 340 * A.line;
       ctx.save(); ctx.globalAlpha = A.lineA; ctx.strokeStyle = HEX.gold; ctx.lineWidth = 1.2; ctx.shadowColor = HEX.gold; ctx.shadowBlur = 10;
-      ctx.beginPath(); ctx.moveTo(CX - w, 612); ctx.lineTo(CX + w, 612); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(CX - w, 575); ctx.lineTo(CX + w, 575); ctx.stroke();
       ctx.globalCompositeOperation = 'lighter';
-      const da = (1 - seg(t, 1.6, 2.4)) * A.lineA;
-      glow(ctx, CX - w, 612, 22, C.gold, da); glow(ctx, CX + w, 612, 22, C.gold, da);
-      glow(ctx, CX - w, 612, 6, C.white, da); glow(ctx, CX + w, 612, 6, C.white, da);
+      const da = (1 - seg(t, 1.4, 2.2)) * A.lineA;
+      glow(ctx, CX - w, 575, 22, C.gold, da); glow(ctx, CX + w, 575, 22, C.gold, da);
+      glow(ctx, CX - w, 575, 6, C.white, da); glow(ctx, CX + w, 575, 6, C.white, da);
       ctx.restore();
     }
     // 蛇（在石头下面）
-    if (t > 5 && A.stonesA > 0) {
+    if (t > 4.5 && A.stonesA > 0) {
       ctx.save(); ctx.strokeStyle = HEX.red; ctx.fillStyle = HEX.red; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
       ctx.shadowColor = HEX.red; ctx.shadowBlur = 12;
       for (const i of SNAKES) { const u = t - FLIP4(i) - .15; if (u < 0) continue; ctx.globalAlpha = clamp(u / .15) * A.stonesA; drawSnake(ctx, SX(i), SY + 6, u); }
@@ -1322,12 +1347,12 @@ function act4() {
       fx.restore();
     }
     // 空石头的尘土
-    if (t > 5 && t < 13) {
+    if (t > 4.5 && t < 11) {
       for (const p of PUFF) { const tau = t - p.t0; if (tau < 0 || tau > p.life) continue; const f = q => [p.x + p.vx * q, p.y + p.vy * q * (1 - q * .4)]; const [x, y] = f(tau), [px, py] = f(Math.max(0, tau - .04)); pSeg(px, py, x, y, [150, 150, 150], .55 * (1 - tau / p.life), 1.4); }
       pFlush(fx, 'source-over');
     }
     // 柱子
-    if (t > 12.5 && t < 24) {
+    if (t > 10.4 && t < 22) {
       const k = 1 - .6 * A.dimO, sk = 1 - A.sand;
       bar(ctx, BX[0], A.h0 * sk, C.gray, k, t);
       bar(ctx, BX[2], A.h100 * sk, C.white, k, t);
@@ -1336,12 +1361,12 @@ function act4() {
       if (A.topFlare > 0 && h50 > 2) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; glow(ctx, BX[1], BASE - h50, 150 * A.topFlare + 40, C.red, Math.min(1, A.topFlare)); glow(ctx, BX[1], BASE - h50, 40, [255, 210, 200], Math.min(1, A.topFlare) * .8); ctx.restore(); }
     }
     // 火星
-    if (t > SURGE && t < 21) {
+    if (t > SURGE && t < 18.9) {
       for (const s of SP) { const tau = t - s.t0; if (tau < 0 || tau > s.life) continue; const y0 = BASE - A.h50; const f = q => [s.x + s.vx * q * .7, y0 + s.vy * q + 420 * q * q]; const [x, y] = f(tau), [px, py] = f(Math.max(0, tau - .035)); pSeg(px, py, x, y, mixC([255, 210, 140], C.red, tau / s.life), 1 - tau / s.life, 1.6); }
       pFlush(fx);
     }
     // 红沙 → 螺旋 → 金
-    if (t > 22 && t < 27.7) {
+    if (t > 19.9 && t < 23.0) {
       for (const p of RED) {
         if (t < p.te) continue;
         const pos = tt => {
@@ -1357,20 +1382,19 @@ function act4() {
       pFlush(ctx);
     }
     // 灰沙落下
-    if (t > 22 && t < 25) {
+    if (t > 19.9 && t < 22.9) {
       for (const p of GRAY) { const tau = t - p.t0; if (tau < 0) continue; const f = q => [p.x + p.vx * q, p.y + 380 * q * q]; const [x, y] = f(tau), [px, py] = f(Math.max(0, tau - .03)); pSeg(px, py, x, y, [140, 140, 140], .75 * (1 - seg(y, BASE - 20, BASE + 140)), p.w); }
       pFlush(ctx, 'source-over');
     }
-    if (A.dot > 0) drawGoldDot(ctx, CX, CY, t, A.dotSc, A.flare + (t > 29.4 ? seg(t, 29.4, 30) * .7 : 0), A.orbit);
+    if (A.dot > 0) drawGoldDot(ctx, CX, CY, t, A.dotSc, A.flare + (t > 24.3 ? seg(t, 24.3, 24.9) * .7 : 0), A.orbit);
   };
-  tl.from = 0; tl.to_ = 30;
+  tl.from = 0; tl.to_ = 24.9;
   return tl;
 }
 
 /* =====================================================================
    第五幕｜91%（92–117s）
    ===================================================================== */
-const FREEZE89 = 13.95, SLAM91 = 14.75;
 function act5() {
   const tl = gsap.timeline({ defaults: { immediateRender: false } });
   const A = { numA: 0, dimNum: 1, g6: 0, g3: 0, sc: 0, netIn: 0, wave: 0 };
@@ -1384,10 +1408,11 @@ function act5() {
   const P = [];
   for (let i = 0; i < 100; i++) {
     const big = i < 8;
-    const p = { big, cell: cellsShuffled[i], ph: R() * TAU, ph2: R() * TAU, r0: (R() - .5) * 1.2 };
-    if (big) { p.t0 = 0; const a = i / 8 * TAU + .35 + (R() - .5) * .4, sp = 1050 + R() * 300; p.vx = Math.cos(a) * sp; p.vy = Math.sin(a) * sp * .62; p.w = 140; p.h = 52; p.text = WORDS8[i]; p.fs = 22; p.spin = (R() - .5) * 9; }
-    else { p.t0 = .6 + 4.3 * ((i - 8) / 92); p.x0 = 60 + R() * 1800; p.vy = -(95 + R() * 90); p.w = 50 + R() * 45; p.h = 20 + R() * 14; p.text = R() < .28 ? TINY[(R() * TINY.length) | 0] : ''; p.fs = 12; p.spin = (R() - .5) * 2; }
-    p.ms = 5.0 + R() * .5 + (big ? .25 : 0); p.md = 1.2 + R() * .5; p.bend = (R() - .5) * 260;
+    const p = { big, cell: cellsShuffled[i], ph: R() * TAU, ph2: R() * TAU, r0: (R() - .5) * (big ? .14 : 1.2) };
+    // 大字纸条：宽240、字28px，旋转限制在±12°以内，只做轻微翻动以保证能看清
+    if (big) { p.t0 = 0; const a = i / 8 * TAU + .35 + (R() - .5) * .4, sp = 1050 + R() * 300; p.vx = Math.cos(a) * sp; p.vy = Math.sin(a) * sp * .62; p.w = 240; p.h = 84; p.text = WORDS8[i]; p.fs = 28; p.spin = (R() - .5) * .16; }
+    else { p.t0 = .6 + 3.8 * ((i - 8) / 92); p.x0 = 60 + R() * 1800; p.vy = -(95 + R() * 90); p.w = 50 + R() * 45; p.h = 20 + R() * 14; p.text = R() < .28 ? TINY[(R() * TINY.length) | 0] : ''; p.fs = 12; p.spin = (R() - .5) * 2; }
+    p.ms = 4.5 + R() * .5 + (big ? .25 : 0); p.md = 1.2 + R() * .5; p.bend = (R() - .5) * 260;
     P.push(p);
   }
   const flutter = (p, t) => {
@@ -1397,8 +1422,8 @@ function act5() {
       const k = 2.5, d = (1 - Math.exp(-k * q)) / k;
       x = CX + p.vx * d + 26 * Math.sin(1.3 * q + p.ph) + 14 * q * Math.cos(p.ph);
       y = CY + p.vy * d + 14 * Math.sin(2.1 * q + p.ph2) + 18 * q;
-      rot = p.r0 + p.spin * (1 - Math.exp(-1.4 * q)) / 1.4 + .35 * Math.sin(.9 * q + p.ph);
-      fl = Math.cos(p.ph2 + 1.6 * q + 5 * (1 - Math.exp(-q)));
+      rot = clamp(p.r0 + p.spin * (1 - Math.exp(-1.4 * q)) / 1.4 + .09 * Math.sin(.9 * q + p.ph), -.2094, .2094);
+      fl = .78 + .22 * Math.cos(p.ph2 + 1.6 * q + 5 * (1 - Math.exp(-q)));
     } else {
       x = p.x0 + 40 * Math.sin(.9 * q + p.ph) + 10 * q;
       y = 1140 + p.vy * q;
@@ -1413,27 +1438,27 @@ function act5() {
   const flips = order.filter(i => !stay.has(i));
   const FT = new Array(100).fill(null);
   flips.forEach((c, k) => {
-    if (k < 89) FT[c] = [7.6 + 6.0 * Math.pow(k / 88, .62), .32];
-    else FT[c] = [k === 89 ? 14.55 : 14.62, .12];
+    if (k < 89) FT[c] = [7.1 + 6.0 * Math.pow(k / 88, .62), .32];
+    else FT[c] = [k === 89 ? FREEZE89 + .6 : FREEZE89 + .67, .12];
   });
   const stayArr = [...stay], gold3 = new Set(stayArr.slice(0, 3));
   const gc = stayArr.slice(0, 3).map(cellPos), gcx = gc.reduce((s, p) => s + p[0], 0) / 3, gcy = gc.reduce((s, p) => s + p[1], 0) / 3;
   const flipCount = t => { let n = 0; for (const c of flips) { const [s, d] = FT[c]; n += seg(t, s, s + d); } return n; };
   // DOM
-  const src = el('div', 'abs', HUDX, { left: '80px', top: '70px', font: "400 22px 'Noto Sans SC',sans-serif", color: HEX.gold, whiteSpace: 'nowrap', textShadow: '0 0 10px rgba(232,194,122,.5)', lineHeight: '30px' }, '宾夕法尼亚州立大学 · 2019');
-  gsap.set(src, { opacity: 0 });
+  const src = el('div', 'src32 abs', HUDX, { left: CX + 'px', top: '70px', color: HEX.gold, textShadow: '0 0 10px rgba(232,194,122,.5)' }, '宾夕法尼亚州立大学 · 2019');
+  gsap.set(src, { xPercent: -50, opacity: 0 });
   const num = el('div', 'big91 abs', CAMDOM, { left: '1380px', top: '500px' }, '0%');
   gsap.set(num, { xPercent: -50, yPercent: -50, opacity: 0, filter: 'blur(10px)' });
 
   // —— 时间轴 ——
   impact(tl, 0, .8); flashFx(tl, 0, .2);                                       // 纸条爆开
   tl.to(src, { opacity: 1, duration: .6 }, .6);
-  cam(tl, 0, { s: 1.12, x: 900, y: 560 }, 5);
-  sub(tl, .5, 5.5, '把每一个担心，都写下来。');
-  cam(tl, 5, { s: 1.0, x: 930, y: 520 }, 2, 'power2.inOut');
-  tl.to(num, { opacity: 1, filter: 'blur(0px)', duration: .6, ease: 'power2.out' }, 6.6);
-  const s91 = sub(tl, 6.0, 17.0, '91%，从来没有发生。', [{ w: '91%', c: 'gold' }], SLAM91);
-  cam(tl, 7.0, { s: 1.08 }, FREEZE89 - 7.0);
+  cam(tl, 0, { s: 1.12, x: 900, y: 560 }, 4.5);
+  sub(tl, .5, 4.7, '把每一个担心，都写下来。');
+  cam(tl, 4.5, { s: 1.0, x: 930, y: 520 }, 2, 'power2.inOut');
+  tl.to(num, { opacity: 1, filter: 'blur(0px)', duration: .6, ease: 'power2.out' }, 6.1);
+  // 91%砸出之前底部不显示任何字幕，只让观众盯着数字往上滚
+  cam(tl, 6.5, { s: 1.08 }, FREEZE89 - 6.5);
   // 91% 砸出：全片最强冲击
   tl.to(num, { scale: 1.25, duration: .1, ease: 'power3.out' }, SLAM91);
   tl.to(num, { scale: 1, duration: .5, ease: 'power2.out' }, SLAM91 + .1);
@@ -1441,18 +1466,19 @@ function act5() {
   tl.fromTo(S, { shake: 10 }, { shake: 0, duration: .3, ease: 'power2.out' }, SLAM91);
   flashFx(tl, SLAM91, .35); rgbFx(tl, SLAM91, 5, .3);
   tl.to(A, { wave: 1, duration: 1.0, ease: 'expo.out' }, SLAM91);
-  // 17–25s
-  tl.to(A, { g6: 1, duration: 2.2, ease: 'sine.inOut' }, 17.0);
-  tl.to(A, { g3: 1, duration: 2.0, ease: 'sine.inOut' }, 17.5);
-  tl.to(num, { opacity: .6, duration: 1.0 }, 17.0);
-  cam(tl, 17.0, { s: 1.35, x: gcx, y: gcy }, 7.2);
-  sub(tl, 17.5, 24.3, '剩下的那些，你也扛过去了。');
-  microPunch(tl, 19.5, .008);
-  // 24.4–25s 转场：方格散成粒子，重新连成红色网络
-  tl.to(A, { sc: 1, duration: .6, ease: 'none' }, 24.4);
-  tl.to(A, { netIn: 1, duration: .3, ease: 'power2.in' }, 24.72);
-  tl.to([num, src], { opacity: 0, duration: .3 }, 24.4);
-  cam(tl, 24.4, { s: .95, x: 1000, y: 500 }, .6, 'power3.inOut');
+  sub(tl, SLAM91, 18.25, '91%，从来没有发生。', [{ w: '91%', c: 'gold' }]);   // 与数字砸出同一刻出现
+  // 91%落定后清晰静止约1.65秒；16.5–23.5s 收尾
+  tl.to(A, { g6: 1, duration: 2.2, ease: 'sine.inOut' }, 16.5);
+  tl.to(A, { g3: 1, duration: 2.0, ease: 'sine.inOut' }, 17.0);
+  tl.to(num, { opacity: .6, duration: 1.0 }, 16.5);
+  cam(tl, 16.5, { s: 1.35, x: gcx, y: gcy }, 6.4);
+  sub(tl, 18.65, 23.1, '剩下的那些，你也扛过去了。');
+  microPunch(tl, 20.0, .008);
+  // 22.9–23.5s 转场：方格散成粒子，重新连成红色网络
+  tl.to(A, { sc: 1, duration: .6, ease: 'none' }, 22.9);
+  tl.to(A, { netIn: 1, duration: .3, ease: 'power2.in' }, 23.22);
+  tl.to([num, src], { opacity: 0, duration: .3 }, 22.9);
+  cam(tl, 22.9, { s: .95, x: 1000, y: 500 }, .6, 'power3.inOut');
 
   // 粒子
   const BURST = [];
@@ -1472,7 +1498,7 @@ function act5() {
   };
   let lastNum = '';
   tl.update = t => {
-    if (t > 6 && t < 25) {
+    if (t > 5.5 && t < 23.5) {
       const n = flipCount(t), v = Math.min(91, Math.floor(n + 1e-6));
       const rate = (n - flipCount(t - .05)) / .05;
       const txt = v + '%';
@@ -1492,7 +1518,7 @@ function act5() {
       pFlush(ctx);
     }
     // 纸条（飘舞 → 被吸向左侧 → 变成红色方格）
-    if (t < 7.8) {
+    if (t < 7.3) {
       ctx.save();
       for (const p of P) {
         if (t < p.t0) continue;
@@ -1519,7 +1545,7 @@ function act5() {
       ctx.restore();
     }
     // 方格
-    if (t > 5.5 && t < 24.4) {
+    if (t > 5.0 && t < 22.9) {
       ctx.save();
       const groups = new Map();
       const rects = [];
@@ -1572,31 +1598,30 @@ function act5() {
       pFlush(fx);
     }
     // 散成粒子 → 飞回网络
-    if (t >= 24.4 && t < 25.2) {
+    if (t >= 22.9 && t < 23.7) {
       for (const s of SCAT) {
         const [cx, cy] = cellPos(s.c), col = mixC(cellColor(s.c, t), C.red, .6);
-        const pos = tt => { const u = E.p3io(seg(tt, 24.4 + s.d, 24.98)); const x0 = cx + s.ox, y0 = cy + s.oy; return [lerp(x0, s.tx, u) + s.bx * Math.sin(Math.PI * u), lerp(y0, s.ty, u) + s.by * Math.sin(Math.PI * u), u]; };
+        const pos = tt => { const u = E.p3io(seg(tt, 22.9 + s.d, 23.48)); const x0 = cx + s.ox, y0 = cy + s.oy; return [lerp(x0, s.tx, u) + s.bx * Math.sin(Math.PI * u), lerp(y0, s.ty, u) + s.by * Math.sin(Math.PI * u), u]; };
         const [x, y, u] = pos(t), [px, py] = pos(t - .03);
         pSeg(px, py, x, y, col, 1 - seg(u, .9, 1) * .8, 1.6);
       }
       pFlush(ctx);
     }
-    if (A.netIn > 0 && t < 25) drawNet(ctx, NET.nodes.map(() => 1), { alpha: A.netIn, glow: 1.2 });
+    if (A.netIn > 0 && t < 23.5) drawNet(ctx, NET.nodes.map(() => 1), { alpha: A.netIn, glow: 1.2 });
     // 近景虚化纸条
-    if (t < 6) {
+    if (t < 5.5) {
       fx.save(); fx.globalCompositeOperation = 'lighter';
       for (const n of NEAR) { const u = (t - n.t0) / 2.6; if (u < 0 || u > 1) continue; const x = n.dir > 0 ? lerp(-300, 2200, u) : lerp(2200, -300, u); fx.globalAlpha = .1 * Math.sin(Math.PI * u); fx.save(); fx.translate(x, n.y); fx.rotate(n.rot + u); fx.drawImage(paperSpr, -n.w, -n.w * .27, n.w * 2, n.w * .55); fx.restore(); }
       fx.restore();
     }
   };
-  tl.from = 0; tl.to_ = 25.2;
+  tl.from = 0; tl.to_ = 23.7;
   return tl;
 }
 
 /* =====================================================================
    第六幕｜回到场景（117–132s）
    ===================================================================== */
-const CHECK6 = 9.1;
 function act6() {
   const tl = gsap.timeline({ defaults: { immediateRender: false } });
   const A = { check: 0, rip: 0 };
@@ -1610,34 +1635,34 @@ function act6() {
   // 时间快进 02:16 → 07:30，天色由黑转深蓝
   tl.set(TS, { k: 3 }, 0);
   tl.to(TS.el, { opacity: 1, duration: .3 }, 0);
-  tsTo(tl, .4, 22, 5.8, 'sine.inOut');
-  tl.to(S, { sky: 1, duration: 6, ease: 'sine.inOut' }, .4);
-  // 退潮：从末端开始，沿来路倒着收回，越到最后越慢
+  tsTo(tl, .4, 22, 4.6, 'sine.inOut');
+  tl.to(S, { sky: 1, duration: 4.6, ease: 'sine.inOut' }, .4);
+  // 退潮（由8秒缩短到6.5秒）：从末端开始，沿来路倒着收回，越到最后越慢
   const order = NET.nodes.slice().sort((a, b) => b.t0 - a.t0);
   const RS = new Array(NET.nodes.length), RD = new Array(NET.nodes.length);
   order.forEach((n, k) => {
     const u = k / (order.length - 1);
-    let s = .4 + 5.0 * Math.pow(u, 1.7);
+    let s = .4 + 3.9 * Math.pow(u, 1.7);
     for (const c of n.kids) s = Math.max(s, RS[c.i] + RD[c.i] + .02);
-    RS[n.i] = s; RD[n.i] = .3 + 1.3 * u * u;
+    RS[n.i] = s; RD[n.i] = .3 + 1.0 * u * u;
     tl.to(Q[n.i], { q: 0, duration: RD[n.i], ease: 'sine.inOut' }, s);
     tl.to(labs[n.i], { opacity: 0, filter: 'blur(4px)', y: -6, duration: .35, ease: 'power2.in' }, s);
   });
   const netEnd = Math.max(...NET.nodes.map(n => RS[n.i] + RD[n.i]));
-  cam(tl, 0, { s: .86, x: CX, y: 530 }, 8);
-  sub(tl, .5, 7.9, '一百种失败，最后只剩一件事。');
-  tl.to(bub, { left: CX + 'px', top: CY + 'px', duration: 1.5, ease: 'power3.inOut' }, Math.min(7.0, netEnd));
-  // 8–15s
-  tsTo(tl, 8.0, 23);
-  cam(tl, 8, { s: .98, x: 920, y: 540 }, 7);
+  cam(tl, 0, { s: .86, x: CX, y: 530 }, 6.5);
+  sub(tl, .5, 6.0, '一百种失败，最后只剩一件事。');
+  tl.to(bub, { left: CX + 'px', top: CY + 'px', duration: 1.5, ease: 'power3.inOut' }, Math.min(5.0, netEnd));
+  // 6.5–12s 打勾（由7秒缩短到5.5秒）
+  tsTo(tl, 6.5, 23);
+  cam(tl, 6.5, { s: .98, x: 920, y: 540 }, 5.5);
   tl.to(A, { check: 1, duration: .5, ease: 'power2.inOut' }, CHECK6 - .5);
   microPunch(tl, CHECK6, .02);
   tl.to(bub, { scale: 1.04, duration: .22, ease: 'power2.out' }, CHECK6);
   tl.to(bub, { scale: 1, duration: .4, ease: 'power2.inOut' }, CHECK6 + .22);
-  sub(tl, 8.5, 14.3, '它过去了。像以前每一次一样。');
-  tl.to(A, { rip: 1, duration: 1.6, ease: 'power2.out' }, 11.8);
-  tl.to(bub, { opacity: 0, scale: 1.03, filter: 'blur(3px)', duration: .35, ease: 'power2.in' }, 14.4);
-  tl.to(A, { check: 2, duration: .35 }, 14.4);
+  sub(tl, 7.0, 11.65, '它过去了。像以前每一次一样。');
+  tl.to(A, { rip: 1, duration: 1.6, ease: 'power2.out' }, 9.6);
+  tl.to(bub, { opacity: 0, scale: 1.03, filter: 'blur(3px)', duration: .35, ease: 'power2.in' }, 11.4);
+  tl.to(A, { check: 2, duration: .35 }, 11.4);
 
   const R = rng(606);
   const DUSTL = [];
@@ -1649,8 +1674,8 @@ function act6() {
   const ckp = [CK[0][0], CK[0][1], CK[1][0], CK[1][1], CK[2][0], CK[2][1]], ckL = polyLen(ckp);
   tl.draw = (ctx, fx, t) => {
     const vis = Q.map(q => q.q);
-    if (t < 8) drawNet(ctx, vis, { heads: true, glow: 1 });
-    if (t < 9) {
+    if (t < 6.5) drawNet(ctx, vis, { heads: true, glow: 1 });
+    if (t < 7.5) {
       for (const d of DUSTL) { const tau = t - d.t0; if (tau < 0 || tau > d.life) continue; const x0 = d.n.x + 8 + d.dx, y0 = d.n.y + d.dy; const f = q => [x0 + d.vx * q, y0 + d.vy * q]; const [x, y] = f(tau), [px, py] = f(Math.max(0, tau - .05)); pSeg(px, py, x, y, [150, 140, 145], .6 * (1 - tau / d.life), 1.3); }
       pFlush(fx, 'source-over');
     }
@@ -1669,7 +1694,7 @@ function act6() {
       pFlush(ctx);
     }
   };
-  tl.from = 0; tl.to_ = 15;
+  tl.from = 0; tl.to_ = 12;
   return tl;
 }
 
@@ -1679,25 +1704,25 @@ function act6() {
 function act7() {
   const tl = gsap.timeline({ defaults: { immediateRender: false } });
   const R = rng(707);
-  const QUOTE = '我们在想象中受的苦，远多于现实。', QF = "700 56px 'Noto Serif SC'", QY = 500;
-  const smp = sampleText([{ text: QUOTE, font: QF, x: CX, y: QY }], 2, [300, 440, 1620, 560]);
+  const QUOTE = '我们在想象中受的苦，远多于现实。', QF = "700 64px 'Noto Serif SC'", QY = 500;
+  const smp = sampleText([{ text: QUOTE, font: QF, x: CX, y: QY }], 2, [240, 430, 1680, 570]);
   const qx = smp.ctx; qx.font = QF;
   const qW = qx.measureText(QUOTE).width, qX0 = CX - qW / 2;
   const edges = []; for (let i = 0; i <= QUOTE.length; i++) edges.push(qX0 + qx.measureText(QUOTE.slice(0, i)).width);
   const charOf = x => { let i = 0; while (i < QUOTE.length - 1 && x > edges[i + 1]) i++; return i; };
   const PTS = shuffle(smp.pts, R).slice(0, 1700).map(([x, y]) => {
     const ci = charOf(x);
-    return { tx: x, ty: y, ci, ox: CX - 160 + R() * 320, oy: CY - 34 + R() * 68, dx: (R() - .5) * 420, dy: -(40 + R() * 120), ph: R() * TAU, st: ci * .1 + R() * .15, w: 1.2 + R() * .9, bend: (R() - .5) * 120 };
+    return { tx: x, ty: y, ci, ox: CX - 160 + R() * 320, oy: CY - 34 + R() * 68, dx: (R() - .5) * 420, dy: -(40 + R() * 120), ph: R() * TAU, st: ci * .06 + R() * .12, w: 1.2 + R() * .9, bend: (R() - .5) * 120 };
   });
   // DOM
   const quote = el('div', 'quote abs', CAMDOM, { left: CX + 'px', top: QY + 'px' });
   const qchars = QUOTE.split('').map(c => el('span', '', quote, null, c));
   gsap.set(quote, { xPercent: -50, yPercent: -50 });
   gsap.set(qchars, { opacity: 0 });
-  qchars.forEach((c, i) => tl.to(c, { opacity: 1, duration: .35, ease: 'power2.out' }, i * .1 + .75));
-  const attr = el('div', 'gray22 abs', CAMDOM, { left: CX + 'px', top: (QY + 28 + 40 + 11) + 'px' }, '—— 塞涅卡 · 公元1世纪');
+  qchars.forEach((c, i) => tl.to(c, { opacity: 1, duration: .35, ease: 'power2.out' }, i * .06 + .6));   // 约1.85秒成形，清晰停留3秒以上
+  const attr = el('div', 'gray22 abs', CAMDOM, { left: CX + 'px', top: (QY + 32 + 40 + 14) + 'px', fontSize: '28px' }, '—— 塞涅卡 · 公元1世纪');
   gsap.set(attr, { xPercent: -50, yPercent: -50, opacity: 0 });
-  tl.to(attr, { opacity: 1, duration: .8 }, 2.6);
+  tl.to(attr, { opacity: 1, duration: .6 }, 1.9);
   tl.to(TS.el, { opacity: 0, duration: .6 }, 0);
   cam(tl, 0, { s: 1.04, x: CX, y: CY }, 5);
   // 5–9s 日出
@@ -1705,58 +1730,58 @@ function act7() {
   tl.to(S, { horizon: 1, duration: 4, ease: 'sine.in' }, 5);
   tl.to(S, { dustWarm: 1, warmBokeh: 1, duration: 3 }, 5);
   tl.to([quote, attr], { opacity: 0, filter: 'blur(6px)', duration: .6, ease: 'power2.in' }, 5.0);
-  const l2 = el('div', 'endl abs', CAMDOM, { left: CX + 'px', top: '475px', fontSize: '48px' });
+  const l2 = el('div', 'endl abs', CAMDOM, { left: CX + 'px', top: '475px', fontSize: '56px' });
   const c2 = '别再预支了。明天的痛，等它来了再说。'.split('').map(c => el('span', '', l2, null, c));
   gsap.set(l2, { xPercent: -50, yPercent: -50 });
-  charsIn(tl, c2, 5.8, .05, .5);
-  cam(tl, 5, { y: 470, s: 1.06 }, 4);
-  tl.to(l2, { opacity: 0, filter: 'blur(6px)', y: -6, duration: .4, ease: 'power2.in' }, 9.0);
-  // 9–12s
-  const l3 = el('div', 'endl abs', CAMDOM, { left: CX + 'px', top: '460px', fontSize: '54px' });
+  const d2 = charsIn(tl, c2, 5.4);                     // 6.45s 完全出现，清晰停留3秒
+  cam(tl, 5, { y: 470, s: 1.06 }, 4.45);
+  tl.to(l2, { opacity: 0, filter: 'blur(6px)', y: -6, duration: .4, ease: 'power2.in' }, d2 + 3.0);
+  // 9.85–13.8s 最后一句：完全出现后停留3秒，直接停在这一帧（不淡出到黑）
+  const l3 = el('div', 'endl abs', CAMDOM, { left: CX + 'px', top: '460px', fontSize: '64px' });
   const { chars: c3, kws } = splitChars(l3, '致每一个，提前替明天痛过的人。', [{ w: '提前替明天痛过', c: 'gold' }]);
   gsap.set(l3, { xPercent: -50, yPercent: -50 });
-  const d3 = charsIn(tl, c3, 9.4, .05, .5);
+  const d3 = charsIn(tl, c3, d2 + 3.4);
   kws.forEach(k => tl.to(k.el, { '--g': 1.4, duration: .6, ease: 'sine.out' }, d3));
-  const tag = el('div', 'abs', CAMDOM, { left: CX + 'px', top: (460 + 27 + 50 + 9) + 'px', font: "400 18px 'Noto Sans SC',sans-serif", letterSpacing: '.5em', color: 'rgba(242,242,242,.6)', whiteSpace: 'nowrap' }, '《预支》');
+  const tag = el('div', 'abs', CAMDOM, { left: CX + 'px', top: (460 + 32 + 50 + 12) + 'px', font: "400 24px 'Noto Sans SC',sans-serif", letterSpacing: '.5em', color: 'rgba(242,242,242,.6)', whiteSpace: 'nowrap' }, '《预支》');
   gsap.set(tag, { xPercent: -50, yPercent: -50, opacity: 0 });
-  tl.to(tag, { opacity: 1, duration: .8 }, 10.4);
-  cam(tl, 9, { s: 1.09, y: 462 }, 3);
-  tl.to(S, { fade: 1, duration: .8, ease: 'sine.in' }, 11.2);
+  tl.to(tag, { opacity: 1, duration: .8 }, d3 - .2);
+  cam(tl, d2 + 3.0, { s: 1.09, y: 462 }, END - ACT[6] - d2 - 3.0, 'sine.out');
 
   tl.draw = (ctx, fx, t) => {
     // 气泡溶解 → 金色粒子汇聚成引文（从第六幕 14.4s 开始）
-    if (t < -.6 || t > 3.2) return;
+    if (t < -.6 || t > 2.4) return;
     for (const p of PTS) {
       const pos = tt => {
         const d = E.p2o(seg(tt, -.6, .2));
         let x = p.ox + p.dx * d + 10 * Math.sin(tt * 1.3 + p.ph), y = p.oy + p.dy * d + 8 * Math.cos(tt * 1.1 + p.ph);
-        const u = E.p3io(seg(tt, p.st, p.st + .9));
+        const u = E.p3io(seg(tt, p.st, p.st + .8));
         if (u > 0) { const nx = lerp(x, p.tx, u), ny = lerp(y, p.ty, u), dx = p.tx - x, dy = p.ty - y, dl = Math.hypot(dx, dy) || 1, b = p.bend * Math.sin(Math.PI * u); x = nx - dy / dl * b; y = ny + dx / dl * b; }
         return [x, y, u];
       };
       const [x, y, u] = pos(t), [px, py] = pos(t - .03);
-      const a = (t < -.4 ? seg(t, -.6, -.4) : 1) * (1 - seg(t, p.st + .85, p.st + 1.2));
+      const a = (t < -.4 ? seg(t, -.6, -.4) : 1) * (1 - seg(t, p.st + .75, p.st + 1.1));
       pSeg(px, py, x, y, u > 0 ? C.gold : mixC(C.green, C.gold, seg(t, -.6, -.1)), a * .9, p.w);
     }
     pFlush(ctx);
   };
-  tl.from = -.6; tl.to_ = 12;
+  tl.from = -.6; tl.to_ = END - ACT[6];
   return tl;
 }
 
 /* =====================================================================
    8. 主时间轴 · 渲染循环 · 后期
    ===================================================================== */
-let master = null, acts = [];
+let master = null, acts = [], ACT_BASE = 0;
 const ACT_FUNCS = [act1, act2, act3, act4, act5, act6, act7];
 function buildAll() {
   if (master) master.kill();
   CAMDOM.innerHTML = ''; SUBS.innerHTML = ''; HUDX.innerHTML = '';
   MAIN.style.filter = 'none';
   resetS();
-  TS.k = 0; TS.last = ''; gsap.set(TS.el, { opacity: 0 });
+  TS.k = 0; TS.last = ''; TS.roll = false; TS.el.classList.remove('roll'); gsap.set(TS.el, { opacity: 0 });
+  lastSubEnd = -1;
   master = gsap.timeline({ paused: true });
-  acts = ACT_FUNCS.map((f, i) => { const tl = f(); tl.start = ACT[i]; master.add(tl, ACT[i]); return tl; });
+  acts = ACT_FUNCS.map((f, i) => { ACT_BASE = ACT[i]; const tl = f(); tl.start = ACT[i]; master.add(tl, ACT[i]); return tl; });
   master.to({}, { duration: .01 }, END - .01);
 }
 function restart(t0) {
@@ -1822,13 +1847,14 @@ function post(T) {
 function printHits() {
   const rows = [
     ['第一幕', '色差（“一百遍”抖动）', 2.2], ['第一幕', '钩子句碎裂', 3.0], ['第一幕', '光点爆开 · 红色裂纹', 6.5],
-    ['第二幕', '网络拉远揭示', ACT[1] + 16], ['第二幕', '时间冻结', ACT[1] + 26],
-    ['第三幕', '最强心跳', ACT[2] + 9], ['第三幕', '“× 100”砸下', ACT[2] + 15.1],
+    ['第二幕', '网络拉远揭示', ACT[1] + A2_REVEAL], ['第二幕', '时间冻结', ACT[1] + A2_FREEZE],
+    ['第三幕', '最强心跳', ACT[2] + A3_PEAK], ['第三幕', '“× 100”砸下', ACT[2] + A3_X100],
     ...SNAKES.map((i, k) => ['第四幕', `翻到蛇（第${k + 1}次）`, ACT[3] + FLIP4(i) + .3]),
     ['第四幕', '50%柱子猛涨', ACT[3] + SURGE],
     ['第五幕', '纸条爆开', ACT[4]], ['第五幕', '89%静止（0.6秒）', ACT[4] + FREEZE89], ['第五幕', '91%砸出', ACT[4] + SLAM91],
     ['第六幕', '对勾画完', ACT[5] + CHECK6]
   ];
+  console.log('七幕起点（秒）：' + ACT.map(a => a.toFixed(1)).join(' / ') + '，全片结束 ' + END.toFixed(1));
   console.log('%c《预支》卡点时间表（全片绝对时间）', 'color:#E8C27A;font-weight:bold');
   console.table(rows.map(([幕, 时刻, t]) => ({ 幕, 时刻, 秒: +t.toFixed(2) })));
 }
