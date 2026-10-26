@@ -6,7 +6,7 @@
 | 《你是不是也有选择困难？》选择过载 / 满意解 | `videos/choice/` | 精修版无音乐全片 `output/choice/full_v2.mp4`（114.5 s），关键帧 `output/choice/keyframes_full/`，分镜 `docs/choice/storyboard.md`，自检 `docs/choice/review.md`，素材来源 `docs/choice/sources.md` |
 | 《时间错觉》为什么越长大，时间过得越快？ | `videos/time/` | 无 BGM 完整片 `output/time/full_v1.mp4`（120 s），封面 `output/time/cover.jpg`，关键帧 `output/time/keyframes_full/`，时间轴 `docs/time/timeline.md`，分镜 `docs/time/storyboard.md`，验收 `docs/time/review.md`，`docs/time/CHANGELOG.md` |
 | 《你最确定的那段回忆，可能是你自己编的》被改写的记忆 | `videos/memory/` | 无 BGM 完整片 `output/memory/full_v1.mp4`（119 s），封面 `output/memory/cover.jpg`，关键帧 `output/memory/keyframes_full/`，分镜 `docs/memory/storyboard.md`，验收 `docs/memory/review.md`，`docs/memory/CHANGELOG.md` |
-| 《镜像》为什么照片里的自己更丑？ | `videos/mirror/` | 无 BGM 完整片 `output/mirror/mirror_v2.mp4`（144.5 s，1080p60）；单文件 HTML 动画 `videos/mirror/mirror.html`（Chrome 打开自动播放，约 143.5 s；空格重播，数字键 1–8 跳幕；控制台打印卡点表） |
+| 《镜像》为什么照片里的自己更丑？ | `videos/mirror/` | 无 BGM 完整片 `output/mirror/mirror_v2.mp4`（144.5 s，1080p60），4:5 黑金封面 `output/mirror/cover_4x5.jpg`（源文件 `videos/mirror/cover.html`）；单文件 HTML 动画 `videos/mirror/mirror.html`（Chrome 打开自动播放，约 143.5 s；空格重播，数字键 1–8 跳幕；控制台打印卡点表） |
 
 所有命令加 `--video choice` 即可切换到新片（默认 `sunk-cost`）。主重拍参数可用 `MAIN_BEAT_T`（或 `T` / `--T`）。
 渲染可加 `--workers 4` 多进程并行。新片使用第二版画面管线（`src/look2.js`、`src/lib/material.js`、`src/lib/motion.js`），上一期不受影响。

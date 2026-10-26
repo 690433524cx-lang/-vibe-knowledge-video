@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>镜像 · 封面</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500&family=Noto+Serif+SC:wght@700;900&display=swap">
+<style>
+html,body{margin:0;background:#000}
+#cover{position:relative;width:1080px;height:1350px;overflow:hidden;background:#050505}
+#cover canvas{position:absolute;left:0;top:0;width:1080px;height:1350px}
+.t{position:absolute;left:0;width:1080px;text-align:center;white-space:nowrap}
+.serif{font-family:'Noto Serif SC',serif}
+.sans{font-family:'Noto Sans SC',sans-serif;font-weight:500}
+#q1,#q2{font-weight:700;font-size:70px;line-height:1;color:#F2F2F2;text-shadow:0 4px 24px rgba(0,0,0,.9)}
+#q1{top:96px}
+#q2{top:190px}
+.gold{color:#E8C27A;text-shadow:0 0 28px rgba(232,194,122,.55),0 4px 24px rgba(0,0,0,.9)}
+#title{top:1012px;font-weight:900;font-size:210px;line-height:1;letter-spacing:.12em;text-indent:.12em;
+  background:linear-gradient(180deg,#FFF1C9 0%,#E8C27A 42%,#B98A3E 72%,#F3D89A 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 26px rgba(232,194,122,.45)) drop-shadow(0 6px 18px rgba(0,0,0,.9))}
+#tag{top:1258px;font-size:38px;line-height:1;letter-spacing:.32em;text-indent:.32em;color:#D9C28F}
+#tag .dot{color:#E8C27A;margin:0 .1em}
+</style>
+</head>
+<body>
+<div id="cover">
+  <canvas id="bg" width="2160" height="2700"></canvas>
+  <div class="t serif" id="q1">为什么照片里的你</div>
+  <div class="t serif" id="q2">总比镜子里<span class="gold">丑</span>？</div>
+  <div class="t serif" id="title">镜像</div>
+  <div class="t sans" id="tag">你从未见过<span class="dot">·</span>自己真正的脸</div>
+</div>
+<script>
+(() => {
+const TAU = Math.PI * 2;
+const C = { gold: '#E8C27A', white: '#F2F2F2', red: '#E5484D' };
+/* —— 以下人脸几何与 drawFace 与 mirror.html 完全一致 —— */
+const rng = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+const _hex = {};
+function rgbOf(c) {
+  if (c[0] === '#') { if (!_hex[c]) { const n = parseInt(c.slice(1), 16); _hex[c] = [n >> 16 & 255, n >> 8 & 255, n & 255]; } return _hex[c]; }
+  return c.match(/[\d.]+/g).slice(0, 3).map(Number);
+}
+function mix(a, b, t) {
+  if (t <= .001) return a; if (t >= .999) return b;
+  const A = rgbOf(a), B = rgbOf(b);
+  return `rgb(${A[0] + (B[0] - A[0]) * t | 0},${A[1] + (B[1] - A[1]) * t | 0},${A[2] + (B[2] - A[2]) * t | 0})`;
+}
+function rgba(c, a) { const v = rgbOf(c); return `rgba(${v[0]},${v[1]},${v[2]},${a})`; }
+function quadPts(a, c, b, n = 16) { const o = []; for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t; o.push([u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]]); } return o; }
+function cubicPts(a, b, c, d, n = 20) { const o = []; for (let i = 0; i <= n; i++) { const t = i / n, u = 1 - t; o.push([u*u*u*a[0] + 3*u*u*t*b[0] + 3*u*t*t*c[0] + t*t*t*d[0], u*u*u*a[1] + 3*u*u*t*b[1] + 3*u*t*t*c[1] + t*t*t*d[1]]); } return o; }
+function crPts(P, closed, seg = 10) {
+  const n = P.length, out = [], g = i => closed ? P[(i + n) % n] : P[Math.max(0, Math.min(n - 1, i))];
+  const last = closed ? n : n - 1;
+  for (let i = 0; i < last; i++) {
+    const p0 = g(i - 1), p1 = g(i), p2 = g(i + 1), p3 = g(i + 2);
+    for (let j = 0; j < seg; j++) {
+      const t = j / seg, t2 = t * t, t3 = t2 * t, f = k => .5 * (2 * p1[k] + (-p0[k] + p2[k]) * t + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * t2 + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * t3);
+      out.push([f(0), f(1)]);
+    }
+  }
+  out.push(closed ? out[0].slice() : P[n - 1].slice());
+  return out;
+}
+function strokePoly(ctx, pts, prog = 1) {
+  const n = pts.length; if (n < 2 || prog <= 0) return;
+  const segs = (n - 1) * Math.min(1, prog), full = Math.floor(segs);
+  ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i <= full; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  if (full < n - 1) { const f = segs - full, a = pts[full], b = pts[full + 1]; ctx.lineTo(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f); }
+  ctx.stroke();
+}
+
+/* =====================================================================
+   镜像人脸：全片唯一的人脸绘制函数
+   ===================================================================== */
+const eyePts = (x, y) => [...quadPts([x - 36, y], [x, y - 24], [x + 36, y]), ...quadPts([x + 36, y], [x, y + 22], [x - 36, y]).slice(1)];
+const FACE = [
+  { n:'hair', out:1, pts: crPts([[-188,-150],[-212,-215],[-180,-292],[-98,-336],[8,-344],[112,-326],[182,-272],[202,-205],[180,-150]], false, 10) },
+  { n:'contour', out:1, pts: crPts([[0,-250],[-185,-150],[-200,-20],[-150,150],[0,260],[140,150],[188,-20],[178,-150]], true, 14) },
+  { n:'hairline', out:1, pts: crPts([[-185,-150],[-150,-190],[-95,-207],[-40,-200]], false, 10) },
+  { n:'hairline', out:1, pts: crPts([[-40,-200],[25,-214],[105,-210],[152,-188],[178,-150]], false, 10) },
+  { n:'part', out:1, pts: [[-55,-255],[-47.5,-227.5],[-40,-200]] },
+  { n:'browL', pts: quadPts([-140,-118],[-97,-134],[-55,-128]) },
+  { n:'browR', pts: quadPts([55,-112],[97,-118],[140,-104]) },
+  { n:'eyeL', pts: eyePts(-95,-70) },
+  { n:'eyeR', pts: eyePts(95,-66) },
+  { n:'pupilL', dot:[-95,-70,5] },
+  { n:'pupilR', dot:[95,-66,5] },
+  { n:'mole', dot:[118,-36,3.5] },
+  { n:'nose', nose:1, pts: [[0,-50],[4,-7.5],[8,35]] },
+  { n:'nose', nose:1, pts: quadPts([-30,48],[0,68],[30,48]) },
+  { n:'nose', nose:1, pts: quadPts([-34,26],[-47,42],[-30,48],10) },
+  { n:'nose', nose:1, pts: quadPts([34,26],[47,42],[30,48],10) },
+  { n:'mouth', pts: quadPts([-72,118],[0,142],[72,110],20) },
+];
+
+/**
+ * drawFace(ctx, cx, cy, scale, options)
+ * options: mirror, color, half('full'|'left'|'right'), highlight[], noseScale,
+ *          以及 hlColor/hlAmt（高亮色与强度）、progress（描边进度）、glow、sx（水平展开系数）、
+ *          outline（外轮廓缩放）、noseMix（鼻子金色程度）、clip（裁切矩形）、lw
+ */
+function drawFace(ctx, cx, cy, scale, o = {}) {
+  const m = (o.mirror ? -1 : 1) * (o.sx ?? 1);
+  const ns = o.noseScale ?? 1, ol = o.outline ?? 1, pr = o.progress ?? 1;
+  const col = o.color || C.white, glow = o.glow ?? 8;
+  const hl = o.highlight || [], hc = o.hlColor || C.red, ha = o.hlAmt ?? 1;
+  const half = o.half && o.half !== 'full' ? o.half : null;
+  if (half && Math.abs(m) < 1e-3) return;
+  ctx.save();
+  if (o.clip) { ctx.beginPath(); ctx.rect(o.clip[0], o.clip[1], o.clip[2], o.clip[3]); ctx.clip(); }
+  if (half) {
+    const W = 3000, xe = cx + m * (half === 'left' ? -W : W) * scale;
+    ctx.beginPath(); ctx.rect(Math.min(cx, xe), cy - W, Math.abs(xe - cx), 2 * W); ctx.clip();
+  }
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.lineWidth = o.lw ?? 2;
+  const tf = (p, x, y) => {
+    if (p.nose) { x *= ns; y = 30 + (y - 30) * ns; }
+    if (p.out) { x *= ol; y *= ol; }
+    return [cx + m * x * scale, cy + y * scale];
+  };
+  for (const p of FACE) {
+    let c = col, g = glow;
+    if (p.nose && o.noseMix) { c = mix(col, C.gold, o.noseMix); g = glow + 8 * o.noseMix; }
+    if (ha > 0 && hl.includes(p.n)) { c = mix(c, hc, ha); g = glow + 8 * ha; }
+    ctx.strokeStyle = c; ctx.fillStyle = c; ctx.shadowColor = c; ctx.shadowBlur = g;
+    if (p.dot) {
+      if (pr < .7) continue;
+      const a = Math.min(1, (pr - .7) / .2), q = tf(p, p.dot[0], p.dot[1]);
+      ctx.save(); ctx.globalAlpha *= a; ctx.beginPath(); ctx.arc(q[0], q[1], Math.max(1.6, p.dot[2] * scale), 0, TAU); ctx.fill(); ctx.restore();
+      continue;
+    }
+    const pts = p.pts.map(q => tf(p, q[0], q[1]));
+    strokePoly(ctx, pts, pr);
+  }
+  ctx.restore();
+}
+/* —— 封面 —— */
+const cv = document.getElementById('bg'), ctx = cv.getContext('2d'), W = 1080, H = 1350;
+ctx.scale(2, 2);
+const R = rng(1977);
+// 底色：中部暖金微光
+let g = ctx.createRadialGradient(540, 640, 0, 540, 640, 700);
+g.addColorStop(0, 'rgba(232,194,122,.16)'); g.addColorStop(.45, 'rgba(232,194,122,.05)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+// 斜向镜面反光条纹
+ctx.save(); ctx.globalAlpha = .045; ctx.strokeStyle = C.gold;
+[[150, 22], [330, 6], [520, 40], [760, 9], [930, 26]].forEach(([u, w]) => { ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(u - 500, H + 100); ctx.lineTo(u + 500, -100 - 0); ctx.stroke(); });
+ctx.restore();
+// 金色微尘
+for (let i = 0; i < 160; i++) {
+  const x = R() * W, y = R() * H, r = .5 + R() * 1.8, a = .1 + R() * .45;
+  const gg = ctx.createRadialGradient(x, y, 0, x, y, r * 3); gg.addColorStop(0, `rgba(240,200,130,${a})`); gg.addColorStop(1, 'rgba(240,200,130,0)');
+  ctx.fillStyle = gg; ctx.fillRect(x - r * 3, y - r * 3, r * 6, r * 6);
+}
+// 镜面中线
+const FX = 540, FY = 672, FS = 1.06;
+g = ctx.createLinearGradient(0, 250, 0, 1000);
+g.addColorStop(0, 'rgba(232,194,122,0)'); g.addColorStop(.25, 'rgba(232,194,122,.85)'); g.addColorStop(.75, 'rgba(232,194,122,.85)'); g.addColorStop(1, 'rgba(232,194,122,0)');
+ctx.save(); ctx.strokeStyle = g; ctx.lineWidth = 2; ctx.shadowColor = C.gold; ctx.shadowBlur = 18;
+ctx.beginPath(); ctx.moveTo(FX, 250); ctx.lineTo(FX, 1000); ctx.stroke(); ctx.restore();
+// 镜像脸（暗金幻影）叠在真实脸下：两边的痣、眉、嘴角都对不上
+ctx.save(); ctx.globalAlpha = .4; drawFace(ctx, FX, FY, FS, { mirror: true, color: '#B98A3E', glow: 10, lw: 2 }); ctx.restore();
+// 真实脸（亮金）
+drawFace(ctx, FX, FY, FS, { color: C.gold, glow: 16, lw: 3, highlight: ['mole'], hlColor: '#FFF1C9', hlAmt: 1 });
+// 中线上的高光点
+g = ctx.createRadialGradient(FX, FY - 70, 0, FX, FY - 70, 60); g.addColorStop(0, 'rgba(255,241,201,.9)'); g.addColorStop(.15, 'rgba(255,241,201,.35)'); g.addColorStop(1, 'rgba(255,241,201,0)');
+ctx.fillStyle = g; ctx.fillRect(FX - 60, FY - 130, 120, 120);
+// 标题上方细金线 + 菱形
+ctx.save(); ctx.strokeStyle = C.gold; ctx.fillStyle = C.gold; ctx.lineWidth = 1.5; ctx.shadowColor = C.gold; ctx.shadowBlur = 8;
+[[300, 500], [580, 780]].forEach(([a, b]) => { ctx.beginPath(); ctx.moveTo(a, 1000); ctx.lineTo(b, 1000); ctx.stroke(); });
+ctx.beginPath(); ctx.moveTo(540, 992); ctx.lineTo(548, 1000); ctx.lineTo(540, 1008); ctx.lineTo(532, 1000); ctx.closePath(); ctx.fill();
+// 四角装饰框
+const m = 36, L = 70;
+[[m, m, 1, 1], [W - m, m, -1, 1], [m, H - m, 1, -1], [W - m, H - m, -1, -1]].forEach(([x, y, sx, sy]) => {
+  ctx.beginPath(); ctx.moveTo(x + sx * L, y); ctx.lineTo(x, y); ctx.lineTo(x, y + sy * L); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + sx * 12, y + sy * 12); ctx.lineTo(x + sx * (L - 26), y + sy * 12); ctx.moveTo(x + sx * 12, y + sy * 12); ctx.lineTo(x + sx * 12, y + sy * (L - 26)); ctx.stroke();
+});
+ctx.restore();
+// 暗角
+g = ctx.createRadialGradient(540, 675, 380, 540, 675, 900); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,.6)');
+ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+// 胶片颗粒
+const img = ctx.getImageData(0, 0, cv.width, cv.height), d = img.data;
+for (let i = 0; i < d.length; i += 4) { const n = (R() - .5) * 14; d[i] += n; d[i + 1] += n; d[i + 2] += n; }
+ctx.putImageData(img, 0, 0);
+document.fonts.ready.then(() => { window.__ready = true; });
+})();
+</script>
+</body>
+</html>
