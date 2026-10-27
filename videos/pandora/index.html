@@ -193,7 +193,7 @@ function updateParticles(dt) {
       if (p.type === 4) { tx *= 2.4; ty = ty * 2.4 - 60; }
       if (F.push > 0 && p.type === 0) {
         const dx = p.x - F.bx, dy = p.y - F.by, d = Math.hypot(dx, dy) + 1;
-        tx += dx / d * F.push; ty += dy / d * F.push * .8;
+        tx += dx / d * F.push * 1.3; ty += dy / d * F.push * .55;
       }
       if (F.swirl > 0) {
         const dx = p.x - F.sx, dy = p.y - F.sy, d = Math.hypot(dx, dy) + 1;
@@ -227,7 +227,9 @@ function drawParticles(ctx, layer) {
   for (let i = 0; i < MAXP; i++) {
     const p = pool[i]; if (!p.on || p.delay > 0 || p.layer !== layer || (p.type !== 0 && p.type !== 4 && p.type !== 2)) continue;
     const fi = Math.min(1, p.life / (p.type === 4 ? .15 : .5)), fo = Math.min(1, (p.max - p.life) / Math.min(1.2, p.max * .4));
-    const al = p.a * fi * fo; if (al <= .003) continue;
+    // 靠近画布边缘时柔和淡出，避免镜头拉远时出现硬切边
+    const edge = p.type === 2 ? 1 : clamp((p.y - p.size) / 160) * clamp((H - p.y - p.size) / 160) * clamp((p.x - p.size) / 160) * clamp((W - p.x - p.size) / 160);
+    const al = p.a * fi * fo * edge; if (al <= .003) continue;
     if (p.type === 2) {
       ctx.globalAlpha = al; ctx.fillStyle = p.col;
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillRect(-p.size / 2, -p.size / 5, p.size, p.size / 2.5); ctx.restore();
@@ -961,7 +963,7 @@ function drawS2(ctx) {
 }
 function fogBurst() {
   emitter(3, 2500 / 3, () => {
-    const an = -Math.PI / 2 + rand(-2.1, 2.1), sp = rand(160, 460);
+    const an = -Math.PI / 2 + rand(-2.3, 2.3), sp = rand(160, 460);
     spawn({ type: 0, x: S.jar.x + rand(-45, 45), y: S.jar.y - 262 * S.jar.s - rand(0, 20), vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, size: rand(45, 120), a: rand(.45, .75), max: rand(9, 13), drag: 1.1, lit: Math.random() < .4, layer: Math.random() < .75 ? 1 : 0 });
   });
 }
@@ -1018,8 +1020,8 @@ function scene2() {
   tl.to(S.s2, { pandA: 0, disc: 0, duration: .6 }, M(12));
   tl.to(S.jar, { x: 960, y: 560, s: 1, duration: .8, ease: 'power3.inOut' }, M(12));
   const to = M(12.8);
-  tl.set(S.F, { noise: 40, wind: -6, swirl: 0, bx: 960, by: 420 }, to);
-  tl.fromTo(S.F, { push: 0 }, { push: 55, duration: 1, immediateRender: false }, to);
+  tl.set(S.F, { noise: 40, wind: -3, swirl: 0, bx: 960, by: 330 }, to);
+  tl.fromTo(S.F, { push: 0 }, { push: 80, duration: 1, immediateRender: false }, to);
   tl.to(S.F, { push: 0, duration: 1 }, M(19));
   tl.to(S.jar, { lid: 1, duration: .6, ease: 'expo.out' }, to);
   impact(tl, to); chroma(tl, to); tl.to(S, { redV: 1, duration: .8 }, to);
