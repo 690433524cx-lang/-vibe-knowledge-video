@@ -1,0 +1,1720 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>罐底</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Noto+Sans+SC:wght@500&family=Noto+Serif+SC:wght@700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+html,body{margin:0;width:100%;height:100%;background:#000;overflow:hidden;cursor:none}
+*{cursor:none}
+#stage{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;overflow:hidden;background:#050505}
+#stage>*,#camera>*{position:absolute;left:0;top:0;width:1920px;height:1080px}
+#bg{background:#050505}
+#sky{position:absolute;inset:0;opacity:0;background:linear-gradient(to bottom,#0B1630 0%,#3A2E4F 40%,#E8A26A 100%)}
+#horizon{position:absolute;inset:0;opacity:0;background:radial-gradient(ellipse 70% 22% at 50% 100%,rgba(255,214,160,.85) 0%,rgba(232,162,106,.45) 40%,rgba(232,162,106,0) 100%)}
+#camera{transform-origin:960px 540px;will-change:transform}
+#far,#near{transform-origin:960px 540px;will-change:transform}
+#dom,#subtitle,#fx{pointer-events:none}
+.row{position:absolute;width:3000px;text-align:center;white-space:nowrap;line-height:1.2;transform-origin:50% 50%}
+.serif{font-family:'Noto Serif SC',serif;font-weight:700}
+.sans{font-family:'Noto Sans SC',sans-serif;font-weight:500}
+.mono{font-family:'JetBrains Mono',monospace;font-weight:500}
+.ch{display:inline-block}
+.kw{display:inline-block;transform-origin:50% 60%}
+.gold{color:#E8C27A;text-shadow:0 0 18px rgba(232,194,122,.55)}
+.red{color:#E5484D;text-shadow:0 0 14px rgba(229,72,77,.45)}
+.grey{color:#8A8A8A}
+#subtitle .sub{position:absolute;left:0;width:1920px;bottom:78px;text-align:center;font-size:56px;color:#F2F2F2;letter-spacing:.06em;text-shadow:0 2px 12px rgba(0,0,0,.85);line-height:1.1;white-space:nowrap}
+#subtitle .sub .in{display:inline-block}
+.fxl{position:absolute;inset:0}
+#vig{background:radial-gradient(ellipse 75% 75% at 50% 50%,rgba(0,0,0,0) 45%,rgba(0,0,0,.45) 100%)}
+#redvig{opacity:0;background:radial-gradient(ellipse 72% 72% at 50% 50%,rgba(60,4,8,0) 35%,rgba(90,8,14,.55) 80%,rgba(70,4,8,.8) 100%)}
+#flash{opacity:0;background:#fff}
+#sweep{left:0;top:0;width:240px;height:3200px;opacity:0;background:linear-gradient(to right,rgba(232,194,122,0) 0%,rgba(232,194,122,.22) 50%,rgba(232,194,122,0) 100%);transform-origin:50% 50%;mix-blend-mode:screen}
+.tear{position:absolute;left:-40px;width:2000px;opacity:0;mix-blend-mode:screen}
+#grain{opacity:.04;image-rendering:auto}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"><div id="sky"></div><div id="horizon"></div></div>
+  <canvas id="far"></canvas>
+  <div id="camera">
+    <canvas id="main"></canvas>
+    <div id="dom">
+      <div id="hook1" class="row serif" style="left:-540px;top:392px;font-size:96px;color:#F2F2F2;opacity:.7;filter:blur(4px)">让你最痛苦的，</div>
+      <div id="hook2" class="row serif" style="left:-540px;top:523px;font-size:112px;color:#F2F2F2;opacity:.7;filter:blur(4px)">可能不是<span class="kw grey">绝望</span>，是<span class="kw gold" id="hopeKw" style="text-shadow:0 0 28px rgba(232,194,122,.7)">希望</span>。</div>
+    </div>
+  </div>
+  <canvas id="near"></canvas>
+  <div id="subtitle"></div>
+  <div id="fx">
+    <div id="vig" class="fxl"></div>
+    <div id="redvig" class="fxl"></div>
+    <div id="sweep"></div>
+    <div id="tear1" class="tear"></div><div id="tear2" class="tear"></div><div id="tear3" class="tear"></div>
+    <div id="flash" class="fxl"></div>
+  </div>
+  <canvas id="grain"></canvas>
+</div>
+<script>
+'use strict';
+/* =====================================================================
+   《罐底》 —— 单文件动画短片
+   时间单位：秒。坐标：1920×1080 舞台，原点左上角。
+   卡点时间表在 buildFilm() 里实时计算，并在加载时 console.log 打印。
+   ===================================================================== */
+
+// ---------- 常量与配色 ----------
+const W = 1920, H = 1080, CX = 960, CY = 540;
+const GOLD = '#E8C27A', CLAY = '#B8643A', CLAY_L = '#D07A48', CLAY_D = '#7A3A1E';
+const FOGC = '#141012', RED = '#E5484D', WHITE = '#F2F2F2', G1 = '#D0D0D0', G2 = '#8A8A8A', G3 = '#3A3A3A';
+const $ = id => document.getElementById(id);
+const stage = $('stage'), camEl = $('camera'), domL = $('dom'), subL = $('subtitle');
+const cMain = $('main'), cFar = $('far'), cNear = $('near'), cGrain = $('grain');
+const mctx = cMain.getContext('2d'), fctx = cFar.getContext('2d'), nctx = cNear.getContext('2d'), gctx = cGrain.getContext('2d');
+
+// ---------- 小工具 ----------
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const rand = (a, b) => a + Math.random() * (b - a);
+const smooth = t => { t = clamp(t); return t * t * (3 - 2 * t); };
+const easeOut3 = t => 1 - Math.pow(1 - clamp(t), 3);
+const hexRgb = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const mixHex = (a, b, t) => { const x = hexRgb(a), y = hexRgb(b); return `rgb(${Math.round(lerp(x[0], y[0], t))},${Math.round(lerp(x[1], y[1], t))},${Math.round(lerp(x[2], y[2], t))})`; };
+const rgba = (h, a) => { const c = hexRgb(h); return `rgba(${c[0]},${c[1]},${c[2]},${a})`; };
+function hash(i, k) { let x = Math.sin(i * 127.1 + k * 311.7) * 43758.5453; return x - Math.floor(x); }
+
+// ---------- 舞台缩放与 Canvas 分辨率 ----------
+let stageScale = 1, K = 1;
+function fit() {
+  const s = Math.min(innerWidth / W, innerHeight / H);
+  stageScale = s;
+  stage.style.transform = `translate(${(innerWidth - W * s) / 2}px,${(innerHeight - H * s) / 2}px) scale(${s})`;
+  K = clamp(s * (window.devicePixelRatio || 1), 0.5, 2);
+  for (const c of [cMain, cFar, cNear]) { c.width = Math.round(W * K); c.height = Math.round(H * K); }
+  cGrain.width = 480; cGrain.height = 270;
+}
+addEventListener('resize', fit);
+fit();
+
+// ---------- 全局状态（GSAP 时间线直接补间这些数值，渲染循环每帧读取） ----------
+const S = {
+  t: 0, frozen: false,
+  cam: { s: 1, x: 0, y: 0, fx: CX, fy: CY, bs: 1, imp: 0, shake: 0 },
+  redV: 0, chroma: 0, dustWarm: 0,
+  jar: { a: 0, x: CX, y: 520, s: 1, lid: 0, cs: 0, glow: 0, reveal: 1, fill: 1, coreRed: 0, pulse: 0, breath: 0, innerFog: 0 },
+  F: { swirl: 0, sx: CX, sy: 520, sr: 330, blast: 0, bx: CX, by: 560, wind: -8, noise: 22, push: 0 },
+  amb: { rate: 0, x: CX, y: 600, rx: 420, ry: 380 },
+  s1: { dotA: 0, dx: CX, dy: 620, dr: 1, hopeFlick: 1 },
+  s2: { handA: 0, fireA: 0, fireP: 0, peopleA: 0, lit: 0, bolt: 0, boltA: 0, pandA: 0, reveal: 0, fill: 0, disc: 0 },
+  s3: { boxA: 0, boxDraw: 0, xDraw: 0, vDraw: 0, boxFlash: 0, jarFlash: 0, marksA: 1 },
+  s4: { linkA: 0, linkDraw: 0, lineA: 0, x0: 360, x1: 360, red: 0, dotY: 520, gold: 0 },
+  s5: { a: 0, lineW: 0, lineA: 0, lineY: 600, shapesA: 0, monkey: 0, beam: 0, beamA: 0, trialClk: 0, exp: 1, chart: 0, h: [0, 0, 0, 0, 0], goldBar: 0, dim: 0, best: 0, titleA: 0, chartS: 1, chartY: 0, chartA: 1 },
+  s6: { a: 0, pan: 0, clk: 0, ts: 0, lit1: 0, taut1: 0, year: 0, taut2: 0, scroll: 0, fing: 0, msg: 0, taut3: 0, glow: 0, grid: 0, sceneA: 1, jarsA: 0, merge: 0 },
+  s7: { orbP: 0, orbA: 0 }
+};
+
+// ---------- 2D 噪声（Perlin） ----------
+const PERM = new Uint8Array(512);
+(() => { const p = []; for (let i = 0; i < 256; i++) p[i] = i; for (let i = 255; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [p[i], p[j]] = [p[j], p[i]]; } for (let i = 0; i < 512; i++) PERM[i] = p[i & 255]; })();
+function grad(h, x, y) { switch (h & 7) { case 0: return x + y; case 1: return -x + y; case 2: return x - y; case 3: return -x - y; case 4: return x; case 5: return -x; case 6: return y; default: return -y; } }
+function noise(x, y) {
+  const X = Math.floor(x) & 255, Y = Math.floor(y) & 255; x -= Math.floor(x); y -= Math.floor(y);
+  const u = x * x * x * (x * (x * 6 - 15) + 10), v = y * y * y * (y * (y * 6 - 15) + 10);
+  const a = PERM[X] + Y, b = PERM[X + 1] + Y;
+  return lerp(lerp(grad(PERM[a], x, y), grad(PERM[b], x - 1, y), u), lerp(grad(PERM[a + 1], x, y - 1), grad(PERM[b + 1], x - 1, y - 1), u), v) * 0.5 + 0.5;
+}
+
+// ---------- 预渲染精灵（柔和雾团、金色光晕、亮烟） ----------
+function sprite(size, stops) {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const g = c.getContext('2d'), r = size / 2, gr = g.createRadialGradient(r, r, 0, r, r, r);
+  for (const [o, col] of stops) gr.addColorStop(o, col);
+  g.fillStyle = gr; g.fillRect(0, 0, size, size); return c;
+}
+const SPR = {
+  fog: sprite(128, [[0, 'rgba(40,32,36,.6)'], [.4, 'rgba(30,24,27,.42)'], [.75, 'rgba(60,22,27,.14)'], [1, 'rgba(20,16,18,0)']]),
+  fogLit: sprite(128, [[0, 'rgba(72,60,65,.5)'], [.45, 'rgba(48,38,42,.32)'], [.8, 'rgba(96,32,38,.1)'], [1, 'rgba(20,16,18,0)']]),
+  smoke: sprite(64, [[0, 'rgba(220,214,210,.75)'], [.5, 'rgba(160,150,150,.35)'], [1, 'rgba(120,110,110,0)']]),
+  gold: sprite(64, [[0, 'rgba(255,240,205,1)'], [.18, 'rgba(232,194,122,.9)'], [.5, 'rgba(232,194,122,.25)'], [1, 'rgba(232,194,122,0)']]),
+  glow: sprite(128, [[0, 'rgba(232,194,122,.9)'], [.35, 'rgba(232,194,122,.35)'], [1, 'rgba(232,194,122,0)']]),
+  white: sprite(64, [[0, 'rgba(255,255,255,1)'], [.3, 'rgba(255,255,255,.5)'], [1, 'rgba(255,255,255,0)']]),
+  red: sprite(64, [[0, 'rgba(229,72,77,.9)'], [.4, 'rgba(229,72,77,.3)'], [1, 'rgba(229,72,77,0)']]),
+  dust: sprite(16, [[0, 'rgba(255,240,220,1)'], [.4, 'rgba(255,240,220,.5)'], [1, 'rgba(255,240,220,0)']]),
+  dustGold: sprite(16, [[0, 'rgba(255,226,170,1)'], [.4, 'rgba(232,194,122,.5)'], [1, 'rgba(232,194,122,0)']]),
+  bokehG: sprite(128, [[0, 'rgba(232,194,122,1)'], [.55, 'rgba(232,194,122,.7)'], [1, 'rgba(232,194,122,0)']]),
+  bokehW: sprite(128, [[0, 'rgba(255,236,210,1)'], [.55, 'rgba(255,236,210,.7)'], [1, 'rgba(255,236,210,0)']])
+};
+
+// ---------- 粒子系统（对象池，总上限 3500） ----------
+// 类型：0 雾团  1 金色火星（拖尾）  2 灰烬碎片  3 金色归位粒子  4 白色文字烟
+const MAXP = 3500, pool = [], freeIdx = [];
+for (let i = 0; i < MAXP; i++) { pool.push({ on: false, i }); freeIdx.push(MAXP - 1 - i); }
+function spawn(o) {
+  if (!freeIdx.length) return null;
+  const p = pool[freeIdx.pop()];
+  p.on = true; p.type = 0; p.x = 0; p.y = 0; p.vx = 0; p.vy = 0; p.life = 0; p.max = 3; p.size = 10; p.a = 1;
+  p.delay = 0; p.seed = Math.random() * 100; p.layer = 1; p.drag = 1; p.g = 0; p.heat = 0; p.tx = 0; p.ty = 0; p.lit = Math.random() < .3; p.col = GOLD; p.rot = 0;
+  Object.assign(p, o); p.px = p.x; p.py = p.y; return p;
+}
+function kill(p) { p.on = false; freeIdx.push(p.i); }
+function clearParticles() { for (const p of pool) if (p.on) kill(p); }
+function activeCount() { return MAXP - freeIdx.length; }
+
+function updateParticles(dt) {
+  const T = S.t, F = S.F;
+  // 环境雾发射器（第四幕罐外稀薄黑雾）
+  if (S.amb.rate > 0) {
+    S.amb.acc = (S.amb.acc || 0) + S.amb.rate * dt;
+    while (S.amb.acc >= 1) {
+      S.amb.acc -= 1; const an = Math.random() * Math.PI * 2, rr = rand(.72, 1.15);
+      spawn({ type: 0, x: S.amb.x + Math.cos(an) * S.amb.rx * rr, y: S.amb.y + Math.sin(an) * S.amb.ry * rr, size: rand(40, 90), a: rand(.3, .5), max: rand(5, 7.5), drag: .8, layer: Math.random() < .5 ? 0 : 1 });
+    }
+  }
+  // 一次性喷发发射器
+  for (let k = emitters.length - 1; k >= 0; k--) {
+    const e = emitters[k]; e.t += dt; if (e.t > e.dur) { emitters.splice(k, 1); continue; }
+    e.acc += e.rate * dt; while (e.acc >= 1) { e.acc -= 1; e.make(); }
+  }
+  for (let i = 0; i < MAXP; i++) {
+    const p = pool[i]; if (!p.on) continue;
+    if (p.delay > 0) { p.delay -= dt; continue; }
+    p.life += dt; if (p.life >= p.max) { kill(p); continue; }
+    p.px = p.x; p.py = p.y;
+    if (p.type === 0 || p.type === 4) {
+      const n = noise(p.x * .0023 + T * .05, p.y * .0023 + p.seed);
+      const ang = n * Math.PI * 2.6 + p.seed;
+      let tx = Math.cos(ang) * F.noise, ty = Math.sin(ang) * F.noise + F.wind;
+      if (p.type === 4) { tx *= 2.4; ty = ty * 2.4 - 60; }
+      if (F.push > 0 && p.type === 0) {
+        const dx = p.x - F.bx, dy = p.y - F.by, d = Math.hypot(dx, dy) + 1;
+        tx += dx / d * F.push; ty += dy / d * F.push * .8;
+      }
+      if (F.swirl > 0) {
+        const dx = p.x - F.sx, dy = p.y - F.sy, d = Math.hypot(dx, dy) + 1;
+        tx += (-dy / d) * 48 * F.swirl - (dx / d) * (d - F.sr) * .22 * F.swirl;
+        ty += (dx / d) * 48 * F.swirl - (dy / d) * (d - F.sr) * .22 * F.swirl;
+      }
+      if (F.blast > 0) {
+        const dx = p.x - F.bx, dy = p.y - F.by, d = Math.hypot(dx, dy) + 1;
+        tx += dx / d * 1500 * F.blast; ty += dy / d * 1500 * F.blast;
+      }
+      const k = Math.min(1, dt * p.drag); p.vx += (tx - p.vx) * k; p.vy += (ty - p.vy) * k;
+      if (p.heat > 0) p.heat = Math.max(0, p.heat - dt * 1.4);
+    } else if (p.type === 1) {
+      p.vy += p.g * dt; const k = Math.max(0, 1 - dt * p.drag); p.vx *= k; p.vy *= k;
+    } else if (p.type === 2) {
+      p.vy += p.g * dt; const k = Math.max(0, 1 - dt * p.drag); p.vx *= k; p.vy *= k; p.rot += dt * p.spin;
+    } else if (p.type === 3) {
+      const k = Math.min(1, dt * p.drag);
+      p.vx += ((p.tx - p.x) * 3.2 - p.vx) * k; p.vy += ((p.ty - p.y) * 3.2 - p.vy) * k;
+    }
+    p.x += p.vx * dt; p.y += p.vy * dt;
+  }
+}
+// 雾与烟本身就是模糊的，画在半分辨率缓冲上再合成，大幅降低填充开销
+const fogC = document.createElement('canvas'); fogC.width = 960; fogC.height = 540;
+const fogX = fogC.getContext('2d');
+function drawParticles(ctx, layer) {
+  // 雾与烟（普通混合）
+  fogX.setTransform(1, 0, 0, 1, 0, 0); fogX.clearRect(0, 0, 960, 540); fogX.setTransform(.5, 0, 0, .5, 0, 0);
+  let anyFog = false;
+  for (let i = 0; i < MAXP; i++) {
+    const p = pool[i]; if (!p.on || p.delay > 0 || p.layer !== layer || (p.type !== 0 && p.type !== 4 && p.type !== 2)) continue;
+    const fi = Math.min(1, p.life / (p.type === 4 ? .15 : .5)), fo = Math.min(1, (p.max - p.life) / Math.min(1.2, p.max * .4));
+    const al = p.a * fi * fo; if (al <= .003) continue;
+    if (p.type === 2) {
+      ctx.globalAlpha = al; ctx.fillStyle = p.col;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillRect(-p.size / 2, -p.size / 5, p.size, p.size / 2.5); ctx.restore();
+      continue;
+    }
+    const s = p.type === 4 ? p.size * (1 + p.life * 1.6) : p.size;
+    if (p.heat > 0) { fogX.globalAlpha = al * p.heat; fogX.drawImage(SPR.smoke, p.x - s, p.y - s, s * 2, s * 2); }
+    fogX.globalAlpha = al * (1 - p.heat * .7);
+    fogX.drawImage(p.lit ? SPR.fogLit : SPR.fog, p.x - s, p.y - s, s * 2, s * 2);
+    anyFog = true;
+  }
+  if (anyFog) { ctx.globalAlpha = 1; ctx.drawImage(fogC, 0, 0, W, H); }
+  // 金色发光粒子（叠加混合 + 运动拖尾）
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < MAXP; i++) {
+    const p = pool[i]; if (!p.on || p.delay > 0 || p.layer !== layer || (p.type !== 1 && p.type !== 3)) continue;
+    const fi = Math.min(1, p.life / .12), fo = Math.min(1, (p.max - p.life) / .5);
+    const al = p.a * fi * fo; if (al <= .003) continue;
+    const sp = Math.hypot(p.vx, p.vy);
+    if (sp > 60) {
+      ctx.globalAlpha = al * .7; ctx.strokeStyle = p.col; ctx.lineWidth = p.size * .8; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(p.x - p.vx * .045, p.y - p.vy * .045); ctx.lineTo(p.x, p.y); ctx.stroke();
+    }
+    ctx.globalAlpha = al; const s = p.size * 3;
+    ctx.drawImage(SPR.gold, p.x - s, p.y - s, s * 2, s * 2);
+  }
+  ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+}
+const emitters = [];
+function emitter(dur, rate, make) { emitters.push({ t: 0, dur, rate, acc: 0, make }); }
+
+// ---------- 远景微尘（90 个） ----------
+const dust = [];
+for (let i = 0; i < 90; i++) dust.push({ x: rand(-100, W + 100), y: rand(-100, H + 100), r: rand(.5, 1.25), a: rand(.1, .3), vx: rand(-5, 5), vy: rand(-4, 4), ph: rand(0, 6.28) });
+function updateDust(dt) {
+  for (const d of dust) {
+    d.x += (d.vx * (1 - S.dustWarm * .6)) * dt; d.y += (d.vy - S.dustWarm * 16) * dt;
+    if (d.x < -120) d.x += W + 240; if (d.x > W + 120) d.x -= W + 240;
+    if (d.y < -120) d.y += H + 240; if (d.y > H + 120) d.y -= H + 240;
+  }
+}
+function drawFar() {
+  const ctx = fctx; ctx.setTransform(K, 0, 0, K, 0, 0); ctx.clearRect(0, 0, W, H);
+  for (const d of dust) {
+    const tw = .8 + .2 * Math.sin(S.t * 1.3 + d.ph), s = (d.r + 2) * 2;
+    ctx.globalAlpha = d.a * tw * (1 + S.dustWarm * .6);
+    ctx.drawImage(S.dustWarm > .5 ? SPR.dustGold : SPR.dust, d.x - s / 2, d.y - s / 2, s, s);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ---------- 近景虚化光斑（2–4 个） ----------
+const bokeh = [];
+function newBokeh(side) {
+  const r = rand(20, 60), fromLeft = Math.random() < .5;
+  return { r, x: side ? (fromLeft ? -r * 2 : W + r * 2) : rand(0, W), y: rand(80, H - 80), vx: (fromLeft ? 1 : -1) * rand(8, 22), vy: rand(-5, 5), a: rand(.05, .12), gold: Math.random() < .6 };
+}
+for (let i = 0; i < 3; i++) bokeh.push(newBokeh(false));
+function updateBokeh(dt) {
+  for (let i = 0; i < bokeh.length; i++) {
+    const b = bokeh[i]; b.x += b.vx * dt; b.y += b.vy * dt;
+    if (b.x < -200 || b.x > W + 200 || b.y < -200 || b.y > H + 200) bokeh[i] = newBokeh(true);
+  }
+}
+function drawNear() {
+  const ctx = nctx; ctx.setTransform(K, 0, 0, K, 0, 0); ctx.clearRect(0, 0, W, H);
+  for (const b of bokeh) { ctx.globalAlpha = b.a; const s = b.r * 2.6; ctx.drawImage(b.gold ? SPR.bokehG : SPR.bokehW, b.x - s / 2, b.y - s / 2, s, s); }
+  ctx.globalAlpha = 1;
+}
+
+// ---------- 胶片噪点 ----------
+const grainFrames = [];
+(() => {
+  for (let f = 0; f < 6; f++) {
+    const id = gctx.createImageData(480, 270), d = id.data;
+    for (let i = 0; i < d.length; i += 4) { const v = Math.random() * 255; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; }
+    grainFrames.push(id);
+  }
+})();
+function drawGrain() { gctx.putImageData(grainFrames[(Math.random() * grainFrames.length) | 0], 0, 0); }
+
+// ---------- 镜头（呼吸 + 指定运动 + 冲击震动），远近景视差 ----------
+let shX = 0, shY = 0;
+function applyCamera() {
+  const c = S.cam, T = S.t, sc = c.s * c.bs * (1 + c.imp);
+  const bx = 4.2 * Math.sin(T * 2 * Math.PI / 7) + 1.6 * Math.sin(T * 2 * Math.PI / 3.3 + 1.3);
+  const by = 4.2 * Math.sin(T * 2 * Math.PI / 7.4 + 2.1) + 1.6 * Math.sin(T * 2 * Math.PI / 2.9 + .4);
+  if (!S.frozen) { shX = c.shake > .05 ? rand(-1, 1) * c.shake : 0; shY = c.shake > .05 ? rand(-1, 1) * c.shake : 0; }
+  const tx = -(c.fx - CX) * sc + c.x + bx + shX, ty = -(c.fy - CY) * sc + c.y + by + shY;
+  camEl.style.transform = `translate(${tx.toFixed(2)}px,${ty.toFixed(2)}px) scale(${sc.toFixed(4)})`;
+  cFar.style.transform = `translate(${(tx * .3).toFixed(2)}px,${(ty * .3).toFixed(2)}px) scale(${(1 + (sc - 1) * .3).toFixed(4)})`;
+  cNear.style.transform = `translate(${(tx * 1.5).toFixed(2)}px,${(ty * 1.5).toFixed(2)}px) scale(${(1 + (sc - 1) * 1.5).toFixed(4)})`;
+}
+
+// ---------- 后期：红色压迫暗角、色差撕裂 ----------
+const redVig = $('redvig'), tears = [$('tear1'), $('tear2'), $('tear3')];
+function applyFx() {
+  redVig.style.opacity = (S.redV * (.72 + .28 * Math.sin(S.t * 2 * Math.PI / 1.6))).toFixed(3);
+  const c = S.chroma;
+  if (c > .01) {
+    const o = (4 * c).toFixed(1);
+    camEl.style.filter = `drop-shadow(${o}px 0 0 rgba(229,72,77,.55)) drop-shadow(-${o}px 0 0 rgba(70,160,255,.5))`;
+    tears.forEach((el, i) => {
+      if (!S.frozen) {
+        el.style.top = rand(120, 960).toFixed(0) + 'px'; el.style.height = rand(4, 22).toFixed(0) + 'px';
+        el.style.transform = `translateX(${rand(-30, 30).toFixed(0)}px)`;
+        el.style.background = ['rgba(229,72,77,.35)', 'rgba(80,170,255,.3)', 'rgba(255,255,255,.22)'][i];
+      }
+      el.style.opacity = c.toFixed(2);
+    });
+  } else if (camEl.style.filter) { camEl.style.filter = ''; tears.forEach(el => el.style.opacity = 0); }
+}
+
+
+// =====================================================================
+//  陶罐：全片唯一的绘制函数 drawJar(ctx, cx, cy, scale, options)
+//  options: lidOpen 0–1, crossSection(布尔或 0–1), innerGlow 0–1, style 'full'|'line'
+//  附加：alpha, reveal(轮廓描绘进度), fill(上色进度), coreRed(光点内核暗红), pulse(心跳), breath(呼吸), innerFog
+// =====================================================================
+const JAR = (() => {
+  const body = new Path2D();
+  body.moveTo(78, -262);
+  body.quadraticCurveTo(80, -256, 74, -250);
+  body.quadraticCurveTo(64, -240, 65, -220);
+  body.bezierCurveTo(64, -168, 190, -150, 190, -60);
+  body.bezierCurveTo(190, 40, 132, 214, 85, 270);
+  body.lineTo(-85, 270);
+  body.bezierCurveTo(-132, 214, -190, 40, -190, -60);
+  body.bezierCurveTo(-190, -150, -64, -168, -65, -220);
+  body.quadraticCurveTo(-64, -240, -74, -250);
+  body.quadraticCurveTo(-80, -256, -78, -262);
+  body.closePath();
+  const inner = new Path2D();
+  inner.moveTo(60, -232);
+  inner.bezierCurveTo(56, -160, 172, -140, 172, -60);
+  inner.bezierCurveTo(172, 30, 118, 196, 76, 252);
+  inner.lineTo(-76, 252);
+  inner.bezierCurveTo(-118, 196, -172, 30, -172, -60);
+  inner.bezierCurveTo(-172, -140, -56, -160, -60, -232);
+  const base = new Path2D(); base.roundRect(-100, 271, 200, 19, 9);
+  const handleR = new Path2D(); handleR.moveTo(70, -210); handleR.bezierCurveTo(152, -266, 232, -150, 175, -80);
+  const handleL = new Path2D(); handleL.moveTo(-70, -210); handleL.bezierCurveTo(-152, -266, -232, -150, -175, -80);
+  const lid = new Path2D(); // 以罐口中心为原点
+  lid.moveTo(-85, 0); lid.quadraticCurveTo(-84, -10, -70, -14); lid.quadraticCurveTo(0, -34, 70, -14); lid.quadraticCurveTo(84, -10, 85, 0); lid.closePath();
+  const meander = new Path2D(); // 希腊回纹（高 36px 的装饰带内）
+  const t0 = -132, h = 28;
+  meander.moveTo(-220, t0 + h); meander.lineTo(220, t0 + h);
+  for (let x = -224; x < 224; x += 32) {
+    meander.moveTo(x, t0 + h); meander.lineTo(x, t0); meander.lineTo(x + 24, t0); meander.lineTo(x + 24, t0 + h * .66);
+    meander.lineTo(x + 12, t0 + h * .66); meander.lineTo(x + 12, t0 + h * .33);
+  }
+  return { body, inner, base, handleR, handleL, lid, meander, len: 1900 };
+})();
+
+function heartbeat(t) { // 1.4 秒周期的心跳
+  const p = (t % 1.4) / 1.4;
+  return Math.exp(-Math.pow((p - .08) / .05, 2)) + .6 * Math.exp(-Math.pow((p - .26) / .06, 2));
+}
+
+function drawJar(ctx, cx, cy, scale, o = {}) {
+  const lo = o.lidOpen || 0, cs = o.crossSection === true ? 1 : (o.crossSection || 0), g = o.innerGlow || 0;
+  const style = o.style || 'full', A = o.alpha == null ? 1 : o.alpha, reveal = o.reveal == null ? 1 : o.reveal;
+  const fill = style === 'line' ? 0 : (o.fill == null ? 1 : o.fill), T = S.t;
+  if (A <= .002 || scale <= .001) return;
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(scale, scale); ctx.globalAlpha = A;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const px = 1 / scale;
+  const beat = o.pulse ? heartbeat(T) : 0;
+  const br = o.breath ? (.85 + .15 * Math.sin(T * 2 * Math.PI / 4.2)) : 1;
+  const flick = .92 + .08 * noise(T * 2.3, 7.7);
+
+  // 底座与身体填充
+  if (fill > 0) {
+    const bodyA = lerp(1, .25, cs) * fill;
+    const gr = ctx.createRadialGradient(-90, -150, 20, -20, -20, 430);
+    gr.addColorStop(0, CLAY_L); gr.addColorStop(.48, CLAY); gr.addColorStop(1, CLAY_D);
+    ctx.globalAlpha = A * fill; ctx.fillStyle = CLAY_D; ctx.fill(JAR.base);
+    // 剖面：内部暗腔
+    if (cs > 0) {
+      ctx.globalAlpha = A * cs; ctx.fillStyle = '#0a0708'; ctx.fill(JAR.body);
+      if (o.innerFog) { // 罐内残存的黑雾
+        ctx.save(); ctx.clip(JAR.body);
+        for (let i = 0; i < 7; i++) {
+          const fx = Math.sin(T * .3 + i * 1.7) * 90, fy = -120 + i * 45 + Math.cos(T * .25 + i) * 20, s = 70 + 20 * Math.sin(i);
+          ctx.globalAlpha = A * cs * o.innerFog * .7; ctx.drawImage(SPR.fogLit, fx - s, fy - s, s * 2, s * 2);
+        }
+        ctx.restore();
+      }
+    }
+    ctx.globalAlpha = A * bodyA; ctx.fillStyle = gr; ctx.fill(JAR.body);
+    // 右下暗部
+    const sh = ctx.createLinearGradient(-190, 0, 190, 0);
+    sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(.55, 'rgba(0,0,0,.05)'); sh.addColorStop(1, 'rgba(0,0,0,.38)');
+    ctx.fillStyle = sh; ctx.fill(JAR.body);
+    // 回纹装饰带与腹部细线
+    ctx.save(); ctx.clip(JAR.body);
+    ctx.strokeStyle = '#140c09'; ctx.lineWidth = 3.4;
+    ctx.beginPath(); ctx.moveTo(-220, -136); ctx.lineTo(220, -136); ctx.moveTo(-220, -100); ctx.lineTo(220, -100); ctx.stroke();
+    ctx.lineWidth = 3; ctx.stroke(JAR.meander);
+    ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-220, 40); ctx.lineTo(220, 40); ctx.moveTo(-220, 54); ctx.lineTo(220, 54); ctx.stroke();
+    ctx.restore();
+    // 把手
+    ctx.globalAlpha = A * lerp(1, .5, cs) * fill; ctx.strokeStyle = CLAY_D; ctx.lineWidth = 6;
+    ctx.stroke(JAR.handleR); ctx.stroke(JAR.handleL);
+    ctx.strokeStyle = 'rgba(208,122,72,.55)'; ctx.lineWidth = 2; ctx.stroke(JAR.handleR); ctx.stroke(JAR.handleL);
+    // 罐口内侧纯黑
+    ctx.globalAlpha = A * fill; ctx.fillStyle = '#050505';
+    ctx.beginPath(); ctx.ellipse(0, -258, 73, 9, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = CLAY_L; ctx.lineWidth = 2.5; ctx.stroke();
+    // 剖面：罐壁内轮廓
+    if (cs > 0) { ctx.globalAlpha = A * cs * .45; ctx.strokeStyle = CLAY_L; ctx.lineWidth = 1.5 * px; ctx.setLineDash([10, 8]); ctx.stroke(JAR.inner); ctx.setLineDash([]); }
+  }
+
+  // 罐底金色光点（剖面可见，或强度足够时透出）
+  const bottomVis = Math.max(cs, o.showCore || 0);
+  if (g > 0 && bottomVis > 0) {
+    const pr = (1 + beat * .22) * flick;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = A * bottomVis * g * .9;
+    const hr = 70 * g * pr; ctx.drawImage(SPR.glow, -hr, 236 - hr, hr * 2, hr * 2);
+    const cr = (9 + 5 * g) * pr; ctx.drawImage(SPR.gold, -cr * 1.6, 236 - cr * 1.6, cr * 3.2, cr * 3.2);
+    ctx.globalCompositeOperation = 'source-over';
+    if (o.coreRed > 0) {
+      ctx.globalAlpha = A * bottomVis * g * o.coreRed;
+      const rg = ctx.createRadialGradient(0, 236, 0, 0, 236, 9 * pr);
+      rg.addColorStop(0, 'rgba(120,14,22,1)'); rg.addColorStop(.6, 'rgba(160,30,36,.85)'); rg.addColorStop(1, 'rgba(229,72,77,0)');
+      ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(0, 236, 9 * pr, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // 轮廓：揭示动画用金色描边，完成后保留 30% 金色轮廓光
+  ctx.globalAlpha = A;
+  ctx.shadowColor = GOLD; ctx.shadowBlur = 8;
+  if (reveal < 1) {
+    ctx.strokeStyle = GOLD; ctx.lineWidth = 2 * px; ctx.setLineDash([JAR.len * reveal, JAR.len]);
+    ctx.stroke(JAR.body); ctx.stroke(JAR.base);
+    ctx.setLineDash([600 * reveal, 600]); ctx.stroke(JAR.handleR); ctx.stroke(JAR.handleL); ctx.setLineDash([]);
+  } else if (style === 'line') {
+    ctx.strokeStyle = o.lineColor || GOLD; ctx.lineWidth = 2 * px;
+    ctx.stroke(JAR.body); ctx.stroke(JAR.base); ctx.stroke(JAR.handleR); ctx.stroke(JAR.handleL);
+  } else {
+    ctx.globalAlpha = A * (.3 + .7 * (1 - fill));
+    ctx.strokeStyle = GOLD; ctx.lineWidth = 1.5 * px; ctx.stroke(JAR.body);
+    if (cs > 0) { ctx.globalAlpha = A * cs * .8; ctx.strokeStyle = CLAY_L; ctx.lineWidth = 2 * px; ctx.stroke(JAR.body); }
+  }
+  ctx.shadowBlur = 0;
+
+  // 罐口 / 盖缝透出的金光
+  if (g > 0) {
+    const seam = (1 - cs) * g * br * flick;
+    if (seam > .01) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = A * Math.min(1, seam * 1.4) * (lo < .05 ? 1 : .3);
+      ctx.drawImage(SPR.glow, -120, -276, 240, 28);
+      ctx.globalAlpha = A * seam * .55; const r = 160 * Math.sqrt(g) * br;
+      ctx.drawImage(SPR.glow, -r, -262 - r * .7, r * 2, r * 1.4);
+      if (lo > .02) { // 盖子打开时，光柱从罐口升起
+        ctx.globalAlpha = A * seam * lo * .8;
+        const lg = ctx.createLinearGradient(0, -262, 0, -620);
+        lg.addColorStop(0, 'rgba(232,194,122,.55)'); lg.addColorStop(1, 'rgba(232,194,122,0)');
+        ctx.fillStyle = lg; ctx.beginPath(); ctx.moveTo(-70, -262); ctx.lineTo(70, -262); ctx.lineTo(150, -620); ctx.lineTo(-150, -620); ctx.closePath(); ctx.fill();
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  }
+
+  // 盖子
+  if (reveal > .6 || style === 'line') {
+    ctx.save();
+    ctx.translate(30 * lo, -262 - 180 * lo); ctx.rotate(lo * 25 * Math.PI / 180);
+    ctx.globalAlpha = A * (reveal < 1 ? (reveal - .6) / .4 : 1);
+    if (fill > 0) {
+      const lg = ctx.createLinearGradient(-85, -30, 85, 0);
+      lg.addColorStop(0, CLAY_L); lg.addColorStop(.5, CLAY); lg.addColorStop(1, CLAY_D);
+      ctx.globalAlpha *= fill; ctx.fillStyle = lg; ctx.fill(JAR.lid);
+      ctx.fillStyle = CLAY_D; ctx.beginPath(); ctx.arc(0, -36, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(-3, -30, 6, 8);
+      ctx.strokeStyle = '#140c09'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-60, -10); ctx.quadraticCurveTo(0, -24, 60, -10); ctx.stroke();
+      ctx.globalAlpha = A * (reveal < 1 ? (reveal - .6) / .4 : 1);
+    }
+    ctx.shadowColor = GOLD; ctx.shadowBlur = 8;
+    ctx.strokeStyle = style === 'line' ? (o.lineColor || GOLD) : rgba(GOLD, .3 + .7 * (1 - fill));
+    ctx.lineWidth = (style === 'line' ? 2 : 1.5) * px; ctx.stroke(JAR.lid);
+    ctx.beginPath(); ctx.arc(0, -36, 9, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+// =====================================================================
+//  潘多拉：古希腊黑绘陶器风格的侧面剪影（原创极简造型，面朝右）
+//  原点为双脚中点，高约 600px
+// =====================================================================
+const PAND = (() => {
+  const fig = new Path2D();
+  fig.moveTo(-96, 0);
+  fig.bezierCurveTo(-80, -120, -50, -230, -40, -320);   // 背部长袍
+  fig.bezierCurveTo(-34, -380, -46, -430, -38, -466);   // 腰背到肩
+  fig.quadraticCurveTo(-30, -486, -16, -494);           // 后颈
+  fig.lineTo(-10, -508);
+  fig.bezierCurveTo(-34, -520, -32, -574, 0, -582);     // 后脑
+  fig.bezierCurveTo(26, -588, 42, -566, 40, -546);      // 头顶到额
+  fig.lineTo(50, -530);                                 // 鼻
+  fig.lineTo(40, -524);
+  fig.quadraticCurveTo(42, -514, 36, -510);             // 唇下颌
+  fig.quadraticCurveTo(28, -500, 16, -498);
+  fig.lineTo(16, -486);                                 // 前颈
+  fig.bezierCurveTo(36, -470, 50, -440, 46, -410);      // 胸
+  fig.bezierCurveTo(44, -360, 40, -320, 44, -290);      // 腰前
+  fig.bezierCurveTo(54, -200, 70, -90, 84, 0);          // 长袍前摆
+  fig.closePath();
+  const bun = new Path2D(); bun.arc(-30, -566, 21, 0, Math.PI * 2);
+  const arm = new Path2D(); // 双臂前伸托罐
+  arm.moveTo(-6, -462); arm.bezierCurveTo(10, -420, 30, -360, 60, -338); arm.lineTo(118, -326);
+  arm.lineTo(118, -306); arm.lineTo(56, -314); arm.bezierCurveTo(20, -340, -10, -400, -24, -452); arm.closePath();
+  const folds = new Path2D(); // 陶土色勾线：衣褶、发带、眼
+  folds.moveTo(-14, -300); folds.bezierCurveTo(-24, -200, -40, -100, -54, -8);
+  folds.moveTo(4, -296); folds.bezierCurveTo(2, -200, -6, -100, -10, -8);
+  folds.moveTo(24, -292); folds.bezierCurveTo(32, -200, 42, -100, 50, -8);
+  folds.moveTo(-36, -306); folds.bezierCurveTo(-48, -220, -66, -120, -80, -12);
+  folds.moveTo(-40, -322); folds.quadraticCurveTo(0, -310, 44, -318);  // 腰带
+  folds.moveTo(-40, -334); folds.quadraticCurveTo(0, -322, 44, -330);
+  folds.moveTo(-22, -560); folds.quadraticCurveTo(4, -578, 30, -566); // 发带
+  folds.moveTo(-40, -560); folds.arc(-30, -566, 11, Math.PI, Math.PI * 2.6); // 发髻螺纹
+  folds.moveTo(22, -540); folds.quadraticCurveTo(28, -545, 34, -539);  // 眼
+  folds.moveTo(-60, -40); folds.lineTo(76, -40); folds.moveTo(-64, -24); folds.lineTo(80, -24); // 下摆回纹边
+  return { fig, bun, arm, folds };
+})();
+function drawPandora(ctx, x, y, o) {
+  if (o.a <= .002) return;
+  ctx.save(); ctx.translate(x, y); ctx.globalAlpha = o.a; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // 自下而上的描边勾勒
+  const rv = o.reveal, top = -600 * rv - 10;
+  if (o.fill > 0) {
+    ctx.globalAlpha = o.a * o.fill; ctx.fillStyle = '#060404';
+    ctx.fill(PAND.fig); ctx.fill(PAND.bun); ctx.fill(PAND.arm);
+  }
+  ctx.save(); ctx.beginPath(); ctx.rect(-300, top, 600, 620); ctx.clip();
+  ctx.globalAlpha = o.a; ctx.strokeStyle = CLAY_L; ctx.lineWidth = 2.2; ctx.shadowColor = CLAY_L; ctx.shadowBlur = 8;
+  ctx.stroke(PAND.fig); ctx.stroke(PAND.bun); ctx.stroke(PAND.arm);
+  ctx.shadowBlur = 0; ctx.lineWidth = 1.6; ctx.globalAlpha = o.a * (.35 + .65 * o.fill); ctx.stroke(PAND.folds);
+  ctx.restore();
+  ctx.restore();
+}
+
+// ---------- 普罗米修斯：极简线条手、火苗、小人、闪电 ----------
+function drawHand(ctx, a) {
+  if (a <= 0) return;
+  ctx.save(); ctx.translate(540, 70); ctx.globalAlpha = a; ctx.strokeStyle = WHITE; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.shadowColor = WHITE; ctx.shadowBlur = 8;
+  ctx.beginPath();
+  ctx.moveTo(730, -20); ctx.bezierCurveTo(780, 60, 840, 120, 900, 150);     // 前臂下沿
+  ctx.bezierCurveTo(950, 176, 1010, 182, 1046, 160);                         // 掌心托
+  ctx.bezierCurveTo(1062, 150, 1070, 136, 1064, 124);                        // 指尖上翘
+  ctx.moveTo(790, -20); ctx.bezierCurveTo(820, 40, 860, 86, 912, 112);       // 前臂上沿
+  ctx.quadraticCurveTo(930, 98, 948, 104); ctx.quadraticCurveTo(958, 116, 946, 126); // 拇指
+  ctx.moveTo(1000, 168); ctx.quadraticCurveTo(1030, 158, 1044, 138);         // 指缝
+  ctx.moveTo(1020, 172); ctx.quadraticCurveTo(1052, 162, 1062, 140);
+  ctx.stroke(); ctx.restore();
+}
+function firePos(p) { // 火苗下落的优雅弧线
+  const x0 = 1530, y0 = 198, cx = 1660, cy = 500, x1 = 960, y1 = 742;
+  const u = 1 - p; return { x: u * u * x0 + 2 * u * p * cx + p * p * x1, y: u * u * y0 + 2 * u * p * cy + p * p * y1 };
+}
+function drawFlame(ctx, x, y, s, a) {
+  if (a <= 0) return;
+  const T = S.t;
+  ctx.save(); ctx.translate(x, y); ctx.globalCompositeOperation = 'lighter';
+  ctx.globalAlpha = a * .55; const hr = 120 * s; ctx.drawImage(SPR.glow, -hr, -hr * 1.1, hr * 2, hr * 2);
+  const layers = [['rgba(232,130,60,.75)', 1], ['rgba(232,170,90,.85)', .72], ['rgba(232,194,122,.95)', .48], ['rgba(255,240,210,1)', .26]];
+  for (let i = 0; i < layers.length; i++) {
+    const [col, k] = layers[i], h = 64 * s * k * (1 + .12 * Math.sin(T * 9 + i)), w = 22 * s * k;
+    const sway = Math.sin(T * 6.3 + i * .8) * 6 * s * k;
+    ctx.globalAlpha = a; ctx.fillStyle = col; ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.bezierCurveTo(-w * 1.4, -h * .2, -w * .6, -h * .7, sway, -h);
+    ctx.bezierCurveTo(w * .6, -h * .7, w * 1.4, -h * .2, 0, 0); ctx.fill();
+  }
+  ctx.restore();
+}
+const PEOPLE = [];
+for (let i = 0; i < 12; i++) {
+  const side = i < 6 ? -1 : 1, k = i < 6 ? 5 - i : i - 6;
+  PEOPLE.push({ x: 960 + side * (70 + k * 88 + (k % 2) * 6), h: 80 + ((i * 37) % 41), lean: side * -.04 });
+}
+function drawPeople(ctx, a, lit) {
+  if (a <= 0) return;
+  const baseY = 860;
+  ctx.save(); ctx.globalAlpha = a;
+  if (lit > 0) { // 火光照亮
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a * lit * .55;
+    ctx.drawImage(SPR.glow, 960 - 520, 760 - 300, 1040, 520); ctx.globalCompositeOperation = 'source-over';
+  }
+  for (const p of PEOPLE) {
+    const h = p.h, hr = h * .11, x = p.x, top = baseY - h;
+    ctx.save(); ctx.translate(x, baseY); ctx.rotate(p.lean);
+    ctx.globalAlpha = a; ctx.fillStyle = G2;
+    ctx.beginPath(); ctx.arc(0, -h + hr, hr, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-h * .15, -h + hr * 2.4); ctx.quadraticCurveTo(0, -h + hr * 2, h * .15, -h + hr * 2.4);
+    ctx.lineTo(h * .11, 0); ctx.lineTo(-h * .11, 0); ctx.closePath(); ctx.fill();
+    if (lit > 0) { // 朝向火光的一侧描出金边
+      const side = x < 960 ? 1 : -1, d = Math.abs(x - 960);
+      ctx.globalAlpha = a * lit * clamp(1.2 - d / 600); ctx.strokeStyle = GOLD; ctx.lineWidth = 2; ctx.shadowColor = GOLD; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(0, -h + hr, hr, side > 0 ? -1.2 : Math.PI - .4, side > 0 ? 1.2 : Math.PI + 1.2 + .4 - .4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(side * h * .15, -h + hr * 2.4); ctx.lineTo(side * h * .11, 0); ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+    ctx.restore();
+    void top;
+  }
+  ctx.restore();
+}
+const BOLT = (() => {
+  const pts = [[1130, -20]], b = [];
+  let x = 1130, y = -20;
+  while (y < 640) { y += rand(50, 90); x += rand(-60, 60) - 8; pts.push([x, y]); }
+  for (let k = 2; k < 5; k++) { const [sx, sy] = pts[k]; const br = [[sx, sy]]; let bx = sx, by = sy; for (let j = 0; j < 3; j++) { bx += rand(20, 70) * (k % 2 ? 1 : -1); by += rand(40, 70); br.push([bx, by]); } b.push(br); }
+  return { pts, b };
+})();
+function drawBolt(ctx, prog, a) {
+  if (a <= 0 || prog <= 0) return;
+  ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = WHITE; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.shadowColor = WHITE; ctx.shadowBlur = 16;
+  const n = Math.max(2, Math.ceil(BOLT.pts.length * prog));
+  for (const [lw, al] of [[7, .35], [2.5, 1]]) {
+    ctx.globalAlpha = a * al; ctx.lineWidth = lw; ctx.beginPath();
+    BOLT.pts.slice(0, n).forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke();
+  }
+  ctx.lineWidth = 1.5; ctx.globalAlpha = a * .7;
+  for (const br of BOLT.b) { ctx.beginPath(); br.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.stroke(); }
+  ctx.restore();
+}
+
+// ---------- 第三幕：线条盒子、红叉、金勾 ----------
+function strokeProgress(ctx, segs, p) { // 按总长度比例描出折线段
+  let total = 0; const L = segs.map(s => { const l = Math.hypot(s[2] - s[0], s[3] - s[1]); total += l; return l; });
+  let left = total * clamp(p);
+  ctx.beginPath();
+  for (let i = 0; i < segs.length && left > 0; i++) {
+    const s = segs[i], k = Math.min(1, left / L[i]); left -= L[i];
+    ctx.moveTo(s[0], s[1]); ctx.lineTo(lerp(s[0], s[2], k), lerp(s[1], s[3], k));
+  }
+  ctx.stroke();
+}
+function boxSegs(x, y) {
+  const w = 240, h = 180, l = x - w / 2, t = y - h / 2 + 20, r = x + w / 2, b = y + h / 2 + 20;
+  return [[l, t, r, t], [r, t, r, b], [r, b, l, b], [l, b, l, t], // 盒身
+    [l - 12, t, l - 12, t - 34], [l - 12, t - 34, r + 12, t - 34], [r + 12, t - 34, r + 12, t], [l - 12, t, r + 12, t], // 盒盖
+    [x - 22, t - 34, x - 22, t - 46], [x - 22, t - 46, x + 22, t - 46], [x + 22, t - 46, x + 22, t - 34]];
+}
+
+// ---------- 第五幕：极简猴子头部侧面轮廓、几何图案 ----------
+function drawMonkey(ctx, x, y, a, p) {
+  if (a <= 0) return;
+  ctx.save(); ctx.translate(x, y); ctx.globalAlpha = a; ctx.strokeStyle = WHITE; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.shadowColor = WHITE; ctx.shadowBlur = 6;
+  const segs = new Path2D();
+  segs.moveTo(-40, 100); segs.bezierCurveTo(-78, 60, -86, -40, -50, -82);     // 后脑
+  segs.bezierCurveTo(-16, -112, 34, -106, 52, -66);                            // 头顶到额
+  segs.quadraticCurveTo(56, -50, 50, -38);                                    // 眉弓
+  segs.bezierCurveTo(70, -26, 92, -6, 90, 18);                                // 口鼻前突
+  segs.bezierCurveTo(88, 40, 70, 50, 52, 46);                                 // 下唇
+  segs.bezierCurveTo(44, 60, 22, 70, 6, 64);                                  // 下巴
+  segs.quadraticCurveTo(-6, 80, -8, 100);                                     // 颈
+  ctx.setLineDash([700 * p, 700]); ctx.stroke(segs); ctx.setLineDash([]);
+  if (p > .6) {
+    ctx.globalAlpha = a * (p - .6) / .4;
+    ctx.beginPath(); ctx.ellipse(-46, -8, 16, 24, -.2, 0, Math.PI * 2); ctx.stroke();           // 耳
+    ctx.beginPath(); ctx.arc(-46, -6, 7, -1.2, 1.6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(22, -46); ctx.quadraticCurveTo(38, -54, 52, -44); ctx.stroke();  // 眉
+    ctx.fillStyle = WHITE; ctx.beginPath(); ctx.arc(38, -32, 4.5, 0, Math.PI * 2); ctx.fill();  // 眼
+    ctx.beginPath(); ctx.arc(80, 6, 2, 0, Math.PI * 2); ctx.fill();                               // 鼻孔
+    ctx.beginPath(); ctx.moveTo(62, 34); ctx.quadraticCurveTo(74, 36, 84, 30); ctx.stroke();      // 嘴
+  }
+  ctx.restore();
+}
+const MONKEY_EYE = { x: 238, y: 448 };
+function shapePath(ctx, kind, x, y, d) {
+  const r = d / 2; ctx.beginPath();
+  if (kind === 0) ctx.arc(x, y, r, 0, Math.PI * 2);
+  else if (kind === 1) { ctx.moveTo(x, y - r); ctx.lineTo(x + r * .95, y + r * .72); ctx.lineTo(x - r * .95, y + r * .72); ctx.closePath(); }
+  else if (kind === 2) ctx.rect(x - r * .82, y - r * .82, r * 1.64, r * 1.64);
+  else if (kind === 3) { ctx.moveTo(x, y - r); ctx.lineTo(x + r * .8, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r * .8, y); ctx.closePath(); }
+  else { for (let i = 0; i < 10; i++) { const an = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * .42 : r; const px = x + Math.cos(an) * rr, py = y + Math.sin(an) * rr; i ? ctx.lineTo(px, py) : ctx.moveTo(px, py); } ctx.closePath(); }
+}
+
+// ---------- 第六幕：手机线框 ----------
+function phonePath(ctx, cx, cy, w = 380, h = 740, r = 44) { ctx.beginPath(); ctx.roundRect(cx - w / 2, cy - h / 2, w, h, r); }
+function drawPhoneFrame(ctx, cx, cy) {
+  ctx.strokeStyle = WHITE; ctx.lineWidth = 1.5; ctx.shadowColor = WHITE; ctx.shadowBlur = 8;
+  phonePath(ctx, cx, cy); ctx.stroke(); ctx.shadowBlur = 0;
+  ctx.beginPath(); ctx.roundRect(cx - 50, cy - 352, 100, 18, 9); ctx.stroke();
+}
+function goldThread(ctx, px, py, ax, ay, taut, a, T) {
+  // 悬浮的“希望”光点 + 牵着画面里的人的细金线
+  const bob = Math.sin(T * 1.7) * 6;
+  py += bob;
+  const sag = 70 * (1 - taut);
+  ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = GOLD; ctx.lineWidth = 1.5 + taut * .8; ctx.shadowColor = GOLD; ctx.shadowBlur = 8 + taut * 8;
+  ctx.beginPath(); ctx.moveTo(px, py); ctx.quadraticCurveTo((px + ax) / 2 + sag * .3, (py + ay) / 2 + sag, ax, ay); ctx.stroke();
+  ctx.shadowBlur = 0; ctx.globalCompositeOperation = 'lighter';
+  const hr = 50 * (1 + .15 * Math.sin(T * 3.1)); ctx.drawImage(SPR.glow, px - hr, py - hr, hr * 2, hr * 2);
+  ctx.drawImage(SPR.gold, px - 14, py - 14, 28, 28);
+  ctx.restore();
+}
+function glowDot(ctx, x, y, a, core = 6, halo = 50) {
+  if (a <= 0) return;
+  ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = a;
+  ctx.drawImage(SPR.glow, x - halo, y - halo, halo * 2, halo * 2);
+  ctx.drawImage(SPR.gold, x - core * 2.2, y - core * 2.2, core * 4.4, core * 4.4);
+  ctx.restore();
+}
+
+
+// =====================================================================
+//  文字系统：标记语法 <g>金</g> <r>红</r> <h>灰</h> <k>普通关键词</k>
+// =====================================================================
+const PUNCT = /[，。、？！：；“”‘’（）《》—…·\s ]/;
+const plain = m => m.replace(/<\/?[grhk]>/g, '');
+function segsOf(markup) {
+  const out = [], re = /<(g|r|h|k)>(.*?)<\/\1>/g; let last = 0, m;
+  while ((m = re.exec(markup))) { if (m.index > last) out.push({ t: markup.slice(last, m.index) }); out.push({ t: m[2], c: m[1] }); last = re.lastIndex; }
+  if (last < markup.length) out.push({ t: markup.slice(last) });
+  return out;
+}
+function buildChars(host, markup) {
+  host.innerHTML = ''; const chars = [], kws = [];
+  for (const s of segsOf(markup)) {
+    let parent = host;
+    if (s.c) { const k = document.createElement('span'); k.className = 'kw ' + { g: 'gold', r: 'red', h: 'grey', k: '' }[s.c]; k.dataset.c = s.c; host.appendChild(k); parent = k; kws.push(k); }
+    for (const ch of s.t) {
+      const sp = document.createElement('span'); sp.className = 'ch' + (/[0-9%:]/.test(ch) ? ' mono' : '');
+      sp.textContent = ch; parent.appendChild(sp); chars.push(sp);
+    }
+  }
+  return { chars, kws };
+}
+function mkText(markup, x, y, size, cls, css = {}, parent = domL) {
+  const el = document.createElement('div'); el.className = 'row ' + cls;
+  el.style.left = (x - 1500) + 'px'; el.style.top = (y - size * .6) + 'px'; el.style.fontSize = size + 'px';
+  Object.assign(el.style, css); parent.appendChild(el);
+  const r = buildChars(el, markup); gsap.set(el, { filter: 'blur(0px)' });
+  return { el, ...r };
+}
+function boxOf(el) { // 舞台坐标（忽略镜头与补间变换）
+  let x = 0, y = 0, e = el;
+  while (e && e !== domL) { x += e.offsetLeft; y += e.offsetTop; e = e.offsetParent; }
+  return { x: x + el.offsetWidth / 2, y: y + el.offsetHeight / 2, w: el.offsetWidth, h: el.offsetHeight };
+}
+function samplePoints(chars, step, limit) { // 文字像素采样（用于化烟、碎成粒子）
+  const pts = [], oc = document.createElement('canvas'), g = oc.getContext('2d', { willReadFrequently: true });
+  chars.forEach((ch, ci) => {
+    const b = boxOf(ch), cs = getComputedStyle(ch), fs = parseFloat(cs.fontSize);
+    oc.width = Math.ceil(b.w + 10); oc.height = Math.ceil(b.h + 10);
+    g.clearRect(0, 0, oc.width, oc.height);
+    g.font = `${cs.fontWeight} ${fs}px ${cs.fontFamily}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff';
+    g.fillText(ch.textContent, oc.width / 2, oc.height / 2);
+    const d = g.getImageData(0, 0, oc.width, oc.height).data;
+    for (let y = 0; y < oc.height; y += step) for (let x = 0; x < oc.width; x += step)
+      if (d[(y * oc.width + x) * 4 + 3] > 120) pts.push({ x: b.x - oc.width / 2 + x, y: b.y - oc.height / 2 + y, ci });
+  });
+  if (limit && pts.length > limit) { const k = pts.length / limit; return pts.filter((_, i) => (i % k) < 1); }
+  return pts;
+}
+// 主体文字：逐字出现 / 整体消失
+function textIn(tl, T, at, o = {}) {
+  const st = o.stagger == null ? .06 : o.stagger, d = o.dur || .5;
+  gsap.set(T.chars, { opacity: 0, y: o.y == null ? 14 : o.y, scale: o.scale || 1, filter: `blur(${o.blur == null ? 8 : o.blur}px)` });
+  tl.to(T.chars, { opacity: 1, y: 0, scale: 1, filter: 'blur(0px)', duration: d, ease: 'power3.out', stagger: st }, at);
+  return at + (T.chars.length - 1) * st + d;
+}
+function textOut(tl, T, at, d = .45) { tl.to(T.el, { opacity: 0, y: -8, filter: 'blur(6px)', duration: d, ease: 'power2.in' }, at); }
+function fadeIn(tl, el, at, d = .6, y = 10) { gsap.set(el, { opacity: 0, y }); tl.to(el, { opacity: 1, y: 0, duration: d, ease: 'power3.out' }, at); }
+
+// =====================================================================
+//  字幕系统 + 阅读时间自动计算
+//  停留时间 = max(2.5, 1.2 + 字数 × 0.18)（字数不计标点），逐字出现时间另计
+// =====================================================================
+const CH_INT = .035, CH_D = .45;
+const appearT = m => ([...plain(m)].length - 1) * CH_INT + CH_D;
+const readHold = m => Math.max(2.5, 1.2 + [...plain(m)].filter(c => !PUNCT.test(c)).length * .18);
+function mkSub(markup) {
+  const el = document.createElement('div'); el.className = 'sub sans';
+  const inn = document.createElement('span'); inn.className = 'in'; el.appendChild(inn); subL.appendChild(el);
+  const r = buildChars(inn, markup);
+  const w = inn.offsetWidth; if (w > 1760) el.style.fontSize = Math.max(48, 56 * 1760 / w).toFixed(1) + 'px';
+  gsap.set(r.chars, { opacity: 0, y: 12, filter: 'blur(8px)' }); gsap.set(el, { opacity: 1, y: 0, filter: 'blur(0px)' });
+  return { el, markup, ...r };
+}
+function subTween(tl, Sb, tIn, tOut) {
+  tl.to(Sb.chars, { opacity: 1, y: 0, filter: 'blur(0px)', duration: CH_D, ease: 'power3.out', stagger: CH_INT }, tIn);
+  const full = tIn + appearT(Sb.markup);
+  Sb.kws.forEach(k => {
+    const red = k.dataset.c === 'r'; if (k.dataset.c !== 'r' && k.dataset.c !== 'g') return;
+    tl.to(k, { scale: 1.1, textShadow: red ? 'rgba(229,72,77,0.9) 0px 0px 26px' : 'rgba(232,194,122,0.95) 0px 0px 30px', duration: .15, ease: 'power2.out' }, full)
+      .to(k, { scale: 1, textShadow: red ? 'rgba(229,72,77,0.6) 0px 0px 16px' : 'rgba(232,194,122,0.7) 0px 0px 22px', duration: .2, ease: 'power2.inOut' }, full + .15);
+    if (red) [4, -3, 2, -1, 0].forEach((x, i) => tl.to(k, { x, duration: .04, ease: 'none' }, full + i * .04));
+  });
+  tl.to(Sb.el, { opacity: 0, y: -6, filter: 'blur(6px)', duration: .35, ease: 'power2.in' }, tOut);
+}
+// 时间规划：约束 {from, to, need, at} 表示 M(to) − M(from) ≥ need，不足时在脚本时间 at 处插入延时，后面全部顺延
+function makePlan(cons) {
+  const delays = [];
+  const M = t => { let s = t; for (const d of delays) if (t >= d.p - 1e-9) s += d.d; return s; };
+  [...cons].sort((a, b) => a.at - b.at).forEach(c => { const cur = M(c.to) - M(c.from); if (cur < c.need - 1e-6) delays.push({ p: c.at, d: c.need - cur + .001 }); });
+  return { M, delays };
+}
+function subCons(list, end) {
+  return list.map((s, i) => {
+    const n = list[i + 1], need = appearT(s.m) + readHold(s.m);
+    return n ? { from: s.t, to: n.t, need: need + .4, at: n.anchor == null ? n.t : n.anchor } : { from: s.t, to: end.t, need, at: end.anchor == null ? end.t : end.anchor };
+  });
+}
+function addSubs(tl, M, list, end) {
+  list.forEach((s, i) => { const Sb = mkSub(s.m), n = list[i + 1]; subTween(tl, Sb, M(s.t), n ? M(n.t) - .4 : M(end.t)); });
+}
+const mainHold = (n, st, d, hold) => (n - 1) * st + d + hold; // 主体文字：出现时长 + 最短停留
+
+// =====================================================================
+//  后期特效快捷函数
+// =====================================================================
+function impact(tl, at, amt = .04) {
+  tl.to(S.cam, { imp: amt, duration: .12, ease: 'expo.out' }, at).to(S.cam, { imp: 0, duration: .5, ease: 'sine.inOut' }, at + .12)
+    .fromTo(S.cam, { shake: 8 }, { shake: 0, duration: .25, ease: 'expo.out', immediateRender: false }, at);
+}
+function flash(tl, at) { tl.fromTo('#flash', { opacity: 0 }, { opacity: .35, duration: .06, ease: 'power2.out', immediateRender: false }, at).to('#flash', { opacity: 0, duration: .14, ease: 'power2.in' }, at + .06); }
+function chroma(tl, at) { tl.fromTo(S, { chroma: 0 }, { chroma: 1, duration: .04, immediateRender: false }, at).to(S, { chroma: 0, duration: .16, ease: 'power2.in' }, at + .04); }
+function goldSweep(tl, at) {
+  tl.fromTo('#sweep', { x: -740, y: -2220, rotation: 45, opacity: 1 }, { x: 2420, y: 100, duration: .7, ease: 'power1.inOut', immediateRender: false }, at)
+    .set('#sweep', { opacity: 0 }, at + .7);
+}
+function breathe(tl, D, tail = true) { // 每幕默认推近 1.00 → 1.05
+  tl.fromTo(S.cam, { bs: 1 }, { bs: 1.05, duration: tail ? D - .6 : D, ease: 'none', immediateRender: false }, 0);
+  if (tail) tl.to(S.cam, { bs: 1, duration: .6, ease: 'sine.inOut' }, D - .6);
+}
+let CUES = [];
+const cue = (name, t) => CUES.push({ name, t });
+
+// =====================================================================
+//  第一幕｜钩子（0–11）
+// =====================================================================
+let hopeKw = null;
+function drawS1(ctx) { glowDot(ctx, S.s1.dx, S.s1.dy, S.s1.dotA, 6, 50); }
+function swirlFog() {
+  for (let c = 0; c < 6; c++) {
+    const an = c / 6 * Math.PI * 2 + rand(-.3, .3), cx = S.F.sx + Math.cos(an) * 330, cy = S.F.sy + Math.sin(an) * 300;
+    for (let i = 0; i < 50; i++) spawn({ type: 0, x: cx + rand(-70, 70), y: cy + rand(-60, 60), size: rand(40, 90), a: rand(.3, .5), max: rand(6, 9), drag: .9, layer: Math.random() < .75 ? 0 : 1 });
+  }
+}
+function scene1() {
+  const tl = gsap.timeline(), DUR = 11;
+  const subs = [{ t: 6.8, m: '两千多年前，古希腊人讲过一个故事。' }], end = { t: 10.8, anchor: 10.4 };
+  const { M } = makePlan(subCons(subs, end));
+  const h1 = { el: $('hook1') }, h2 = { el: $('hook2') };
+  Object.assign(h1, buildChars(h1.el, '让你最痛苦的，')); Object.assign(h2, buildChars(h2.el, '可能不是<h>绝望</h>，是<g>希望</g>。'));
+  hopeKw = h2.kws[1]; hopeKw.style.textShadow = '0 0 28px rgba(232,194,122,.7)';
+  const sub = mkText('一个被误解了两千年的神话', 960, 720, 38, 'sans', { color: G1 });
+  gsap.set(sub.el, { opacity: 0, y: 10 });
+  Object.assign(S.jar, { a: 0, x: 960, y: 520, s: 1, lid: 0, cs: 0, glow: 0, reveal: 0, fill: 0, coreRed: 0, pulse: 0, breath: 0, showCore: 0 });
+  Object.assign(S.F, { swirl: 0, sx: 960, sy: 520, sr: 330, blast: 0, noise: 22, wind: -8 });
+  const kb = boxOf(hopeKw); S.s1.dx = kb.x; S.s1.dy = kb.y; S.s1.dotA = 0; S.s1.hopeFlick = 1;
+
+  // 0–3.5 钩子句对焦
+  tl.to([h1.el, h2.el], { opacity: 1, filter: 'blur(0px)', duration: .3, ease: 'power3.out' }, 0);
+  tl.to(sub.el, { opacity: 1, y: 0, duration: .6, ease: 'power3.out' }, 2.0);
+  // 镜头
+  breathe(tl, M(DUR));
+  tl.fromTo(S.cam, { s: 1 }, { s: 1.08, duration: 3.5, ease: 'sine.inOut', immediateRender: false }, 0);
+  tl.to(S.cam, { s: 1, duration: 1, ease: 'sine.inOut' }, 5.0);
+  tl.to(S.cam, { s: 1.06, duration: M(10.4) - 6, ease: 'sine.inOut' }, 6.0);
+
+  // 3.5 【冲击】文字从边缘化为黑雾（“希望”除外）
+  const dissolve = [...h1.chars, ...h2.chars.filter(c => c.parentNode !== hopeKw), ...sub.chars];
+  const delays = dissolve.map(c => { const b = boxOf(c); return .75 * (1 - Math.min(1, Math.abs(b.x - 960) / 700)); });
+  const pts = samplePoints(dissolve, 5, 1500);
+  dissolve.forEach((c, i) => tl.to(c, { opacity: 0, y: -14, filter: 'blur(6px)', duration: .45, ease: 'power2.in' }, 3.5 + delays[i]));
+  tl.call(() => pts.forEach(p => spawn({ type: 4, x: p.x, y: p.y, delay: delays[p.ci] + rand(0, .3), heat: 1, size: rand(5, 11), vx: rand(-60, 60), vy: rand(-170, -70), max: rand(1.5, 2.4), a: rand(.5, .85), drag: .6, layer: 1 })), null, 3.5);
+  impact(tl, 3.5); cue('第一幕 · 文字化为黑雾', 3.5);
+  // “希望”缩小凝聚成金色光点，移到 (960,620)
+  tl.to(hopeKw, { x: 960 - kb.x, y: 620 - kb.y, scale: .12, opacity: 0, duration: 1.2, ease: 'power3.inOut' }, 4.4);
+  tl.to(S.s1, { dx: 960, dy: 620, duration: 1.2, ease: 'power3.inOut' }, 4.4);
+  tl.to(S.s1, { dotA: 1, duration: .8, ease: 'power2.out' }, 4.6);
+  tl.set(S.s1, { hopeFlick: 0 }, 5.6);
+
+  // 6.0 陶罐浮现：金色轮廓 → 陶土色填充，盖缝透出一线金光
+  tl.set(S.jar, { a: 1 }, 6.0);
+  tl.to(S.jar, { reveal: 1, duration: .8, ease: 'power2.inOut' }, 6.0);
+  tl.to(S.jar, { fill: 1, duration: .8, ease: 'power2.out' }, 6.8);
+  tl.to(S.jar, { glow: .3, duration: .8, ease: 'sine.inOut' }, 6.9);
+  tl.to(S.s1, { dotA: 0, duration: .7 }, 7.0);
+  tl.call(swirlFog, null, 6.0);
+  tl.to(S.F, { swirl: 1, duration: 1.5, ease: 'sine.inOut' }, 6.0);
+  addSubs(tl, M, subs, end);
+
+  // 转场：镜头拉远到 0.85，陶罐缩小移向右下，上方出现火苗
+  const tt = M(10.4);
+  tl.to(S.cam, { s: .85, duration: .6, ease: 'power3.inOut' }, tt);
+  tl.to(S.jar, { x: 1480, y: 880, s: .4, duration: 1.2, ease: 'power3.inOut' }, tt);
+  tl.to(S.jar, { a: 0, duration: .6, ease: 'power2.in' }, tt + .6);
+  tl.to(S.F, { swirl: 0, duration: .6 }, tt);
+  tl.call(() => { for (const p of pool) if (p.on && p.type === 0) p.max = Math.min(p.max, p.life + 1.4); }, null, tt);
+  tl.to(S.s2, { handA: 1, fireA: 1, duration: .8, ease: 'power2.out' }, tt + .1);
+  return { tl, dur: M(DUR) };
+}
+
+// =====================================================================
+//  第二幕｜重讲神话（11–39）
+// =====================================================================
+function drawS2(ctx) {
+  const s = S.s2;
+  if (s.disc > 0) { // 陶器画面般的暗陶土色底盘，让黑色剪影浮现
+    ctx.save(); ctx.globalAlpha = s.disc;
+    const g = ctx.createRadialGradient(830, 560, 40, 830, 560, 380);
+    g.addColorStop(0, 'rgba(184,100,58,.42)'); g.addColorStop(.6, 'rgba(122,58,30,.22)'); g.addColorStop(1, 'rgba(122,58,30,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(830, 560, 380, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = s.disc * .35; ctx.strokeStyle = CLAY_L; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(830, 560, 330, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  drawPandora(ctx, 800, 860, { a: s.pandA, reveal: s.reveal, fill: s.fill });
+  drawPeople(ctx, s.peopleA, s.lit);
+  drawHand(ctx, s.handA);
+  if (s.fireA > 0) {
+    const p = firePos(s.fireP);
+    if (s.fireP > 0 && s.fireP < 1) { // 下落轨迹的金色拖尾
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let k = 1; k < 14; k++) { const q = firePos(Math.max(0, s.fireP - k * .012)); ctx.globalAlpha = s.fireA * (1 - k / 14) * .5; const r = 18 - k; ctx.drawImage(SPR.gold, q.x - r, q.y - r - 20, r * 2, r * 2); }
+      ctx.restore();
+    }
+    drawFlame(ctx, p.x, p.y, 1 + s.lit * .25, s.fireA);
+  }
+  drawBolt(ctx, s.bolt, s.boltA);
+}
+function fogBurst() {
+  emitter(3, 2500 / 3, () => {
+    const an = -Math.PI / 2 + rand(-2.1, 2.1), sp = rand(160, 460);
+    spawn({ type: 0, x: S.jar.x + rand(-45, 45), y: S.jar.y - 262 * S.jar.s - rand(0, 20), vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, size: rand(45, 120), a: rand(.45, .75), max: rand(9, 13), drag: 1.1, lit: Math.random() < .4, layer: Math.random() < .75 ? 1 : 0 });
+  });
+}
+function fogBlast() { emitters.length = 0; for (const p of pool) if (p.on && (p.type === 0 || p.type === 4)) p.max = Math.min(p.max, p.life + rand(.9, 1.3)); }
+function scene2() {
+  const tl = gsap.timeline(), DUR = 28;
+  const subs = [
+    { t: .5, m: '普罗米修斯偷了天火，送给人类。' },
+    { t: 3.0, anchor: 2.5, m: '宙斯大怒，决定<r>惩罚</r>人类。' },
+    { t: 6.5, anchor: 6.0, m: '他造出第一个女人潘多拉，连同一个罐子，送到人间。' },
+    { t: 13.2, anchor: 12.0, m: '罐子一打开，所有的<r>灾难</r>都飞了出去。' },
+    { t: 21.5, m: '她慌忙盖上，罐子里只剩下最后一样东西——' },
+    { t: 24.5, anchor: 23.0, m: '<g>希望</g>。' }];
+  const end = { t: 27.4 };
+  const { M } = makePlan(subCons(subs, end));
+  breathe(tl, M(DUR));
+
+  // 镜头
+  tl.to(S.cam, { s: 1, duration: 1.4, ease: 'sine.inOut' }, 0);
+  tl.to(S.cam, { fy: 480, duration: .5, ease: 'sine.inOut' }, 0);
+  tl.to(S.cam, { fy: 540, duration: M(3.0) - .5, ease: 'sine.inOut' }, .5);
+  tl.to(S.cam, { s: 1.1, fx: 870, duration: M(12) - M(6), ease: 'sine.inOut' }, M(6));
+  tl.to(S.cam, { s: 1, fx: 960, duration: .8, ease: 'sine.inOut' }, M(12));
+  tl.to(S.cam, { s: .92, duration: .5, ease: 'expo.out' }, M(12.8));
+  tl.to(S.cam, { s: 1, duration: M(20) - M(13.3), ease: 'sine.inOut' }, M(13.3));
+  tl.to(S.cam, { s: 1.25, fy: 700, duration: M(27.4) - M(20.4), ease: 'sine.inOut' }, M(20.4));
+  tl.to(S.cam, { s: 1, fy: 540, duration: .6, ease: 'power3.inOut' }, M(27.4));
+
+  // 0–6 盗火
+  const src = mkText('古希腊 · 赫西俄德《工作与时日》', 960, 110, 36, 'sans', { color: G1 });
+  fadeIn(tl, src.el, .2); textOut(tl, src, M(5.6));
+  tl.to(S.s2, { peopleA: 1, duration: .8 }, 0);
+  tl.to(S.s2, { fireP: 1, duration: 1.8, ease: 'sine.inOut' }, .3);
+  tl.to(S.s2, { lit: 1, duration: .5, ease: 'power2.out' }, 2.0);
+  tl.to(S.s2, { handA: 0, duration: .8 }, 2.3);
+  const tb = M(2.6); // 闪电
+  tl.fromTo(S.s2, { bolt: 0, boltA: 1 }, { bolt: 1, duration: .15, ease: 'power2.out', immediateRender: false }, tb);
+  tl.to(S.s2, { boltA: 0, duration: .5, ease: 'power2.in' }, tb + .15);
+  flash(tl, tb); impact(tl, tb); cue('第二幕 · 闪电', tb);
+  tl.to(S.s2, { peopleA: 0, fireA: 0, lit: 0, duration: .7 }, M(5.5));
+
+  // 6–12 潘多拉与罐子
+  tl.to(S.s2, { disc: 1, duration: .8 }, M(6));
+  tl.set(S.s2, { pandA: 1 }, M(6));
+  tl.to(S.s2, { reveal: 1, duration: 1.2, ease: 'power1.inOut' }, M(6));
+  tl.to(S.s2, { fill: 1, duration: .6, ease: 'power2.out' }, M(7.2));
+  tl.set(S.jar, { x: 945, y: 578, s: .45, lid: 0, cs: 0, glow: 0, reveal: 1, fill: 1, coreRed: 0, pulse: 0 }, M(6));
+  tl.to(S.jar, { a: 1, duration: .6 }, M(7.2));
+  const n1 = mkText('潘多拉', 1260, 540, 44, 'serif', { color: CLAY_L }), n2 = mkText('第一个女人', 1260, 604, 32, 'sans', { color: G1 });
+  fadeIn(tl, n1.el, M(7.4)); fadeIn(tl, n2.el, M(7.6));
+  textOut(tl, n1, M(12)); textOut(tl, n2, M(12));
+
+  // 12–20 罐子打开（视觉奇观）
+  tl.to(S.s2, { pandA: 0, disc: 0, duration: .6 }, M(12));
+  tl.to(S.jar, { x: 960, y: 560, s: 1, duration: .8, ease: 'power3.inOut' }, M(12));
+  const to = M(12.8);
+  tl.set(S.F, { noise: 40, wind: -6, swirl: 0, bx: 960, by: 420 }, to);
+  tl.fromTo(S.F, { push: 0 }, { push: 55, duration: 1, immediateRender: false }, to);
+  tl.to(S.F, { push: 0, duration: 1 }, M(19));
+  tl.to(S.jar, { lid: 1, duration: .6, ease: 'expo.out' }, to);
+  impact(tl, to); chroma(tl, to); tl.to(S, { redV: 1, duration: .8 }, to);
+  tl.call(fogBurst, null, to); cue('第二幕 · 盖子打开', to);
+  const labels = [['疾病', 380, 240], ['灾难', 1540, 250], ['痛苦', 250, 520], ['衰老', 1670, 500], ['战争', 640, 160], ['饥荒', 1290, 150], ['死亡', 1420, 720]];
+  labels.forEach(([w, x, y], i) => {
+    const L = mkText(w, x, y, 40, 'sans', { color: RED, textShadow: '0 0 16px rgba(229,72,77,.65), 0 0 36px rgba(120,10,16,.7)' });
+    gsap.set(L.el, { opacity: 0, scale: .9, filter: 'blur(10px)' });
+    const t0 = M(13.0 + i * .8);
+    tl.to(L.el, { opacity: 1, scale: 1, filter: 'blur(0px)', duration: .4, ease: 'power3.out' }, t0);
+    tl.to(L.el, { opacity: 0, y: -46, x: rand(-24, 24), filter: 'blur(8px)', duration: .6, ease: 'power2.in' }, t0 + 1.6);
+  });
+
+  // 20–28 盖子合上，罐底的光
+  const tc = M(20);
+  tl.to(S.jar, { lid: 0, duration: .25, ease: 'power2.in' }, tc);
+  impact(tl, tc + .25, .06); flash(tl, tc + .25);
+  tl.set(S.F, { bx: 960, by: 560 }, tc);
+  tl.call(fogBlast, null, tc + .25);
+  tl.fromTo(S.F, { blast: 1 }, { blast: 0, duration: 1.2, ease: 'power2.out', immediateRender: false }, tc + .25);
+  tl.to(S, { redV: 0, duration: 1.0 }, tc + .25);
+  cue('第二幕 · 盖子合上', tc + .25);
+  tl.to(S.jar, { cs: 1, duration: .8, ease: 'power2.inOut' }, M(21));
+  tl.set(S.jar, { pulse: 1 }, M(21));
+  tl.to(S.jar, { glow: 1, duration: 2, ease: 'sine.in' }, M(21));
+  const hope = mkText('<g>希望</g>', 1110, 798, 52, 'serif', { textShadow: '0 0 20px rgba(232,194,122,.7)' });
+  gsap.set(hope.el, { opacity: 0, filter: 'blur(10px)' });
+  tl.to(hope.el, { opacity: 1, filter: 'blur(0px)', duration: .7, ease: 'power3.out' }, M(23.2));
+  addSubs(tl, M, subs, end);
+
+  // 转场：镜头从罐底拉远，陶罐恢复完整上色，退到下方
+  const tt = M(27.4);
+  textOut(tl, hope, tt, .4);
+  tl.to(S.jar, { cs: 0, pulse: 0, glow: .15, duration: .6, ease: 'power2.inOut' }, tt);
+  tl.to(S.jar, { x: 960, y: 820, s: .5, a: .4, duration: 1.0, ease: 'power3.inOut' }, tt);
+  return { tl, dur: M(DUR) };
+}
+
+// =====================================================================
+//  第三幕｜小反转：根本没有盒子（39–52）
+// =====================================================================
+function drawS3(ctx) {
+  const s = S.s3;
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  if (s.boxA > 0) {
+    ctx.globalAlpha = s.boxA; ctx.strokeStyle = CLAY_L; ctx.lineWidth = 2.2; ctx.shadowColor = CLAY_L; ctx.shadowBlur = 8;
+    strokeProgress(ctx, boxSegs(1220, 560), s.boxDraw);
+  }
+  ctx.shadowBlur = 0; ctx.globalCompositeOperation = 'lighter';
+  if (s.boxFlash > 0) { ctx.globalAlpha = s.boxFlash * .55; ctx.drawImage(SPR.red, 1220 - 230, 560 - 200, 460, 400); }
+  if (s.jarFlash > 0) { ctx.globalAlpha = s.jarFlash * .5; ctx.drawImage(SPR.glow, 700 - 260, 560 - 300, 520, 600); }
+  ctx.globalCompositeOperation = 'source-over';
+  if (s.xDraw > 0) {
+    ctx.globalAlpha = s.marksA * s.boxA; ctx.strokeStyle = RED; ctx.lineWidth = 7; ctx.shadowColor = RED; ctx.shadowBlur = 16;
+    strokeProgress(ctx, [[1120, 470, 1320, 670], [1320, 470, 1120, 670]], s.xDraw);
+  }
+  if (s.vDraw > 0) {
+    ctx.globalAlpha = s.marksA; ctx.strokeStyle = GOLD; ctx.lineWidth = 7; ctx.shadowColor = GOLD; ctx.shadowBlur = 16;
+    strokeProgress(ctx, [[630, 572, 688, 632], [688, 632, 800, 480]], s.vDraw);
+  }
+  ctx.restore();
+}
+function shatterBox() {
+  for (const sg of boxSegs(1220, 560)) {
+    const L = Math.hypot(sg[2] - sg[0], sg[3] - sg[1]), n = Math.max(3, Math.round(L / 9));
+    for (let i = 0; i < n; i++) {
+      const k = Math.random();
+      spawn({ type: 2, x: lerp(sg[0], sg[2], k), y: lerp(sg[1], sg[3], k), vx: rand(-160, 160), vy: rand(-200, 60), g: 320, drag: .9, size: rand(4, 11), col: Math.random() < .5 ? G2 : CLAY_L, max: rand(1.1, 1.9), a: rand(.6, 1), spin: rand(-8, 8), layer: 1 });
+    }
+  }
+}
+function scene3() {
+  const tl = gsap.timeline(), DUR = 13;
+  const subs = [{ t: 6.5, m: '原文里，根本没有盒子。' }, { t: 9.5, m: '16世纪的一次误译，把“<g>罐子</g>”写成了“<r>盒子</r>”。' }], end = { t: 12.4 };
+  const { M } = makePlan([...subCons(subs, end), { from: 0, to: 6, need: 3.5, at: 6 }]);
+  breathe(tl, M(DUR));
+  tl.to(S.cam, { s: 1.06, fy: 470, duration: 6, ease: 'sine.inOut' }, 0);
+  tl.to(S.cam, { s: .97, fy: 540, duration: M(12.4) - 6, ease: 'sine.inOut' }, 6);
+  tl.to(S.cam, { s: 1, duration: .6, ease: 'sine.inOut' }, M(12.4));
+
+  // 0–6 “潘多拉的盒子” → 划掉 → “罐子”
+  const grp = document.createElement('div'); grp.style.cssText = 'position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:960px 420px'; domL.appendChild(grp);
+  const T = mkText('潘多拉的<k>盒子</k>', 960, 420, 100, 'serif', { color: WHITE }, grp);
+  const box = T.kws[0], kb = boxOf(box);
+  const strike = document.createElement('div');
+  strike.style.cssText = `position:absolute;left:${kb.x - kb.w / 2 - 12}px;top:${420 - 2.5}px;width:${kb.w + 24}px;height:5px;border-radius:3px;background:${RED};box-shadow:0 0 12px rgba(229,72,77,.75);transform-origin:0 50%`;
+  grp.appendChild(strike); gsap.set(strike, { scaleX: 0 });
+  const J = mkText('<g>罐子</g>', kb.x, 290, 100, 'serif', { textShadow: '0 0 22px rgba(232,194,122,.65)' }, grp);
+  gsap.set(J.el, { opacity: 0, filter: 'blur(12px)' });
+  const caret = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  caret.setAttribute('width', 44); caret.setAttribute('height', 26); caret.setAttribute('viewBox', '0 0 44 26');
+  caret.style.cssText = `position:absolute;left:${kb.x - 22}px;top:343px;overflow:visible;filter:drop-shadow(0 0 6px rgba(232,194,122,.8))`;
+  caret.innerHTML = `<polyline points="3,23 22,3 41,23" fill="none" stroke="${GOLD}" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+  grp.appendChild(caret); gsap.set(caret, { opacity: 0, y: 8 });
+
+  tl.to(S.jar, { x: 960, y: 820, s: .5, a: .4, duration: .5, ease: 'power2.out' }, 0);
+  textIn(tl, T, 0, { stagger: .08, dur: .5, blur: 10 });
+  tl.to(strike, { scaleX: 1, duration: .4, ease: 'power2.inOut' }, 1.6);
+  tl.to(box, { color: G2, opacity: .4, duration: .3 }, 1.9);
+  chroma(tl, 1.9); cue('第三幕 · “盒子”被划掉', 1.6);
+  tl.to(J.el, { opacity: 1, filter: 'blur(0px)', duration: .6, ease: 'power3.out' }, 2.2);
+  tl.to(caret, { opacity: 1, y: 0, duration: .5, ease: 'power3.out' }, 2.5);
+
+  // 6–13 大字上移缩小；罐子 vs 盒子
+  tl.to([strike, caret, box], { opacity: 0, duration: .4 }, 6);
+  tl.to(J.el, { y: 130, duration: .6, ease: 'power3.inOut' }, 6.05);
+  tl.to(grp, { y: -220, scale: .64, duration: .8, ease: 'power3.inOut' }, 6);
+  tl.to(S.jar, { x: 700, y: 560, s: .7, a: 1, glow: 0, duration: .8, ease: 'power3.inOut' }, 6);
+  tl.set(S.s3, { boxA: 1, marksA: 1 }, 6);
+  tl.to(S.s3, { boxDraw: 1, duration: .6, ease: 'power2.inOut' }, 6.0);
+  tl.fromTo(S.s3, { boxFlash: 0 }, { boxFlash: 1, duration: .12, immediateRender: false }, 6.4).to(S.s3, { boxFlash: 0, duration: .5 }, 6.52);
+  tl.to(S.s3, { xDraw: 1, duration: .4, ease: 'power2.inOut' }, 6.45);
+  tl.fromTo(S.s3, { jarFlash: 0 }, { jarFlash: 1, duration: .12, immediateRender: false }, 6.6).to(S.s3, { jarFlash: 0, duration: .5 }, 6.72);
+  tl.to(S.s3, { vDraw: 1, duration: .4, ease: 'power2.inOut' }, 6.65);
+  const src = mkText('16世纪 · 一次翻译错误', 960, 110, 36, 'sans', { color: G1 });
+  fadeIn(tl, src.el, 6.0);
+  addSubs(tl, M, subs, end);
+
+  // 转场：盒子碎成灰色粒子，陶罐回到中央切换剖面
+  const tt = M(12.4);
+  tl.call(shatterBox, null, tt);
+  tl.to(S.s3, { boxA: 0, duration: .12 }, tt);
+  tl.to(S.s3, { marksA: 0, duration: .4 }, tt);
+  tl.to(grp, { opacity: 0, y: -250, duration: .5, ease: 'power2.in' }, tt);
+  textOut(tl, src, tt);
+  tl.to(S.jar, { x: 960, y: 600, s: .9, duration: .9, ease: 'power3.inOut' }, tt);
+  tl.set(S.jar, { pulse: 1 }, tt);
+  tl.to(S.jar, { cs: 1, glow: 1, duration: .8, ease: 'power2.inOut' }, tt + .2);
+  return { tl, dur: M(DUR) };
+}
+
+// =====================================================================
+//  第四幕｜大反转：希望为什么在罐子里（52–75）
+// =====================================================================
+function drawS4(ctx) {
+  const s = S.s4;
+  if (s.linkA > 0) { // 罐外黑雾 ↔ 罐底金光 的流动虚线
+    const jx = S.jar.x, jy = S.jar.y + 236 * S.jar.s, p0 = [1290, 360], c = [1300, 820];
+    ctx.save(); ctx.globalAlpha = s.linkA; ctx.strokeStyle = G2; ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.setLineDash([8, 10]); ctx.lineDashOffset = -S.t * 40; ctx.beginPath();
+    const n = Math.max(2, Math.round(60 * s.linkDraw));
+    for (let i = 0; i <= n; i++) { const t = i / 60, u = 1 - t; const x = u * u * p0[0] + 2 * u * t * c[0] + t * t * jx, y = u * u * p0[1] + 2 * u * t * c[1] + t * t * jy; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(p0[0], p0[1], 7, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  if (s.lineA > 0) { // 痛苦时间线
+    const y = s.dotY, L = s.x1 - s.x0;
+    ctx.save(); ctx.globalAlpha = s.lineA; ctx.lineCap = 'round';
+    const col = mixHex(WHITE, '#8B2A2E', s.red);
+    if (L > 1) {
+      ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.shadowColor = col; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.moveTo(s.x0, y); ctx.lineTo(s.x1, y); ctx.stroke(); ctx.shadowBlur = 0;
+      const n = Math.max(2, Math.round(6 * Math.pow(L / 200, 1.6)));
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i <= n; i++) { const x = s.x0 + L * i / n, big = i % 5 === 0; ctx.globalAlpha = s.lineA * (big ? .9 : .55); ctx.beginPath(); ctx.moveTo(x, y - (big ? 14 : 7)); ctx.lineTo(x, y + (big ? 14 : 7)); ctx.stroke(); }
+    }
+    ctx.restore();
+    glowDot(ctx, s.x1, y, s.lineA, 6 + s.gold * 2, 46);
+  }
+}
+function scene4() {
+  const tl = gsap.timeline(), DUR = 23;
+  const subs = [{ t: 7.5, m: '在古希腊人眼里，希望也许不是<g>礼物</g>。' }, { t: 11.0, m: '它也是一种，<r>惩罚</r>。' }], end = { t: 14.0 };
+  const Qm = '为什么，<g>希望</g>会和<r>灾难</r>装在同一个罐子里？', Km = '希望是最坏的恶，因为它延长了人的痛苦。';
+  const { M } = makePlan([...subCons(subs, end),
+    { from: .3, to: 6.6, need: mainHold(plain(Qm).length, .06, .5, 3.5), at: 6.6 },
+    { from: 15, to: 22.4, need: mainHold(plain(Km).length, .07, .5, 4.5), at: 22.4 }]);
+  breathe(tl, M(DUR));
+  tl.to(S.cam, { s: 1.03, duration: 7, ease: 'sine.inOut' }, 0);
+  tl.to(S.cam, { x: -40, duration: M(14) - 7, ease: 'sine.inOut' }, 7);
+  tl.to(S.cam, { x: 0, s: 1.08, fy: 420, duration: M(22.4) - M(14), ease: 'sine.inOut' }, M(14));
+  tl.to(S.cam, { s: 1, fy: 540, duration: .6, ease: 'power3.inOut' }, M(22.4));
+
+  // 0–7 问题句；罐外稀薄黑雾
+  tl.set(S.F, { noise: 18, wind: -5, swirl: 0, blast: 0, push: 0 }, 0);
+  tl.set(S.amb, { x: 960, y: 600, rx: 430, ry: 400 }, 0);
+  tl.fromTo(S.amb, { rate: 0 }, { rate: 55, duration: 1, immediateRender: false }, 0);
+  const Q = mkText(Qm, 960, 210, 68, 'serif', { color: WHITE });
+  textIn(tl, Q, .3); textOut(tl, Q, M(6.6), .4);
+  tl.to(S.s4, { linkA: 1, linkDraw: 1, duration: .9, ease: 'power2.inOut' }, M(3.5));
+  tl.to(S.s4, { linkA: 0, duration: .5 }, M(6.8));
+
+  // 7–14 金光内核出现一丝暗红
+  tl.to(S.jar, { coreRed: 1, duration: 2.2, ease: 'sine.inOut' }, M(7.2));
+  addSubs(tl, M, subs, end);
+
+  // 14–23 尼采：痛苦时间线
+  const t14 = M(14);
+  tl.to(S.jar, { x: 960, y: 860, s: .5, a: .4, duration: 1, ease: 'power3.inOut' }, t14);
+  tl.to(S.amb, { rate: 14, y: 860, rx: 220, ry: 190, duration: 1 }, t14);
+  tl.set(S.s4, { x0: 360, x1: 360, red: 0, dotY: 520, gold: 0 }, t14);
+  tl.to(S.s4, { lineA: 1, duration: .4 }, t14);
+  let x = 360, tp = M(14.2);
+  [.13, .19, .15, .2, .17, .16].forEach(k => { x += k * 1200; tl.to(S.s4, { x1: x, duration: .85, ease: 'power4.out' }, tp); tp += 1.0; });
+  tl.to(S.s4, { red: 1, duration: 6, ease: 'sine.in' }, M(14.2));
+  const K = mkText(Km, 960, 300, 60, 'serif', { color: GOLD, textShadow: '0 0 18px rgba(232,194,122,.55)' });
+  const A = mkText('—— 尼采《人性的，太人性的》', 960, 394, 34, 'sans', { color: G1 });
+  textIn(tl, K, M(15), { stagger: .07 }); fadeIn(tl, A.el, M(15) + 1.4);
+  cue('第四幕 · 引文出现', M(15));
+
+  // 转场：时间线收缩成一个点，成为下一幕金线的起点
+  const tt = M(22.4);
+  textOut(tl, K, tt, .5); textOut(tl, A, tt, .5);
+  tl.to(S.s4, { x0: 960, x1: 960, duration: .5, ease: 'power3.in' }, tt);
+  tl.to(S.s4, { dotY: 600, gold: 1, duration: .3, ease: 'power2.inOut' }, tt + .35);
+  tl.to(S.jar, { a: 0, duration: .6 }, tt);
+  tl.to(S.amb, { rate: 0, duration: .3 }, tt);
+  tl.set(S.s4, { lineA: 0 }, M(DUR));
+  tl.set(S.s5, { lineA: 1, lineW: 0 }, M(DUR));
+  return { tl, dur: M(DUR) };
+}
+
+
+// =====================================================================
+//  第五幕｜科学证据：多巴胺实验（75–101）
+// =====================================================================
+const PROBS = ['0%', '25%', '50%', '75%', '100%'];
+const PATTERN = [[0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0, 1], [1, 0, 0, 1, 0, 1, 1, 0], [1, 1, 0, 1, 1, 0, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1]];
+const BAR_H = [60, 220, 440, 220, 80];
+function drawS5(ctx) {
+  const s = S.s5;
+  // 标题下的金线（由上一幕时间线收缩成的点展开）
+  if (s.lineA > 0) {
+    const w = s.lineW, y = s.lineY;
+    ctx.save(); ctx.globalAlpha = s.lineA; ctx.strokeStyle = GOLD; ctx.lineWidth = 2; ctx.shadowColor = GOLD; ctx.shadowBlur = 8; ctx.lineCap = 'round';
+    if (w > 1) { ctx.beginPath(); ctx.moveTo(960 - w / 2, y); ctx.lineTo(960 + w / 2, y); ctx.stroke(); }
+    ctx.restore();
+    glowDot(ctx, 960, y, s.lineA * (1 - clamp(w / 300) * .6), 6, 40);
+    if (w > 40) { const p = (S.t * .9) % 1; glowDot(ctx, 960 - w / 2 + p * w, y, s.lineA, 3.5, 22); }
+  }
+  if (s.shapesA <= 0) return;
+  ctx.save();
+  const k = s.chart, cy0 = 560;
+  ctx.globalAlpha = s.chartA;
+  ctx.translate(960, cy0 + s.chartY); ctx.scale(s.chartS, s.chartS); ctx.translate(-960, -cy0);
+  const base = s.chartA;
+  // 柱状图
+  if (k > 0) {
+    for (let i = 0; i < 5; i++) {
+      const h = s.h[i]; if (h <= .5) continue;
+      const x = 480 + i * 240, top = 785 - h, dimK = i === 2 ? 1 : lerp(1, .45, s.dim);
+      const col = i === 2 ? mixHex(WHITE, GOLD, s.goldBar) : (i === 0 || i === 4 ? G2 : WHITE);
+      ctx.save(); ctx.globalAlpha = base * dimK * .9;
+      ctx.beginPath(); ctx.roundRect(x - 45, top, 90, h, [6, 6, 0, 0]);
+      const gr = ctx.createLinearGradient(0, top, 0, 785); gr.addColorStop(0, col); gr.addColorStop(1, rgba(i === 2 && s.goldBar > .5 ? GOLD : '#F2F2F2', .25));
+      ctx.fillStyle = gr; ctx.fill();
+      if (i === 2 && s.goldBar > 0) { ctx.shadowColor = GOLD; ctx.shadowBlur = 16; ctx.strokeStyle = GOLD; ctx.lineWidth = 2; ctx.stroke(); ctx.shadowBlur = 0; }
+      ctx.clip(); ctx.globalAlpha = base * dimK * .22; ctx.fillStyle = '#ffffff'; // 向上流动的光纹
+      for (let yy = 0; yy < h + 40; yy += 34) { const yb = 785 - ((yy + S.t * 70) % (h + 40)); ctx.fillRect(x - 45, yb, 90, 8); }
+      ctx.restore();
+    }
+    if (s.goldBar > 0) glowDot(ctx, 960, 785 - s.h[2], base * s.goldBar, 10, 120);
+    ctx.globalAlpha = base * s.titleA; ctx.fillStyle = G1; ctx.font = '500 36px "Noto Sans SC"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('等待时，多巴胺的兴奋程度', 960, 200);
+    if (s.best > 0) { ctx.globalAlpha = base * s.best; ctx.fillStyle = GOLD; ctx.font = '500 40px "Noto Sans SC"'; ctx.shadowColor = GOLD; ctx.shadowBlur = 16; ctx.fillText('最兴奋', 960, 785 - s.h[2] - 48); ctx.shadowBlur = 0; }
+  }
+  // 图案 + 概率
+  const beamIdx = Math.min(4, Math.floor(s.beam)) + smooth((s.beam % 1 - .6) / .4);
+  for (let i = 0; i < 5; i++) {
+    const x = 480 + i * 240, y = lerp(470, 830, k), d = lerp(120, 70, k);
+    const dimK = (k > 0 && i !== 2) ? lerp(1, .45, s.dim) : 1;
+    const lit = s.beamA * clamp(1 - Math.abs(beamIdx - i) * 1.4);
+    // 试次：亮起后按概率掉落金色水滴
+    let flashG = 0;
+    if (s.exp > 0 && k < 1) {
+      const clk = s.trialClk - (i + .25);
+      if (clk > 0) {
+        const n = Math.floor(clk / .45);
+        for (let j = Math.max(0, n - 1); j <= n; j++) {
+          const lt = clk - j * .45; if (lt < 0) continue;
+          if (PATTERN[i][j % 8]) {
+            const fy = y + 62 + easeOut3(lt / .5) * 0 + lt * lt * 260, al = clamp(1 - lt / .75);
+            flashG = Math.max(flashG, clamp(1 - lt / .3));
+            ctx.save(); ctx.globalAlpha = base * s.shapesA * s.exp * al; ctx.fillStyle = GOLD; ctx.shadowColor = GOLD; ctx.shadowBlur = 12;
+            ctx.beginPath(); ctx.moveTo(x, fy - 13); ctx.quadraticCurveTo(x + 9, fy + 2, x, fy + 7); ctx.quadraticCurveTo(x - 9, fy + 2, x, fy - 13); ctx.fill(); ctx.restore();
+          } else {
+            const al = clamp(1 - lt / .35) * .55;
+            ctx.save(); ctx.globalAlpha = base * s.shapesA * s.exp * al; ctx.strokeStyle = G2; ctx.lineWidth = 1.5;
+            ctx.beginPath(); ctx.arc(x, y + 80, 5 + lt * 20, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+          }
+        }
+      }
+    }
+    ctx.save(); ctx.globalAlpha = s.shapesA * dimK * base; ctx.lineJoin = 'round';
+    const col = (k > 0 && i === 2) ? mixHex(WHITE, GOLD, s.goldBar) : WHITE;
+    ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.shadowColor = flashG > 0 ? GOLD : WHITE; ctx.shadowBlur = 8 + 10 * Math.max(lit, flashG);
+    shapePath(ctx, i, x, y, d);
+    if (lit + flashG > 0) { ctx.fillStyle = flashG > lit ? rgba(GOLD, .22 * flashG) : `rgba(242,242,242,${.14 * lit})`; ctx.fill(); }
+    ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.fillStyle = WHITE; ctx.font = `500 ${lerp(44, 40, k)}px "JetBrains Mono"`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(PROBS[i], x, lerp(660, 888, k));
+    ctx.restore();
+  }
+  ctx.restore();
+  // 猴子与视线光束
+  drawMonkey(ctx, 200, 480, Math.min(1, s.monkey * 3) * s.exp, s.monkey);
+  if (s.beamA > 0) {
+    const tx = 480 + beamIdx * 240, ty = 470;
+    ctx.save(); ctx.globalAlpha = s.beamA * .8;
+    const g = ctx.createLinearGradient(MONKEY_EYE.x, MONKEY_EYE.y, tx, ty); g.addColorStop(0, 'rgba(242,242,242,.9)'); g.addColorStop(1, 'rgba(232,194,122,.25)');
+    ctx.strokeStyle = g; ctx.lineWidth = 2; ctx.shadowColor = WHITE; ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.moveTo(MONKEY_EYE.x, MONKEY_EYE.y); ctx.lineTo(tx - 60, ty); ctx.stroke(); ctx.restore();
+  }
+}
+function barSparks() {
+  for (let i = 0; i < 140; i++) {
+    const an = -Math.PI / 2 + rand(-1.3, 1.3), sp = rand(200, 720);
+    spawn({ type: 1, x: 960 + rand(-40, 40), y: 345, vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, g: 520, drag: 1.4, size: rand(1.5, 3), max: rand(.8, 1.6), a: rand(.6, 1), layer: 1 });
+  }
+}
+let goldPts = [];
+function goldShatter() { // 金色大字碎成粒子，飞向手机屏幕
+  goldPts.forEach(p => spawn({ type: 3, x: p.x, y: p.y, vx: rand(-260, 260), vy: rand(-260, 120), tx: 960 + rand(-160, 160), ty: 520 + rand(-330, 330), drag: 3.2, size: rand(1.4, 2.6), max: rand(1.3, 1.8), a: rand(.6, 1), layer: 1, delay: rand(0, .15) }));
+}
+function scene5() {
+  const tl = gsap.timeline(), DUR = 26;
+  const subs = [
+    { t: 3.5, m: '科学家给猴子看不同的图案，每个图案代表不同的奖励概率。' },
+    { t: 8.5, m: '然后，测量它们在等待时，大脑里的<g>多巴胺</g>。' },
+    { t: 13.0, anchor: 12.0, m: '结果，最让多巴胺兴奋的，不是一定有，' },
+    { t: 17.0, m: '而是<g>一半一半</g>的时候。' }], end = { t: 20.0 };
+  const L1m = '让大脑上瘾的，不是得到。', L2m = '是“说不定呢”。';
+  const { M } = makePlan([...subCons(subs, end), { from: 22.5, to: 25.4, need: mainHold(plain(L2m).length, .06, .5, 4.0), at: 25.4 }]);
+  breathe(tl, M(DUR));
+  tl.to(S.cam, { s: 1.04, duration: 3, ease: 'sine.inOut' }, 0);
+  tl.to(S.cam, { s: 1, x: -30, duration: M(12) - 3, ease: 'sine.inOut' }, 3);
+  tl.to(S.cam, { x: 0, s: 1.1, fy: 620, duration: M(16.4) - M(12), ease: 'sine.inOut' }, M(12));
+  tl.to(S.cam, { s: 1.04, fy: 540, duration: M(20) - M(16.4), ease: 'sine.inOut' }, M(16.4));
+  tl.to(S.cam, { s: 1.1, fy: 460, duration: M(25.4) - M(20), ease: 'sine.inOut' }, M(20));
+  tl.to(S.cam, { s: 1, fy: 540, duration: .6, ease: 'power3.inOut' }, M(25.4));
+
+  // 0–3 标题卡
+  Object.assign(S.s5, { shapesA: 0, monkey: 0, beam: 0, beamA: 0, trialClk: 0, exp: 1, chart: 0, goldBar: 0, dim: 0, best: 0, titleA: 0, chartS: 1, chartY: 0, chartA: 1, lineY: 600 });
+  S.s5.h = [0, 0, 0, 0, 0];
+  const T = mkText('期待实验', 960, 500, 100, 'serif', { color: GOLD, textShadow: '0 0 22px rgba(232,194,122,.6)' });
+  gsap.set(T.chars, { opacity: 0, scale: 1.15, filter: 'blur(6px)' });
+  tl.to(T.chars, { opacity: 1, scale: 1, filter: 'blur(0px)', duration: .6, ease: 'power3.out', stagger: .08 }, 0);
+  tl.to(S.s5, { lineW: 600, duration: .8, ease: 'power3.out' }, .2);
+  goldSweep(tl, .5);
+  const src = mkText('神经科学家舒尔茨团队 · 2003', 960, 110, 36, 'sans', { color: G1 });
+  fadeIn(tl, src.el, .2); textOut(tl, src, M(11.8));
+
+  // 3–12 实验过程
+  tl.to(T.el, { y: -80, opacity: 0, duration: .6, ease: 'power2.in' }, 3.0);
+  tl.to(S.s5, { lineA: 0, duration: .5 }, 3.0);
+  tl.to(S.s5, { shapesA: 1, duration: .8 }, 3.0);
+  tl.to(S.s5, { monkey: 1, duration: .9, ease: 'power2.inOut' }, 3.0);
+  tl.set(S.s5, { beamA: 1 }, 3.8);
+  tl.to(S.s5, { beam: 4.99, duration: 5, ease: 'none' }, 3.8);
+  tl.to(S.s5, { beamA: 0, duration: .4 }, 8.8);
+  tl.fromTo(S.s5, { trialClk: 0 }, { trialClk: M(12.4) - 3.8, duration: M(12.4) - 3.8, ease: 'none', immediateRender: false }, 3.8);
+
+  // 12–20 结果：倒 U 形
+  tl.to(S.s5, { exp: 0, duration: .5 }, M(12));
+  tl.to(S.s5, { chart: 1, duration: .9, ease: 'power3.inOut' }, M(12));
+  tl.to(S.s5, { titleA: 1, duration: .6 }, M(12.4));
+  [[0, 12.6], [4, 13.2], [1, 13.8], [3, 14.4]].forEach(([i, t]) => tl.to(S.s5.h, { [i]: BAR_H[i], duration: .9, ease: 'power3.out' }, M(t)));
+  tl.to(S.s5.h, { 2: 220, duration: .9, ease: 'power3.out' }, M(15.0));
+  const tp = M(16.2); // 50% 猛涨
+  tl.to(S.s5.h, { 2: 440, duration: .5, ease: 'expo.out' }, tp);
+  tl.to(S.s5, { goldBar: 1, duration: .4 }, tp);
+  tl.to(S.s5, { dim: 1, duration: .5 }, tp + .1);
+  tl.call(barSparks, null, tp + .12);
+  impact(tl, tp + .05); goldSweep(tl, tp + .05);
+  tl.to(S.s5, { best: 1, duration: .5 }, M(16.6));
+  cue('第五幕 · 50%柱子猛涨到最高', tp);
+  addSubs(tl, M, subs, end);
+
+  // 20–26 结论大字
+  const t20 = M(20);
+  tl.to(S.s5, { chartS: .42, chartY: 300, chartA: .35, duration: .9, ease: 'power3.inOut' }, t20);
+  const L1 = mkText(L1m, 960, 380, 68, 'serif', { color: WHITE });
+  const L2 = mkText(L2m, 960, 520, 96, 'serif', { color: GOLD, textShadow: '0 0 30px rgba(232,194,122,.85), 0 0 70px rgba(232,194,122,.4)' });
+  textIn(tl, L1, M(20.2));
+  textIn(tl, L2, M(22.5), { stagger: .06, blur: 10 }); flash(tl, M(22.5));
+  cue('第五幕 · “是“说不定呢”。”出现', M(22.5));
+
+  // 转场：金色大字碎成粒子，飞向画面中央，组成手机屏幕的亮光
+  const tt = M(25.4);
+  tl.call(() => { goldPts = samplePoints(L2.chars, 4, 900); goldShatter(); }, null, tt);
+  tl.to(L2.el, { opacity: 0, duration: .15 }, tt + .02);
+  textOut(tl, L1, tt, .4);
+  tl.to(S.s5, { chartA: 0, duration: .5 }, tt);
+  tl.to(S.s6, { a: 1, duration: .45 }, tt + .2);
+  tl.fromTo(S.s6, { glow: 0 }, { glow: 1, duration: .5, immediateRender: false }, tt + .3);
+  return { tl, dur: M(DUR) };
+}
+
+// =====================================================================
+//  第六幕｜三个你都经历过的瞬间（101–125）
+// =====================================================================
+const TIMES = ['23:10', '00:40', '02:15'], YEARS = ['2024', '2025', '2026'];
+const CARD_COL = ['#2c2c2c', '#454545', '#383838', '#5a5a5a', '#303030', '#4d4d4d'];
+function sub1(ctx, s) {
+  const cx = 960, cy = 520;
+  ctx.save(); phonePath(ctx, cx, cy); ctx.clip();
+  ctx.fillStyle = 'rgba(10,10,10,.9)'; ctx.fillRect(cx - 190, cy - 370, 380, 740);
+  if (s.glow > 0) { ctx.globalAlpha = s.glow * .55; ctx.fillStyle = GOLD; ctx.fillRect(cx - 190, cy - 370, 380, 740); ctx.globalAlpha = 1; }
+  ctx.strokeStyle = G3; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx - 140, 236, 18, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(cx - 108, 229, 110, 14, 7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx - 190, 274); ctx.lineTo(cx + 190, 274); ctx.stroke();
+  ctx.fillStyle = '#3F8F5F'; ctx.beginPath(); ctx.roundRect(cx + 160 - 140, 368, 140, 64, 24); ctx.fill();
+  ctx.fillStyle = WHITE; ctx.font = '500 32px "Noto Sans SC"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('在吗？', cx + 90, 401);
+  ctx.fillStyle = G2; ctx.textAlign = 'right'; ctx.fillText('未读', cx + 160, 468);
+  ctx.strokeStyle = G3; ctx.beginPath(); ctx.roundRect(cx - 160, 812, 320, 46, 23); ctx.stroke();
+  if (s.lit1 > 0) { ctx.fillStyle = `rgba(242,242,242,${(.16 * s.lit1).toFixed(3)})`; ctx.fillRect(cx - 190, cy - 370, 380, 740); }
+  ctx.restore();
+  if (s.lit1 > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = s.lit1 * .18; ctx.drawImage(SPR.white, cx - 360, cy - 520, 720, 1040); ctx.restore(); }
+  drawPhoneFrame(ctx, cx, cy);
+  // 时间戳滚动
+  const i = Math.min(2, Math.floor(s.ts)), f = s.ts - i;
+  ctx.save(); ctx.font = '500 44px "JetBrains Mono"'; ctx.fillStyle = G1; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.beginPath(); ctx.rect(520, 180, 240, 72); ctx.clip();
+  ctx.globalAlpha = 1 - f; ctx.fillText(TIMES[i], 640, 216 - f * 46);
+  if (f > 0 && i < 2) { ctx.globalAlpha = f; ctx.fillText(TIMES[i + 1], 640, 216 + (1 - f) * 46); }
+  ctx.restore();
+  goldThread(ctx, 1210, 92, 1090, 150, s.taut1, 1, s.clk);
+}
+function sub2(ctx, s) {
+  const h = s.year;
+  ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = WHITE; ctx.lineWidth = 2; ctx.shadowColor = WHITE; ctx.shadowBlur = 6;
+  ctx.beginPath(); ctx.moveTo(610, 700); ctx.lineTo(1310, 700); ctx.moveTo(650, 700); ctx.lineTo(650, 880); ctx.moveTo(1270, 700); ctx.lineTo(1270, 880); ctx.stroke();
+  ctx.beginPath(); ctx.roundRect(730, 390, 340, 220, 10); ctx.stroke();
+  ctx.fillStyle = 'rgba(242,242,242,.05)'; ctx.fill();
+  ctx.beginPath(); ctx.moveTo(900, 610); ctx.lineTo(900, 690); ctx.moveTo(856, 698); ctx.lineTo(944, 698); ctx.stroke();
+  ctx.shadowBlur = 0;
+  // 台历（陶土色描边）
+  ctx.strokeStyle = CLAY_L; ctx.beginPath(); ctx.roundRect(1110, 572, 140, 126, 6); ctx.stroke();
+  ctx.fillStyle = 'rgba(184,100,58,.3)'; ctx.fillRect(1111, 573, 138, 26);
+  ctx.beginPath(); ctx.arc(1145, 572, 6, 0, Math.PI * 2); ctx.arc(1215, 572, 6, 0, Math.PI * 2); ctx.stroke();
+  const yi = Math.min(2, Math.floor(h)), f = h - yi;
+  ctx.font = '500 48px "JetBrains Mono"'; ctx.fillStyle = WHITE; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.save(); ctx.translate(1180, 600);
+  if (f < .5 || yi === 2) { ctx.scale(1, yi === 2 ? 1 : 1 - f * 2); ctx.fillText(YEARS[yi], 0, 46); }
+  else { ctx.scale(1, f * 2 - 1); ctx.fillText(YEARS[yi + 1], 0, 46); }
+  ctx.restore();
+  // 便利贴
+  ctx.save(); ctx.translate(1112, 452); ctx.rotate(-5 * Math.PI / 180);
+  ctx.fillStyle = 'rgba(232,194,122,.08)'; ctx.strokeStyle = GOLD; ctx.shadowColor = GOLD; ctx.shadowBlur = 8;
+  ctx.beginPath(); ctx.rect(-100, -48, 200, 96); ctx.fill(); ctx.stroke(); ctx.shadowBlur = 0;
+  ctx.fillStyle = GOLD; ctx.font = '500 32px "Noto Sans SC"'; ctx.fillText('明年就好了', 0, 2); ctx.restore();
+  // 越来越弯的背影
+  const b = Math.min(2, h);
+  ctx.fillStyle = '#1b1b1b'; ctx.strokeStyle = G2; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.roundRect(838, 740, 124, 150, 10); ctx.strokeStyle = G3; ctx.stroke();
+  ctx.strokeStyle = G2; ctx.beginPath();
+  ctx.moveTo(816, 890); ctx.lineTo(814 + b * 4, 690 + b * 8);
+  ctx.quadraticCurveTo(812 + b * 6, 628 + b * 16, 900, 618 + b * 22);
+  ctx.quadraticCurveTo(988 - b * 6, 628 + b * 16, 986 - b * 4, 690 + b * 8);
+  ctx.lineTo(984, 890); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(900, 574 + b * 26, 40, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.restore();
+  goldThread(ctx, 1290, 300, 1120, 404, s.taut2, 1, s.clk);
+}
+function sub3(ctx, s) {
+  const cx = 960, cy = 520;
+  ctx.save(); phonePath(ctx, cx, cy); ctx.clip();
+  ctx.fillStyle = 'rgba(10,10,10,.9)'; ctx.fillRect(cx - 190, cy - 370, 380, 740);
+  const first = Math.floor(s.scroll) - 1;
+  for (let i = first; i < first + 4; i++) {
+    if (i < 0) continue;
+    const y = 176 + (i - s.scroll) * 360;
+    ctx.fillStyle = CARD_COL[i % 6]; ctx.beginPath(); ctx.roundRect(cx - 170, y, 340, 330, 18); ctx.fill();
+    ctx.fillStyle = 'rgba(242,242,242,.75)'; ctx.beginPath(); ctx.moveTo(cx - 18, y + 140); ctx.lineTo(cx + 26, y + 165); ctx.lineTo(cx - 18, y + 190); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(242,242,242,.18)'; ctx.fillRect(cx - 150, y + 286, 180, 10); ctx.fillRect(cx - 150, y + 304, 120, 8);
+  }
+  if (s.msg > 0) {
+    ctx.globalAlpha = s.msg; ctx.fillStyle = 'rgba(5,5,5,.8)'; ctx.fillRect(cx - 190, 800, 380, 70);
+    ctx.fillStyle = GOLD; ctx.font = '500 32px "Noto Sans SC"'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.shadowColor = GOLD; ctx.shadowBlur = 8;
+    ctx.fillText('下一个，说不定更好看', cx, 836); ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+  }
+  ctx.restore();
+  drawPhoneFrame(ctx, cx, cy);
+  if (s.fing > 0 && s.fing < 1) { // 上滑的手指
+    const fy = lerp(720, 360, easeOut3(s.fing)), al = Math.sin(Math.PI * s.fing);
+    ctx.save(); ctx.globalAlpha = al; ctx.strokeStyle = WHITE; ctx.lineWidth = 2; ctx.shadowColor = WHITE; ctx.shadowBlur = 8;
+    ctx.beginPath(); ctx.arc(1050, fy, 24, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(1036, fy + 22); ctx.lineTo(1030, fy + 90); ctx.moveTo(1064, fy + 22); ctx.lineTo(1070, fy + 90); ctx.stroke();
+    ctx.globalAlpha = al * .35; ctx.beginPath(); ctx.moveTo(1050, fy + 30); ctx.lineTo(1050, fy + 150); ctx.stroke();
+    ctx.restore();
+  }
+  goldThread(ctx, 1210, 92, 1090, 150, s.taut3, 1, s.clk);
+}
+function drawS6(ctx) {
+  const s = S.s6; if (s.a <= 0) return;
+  const fns = [sub1, sub2, sub3];
+  if (s.sceneA > 0) for (let j = 0; j < 3; j++) {
+    const ox = lerp((j - s.pan) * 1920, (j - 1) * 700, s.grid), sc = lerp(1, .6, s.grid);
+    if (Math.abs(ox) > 1920 * 1.05 && s.grid < .01) continue;
+    ctx.save(); ctx.globalAlpha = s.a * s.sceneA; ctx.translate(960 + ox, 540); ctx.scale(sc, sc); ctx.translate(-960, -540);
+    fns[j](ctx, s); ctx.restore();
+  }
+  if (s.jarsA > 0) for (let j = 0; j < 3; j++) { // 三个场景变成三个小陶罐，汇聚成一个
+    const x = lerp(960 + (j - 1) * 700, 960, s.merge), y = lerp(540, 560, s.merge), sc = lerp(.5, .9, s.merge);
+    drawJar(ctx, x, y, sc, { style: 'full', crossSection: .7, innerGlow: .9, pulse: 1, alpha: s.jarsA });
+  }
+}
+function scene6() {
+  const tl = gsap.timeline(), DUR = 24;
+  const subs = [
+    { t: .5, m: '等一条不会回的消息，每隔几分钟就看一次。' },
+    { t: 8.0, m: '一份早该辞的工作，你总想着“<g>明年就好了</g>”。' },
+    { t: 15.5, m: '你现在刷视频停不下来，也是因为——' },
+    { t: 19.0, m: '下一个，“<g>说不定</g>”更好看。' }], end = { t: 22.5 };
+  const { M } = makePlan(subCons(subs, end));
+  Object.assign(S.s6, { pan: 0, ts: 0, lit1: 0, taut1: 0, year: 0, taut2: 0, scroll: 0, fing: 0, msg: 0, taut3: 0, grid: 0, sceneA: 1, jarsA: 0, merge: 0 });
+  tl.fromTo(S.s6, { clk: 0 }, { clk: M(DUR), duration: M(DUR), ease: 'none', immediateRender: false }, 0);
+  // 镜头：每个小场景开始时轻推 1.00 → 1.05
+  tl.to(S.cam, { s: 1.05, duration: 7.2, ease: 'sine.inOut' }, 0);
+  tl.to(S.cam, { s: 1, duration: .6, ease: 'power3.inOut' }, 7.2);
+  tl.to(S.cam, { s: 1.05, duration: 6.9, ease: 'sine.inOut' }, 7.8);
+  tl.to(S.cam, { s: 1, duration: .6, ease: 'power3.inOut' }, M(14.7));
+  tl.to(S.cam, { s: 1.05, duration: M(22.5) - M(15.3), ease: 'sine.inOut' }, M(15.3));
+
+  // 场景一：等一条不会回的消息
+  tl.to(S.s6, { glow: 0, duration: 1.4, ease: 'power2.out' }, .3);
+  [.3, 2.6, 4.9].forEach((t, k) => {
+    if (k) tl.to(S.s6, { ts: k, duration: .5, ease: 'power3.inOut' }, t);
+    tl.fromTo(S.s6, { lit1: 1 }, { lit1: 0, duration: 1.1, ease: 'power2.out', immediateRender: false }, t + .25);
+    tl.fromTo(S.s6, { taut1: 1 }, { taut1: 0, duration: .9, ease: 'power2.out', immediateRender: false }, t + .25);
+  });
+  tl.to(S.s6, { pan: 1, duration: .6, ease: 'power3.inOut' }, 7.2);
+  // 场景二：一份早该辞的工作
+  [10.4, 12.7].forEach((t, k) => {
+    tl.to(S.s6, { year: k + 1, duration: .5, ease: 'power2.inOut' }, t);
+    tl.fromTo(S.s6, { taut2: 1 }, { taut2: 0, duration: .9, ease: 'power2.out', immediateRender: false }, t);
+  });
+  tl.to(S.s6, { pan: 2, duration: .6, ease: 'power3.inOut' }, M(14.7));
+  // 场景三：刷不停的视频
+  const swipes = [15.6, 16.8, 17.8, 18.6, 19.25, 19.8, 20.3, 20.7, 20.95, 21.3, 21.6, 21.85, 22.1];
+  swipes.forEach((t, k) => {
+    const d = Math.max(.2, .5 - k * .03), at = M(t);
+    tl.to(S.s6, { scroll: k + 1, duration: d, ease: 'power3.out' }, at);
+    tl.fromTo(S.s6, { fing: 0 }, { fing: 1, duration: d * 1.1, ease: 'none', immediateRender: false }, at - .05);
+    tl.fromTo(S.s6, { msg: 1 }, { msg: 0, duration: .9, ease: 'power2.in', immediateRender: false }, at + .1);
+    tl.fromTo(S.s6, { taut3: 1 }, { taut3: 0, duration: .6, ease: 'power2.out', immediateRender: false }, at);
+  });
+  // 21.0 画面完全静止 0.5 秒
+  tl.call(() => freeze(.5), null, M(21.0)); cue('第六幕 · 画面完全静止0.5秒', M(21.0));
+  addSubs(tl, M, subs, end);
+
+  // 收束：三个场景并排 → 三个小陶罐 → 汇聚成一个大陶罐
+  const tt = M(22.5);
+  tl.to(S.s6, { grid: 1, duration: .6, ease: 'power3.inOut' }, tt);
+  tl.to(S.cam, { s: .7, duration: .6, ease: 'power3.inOut' }, tt);
+  tl.to(S.s6, { sceneA: 0, jarsA: 1, duration: .4, ease: 'power2.inOut' }, tt + .6);
+  tl.to(S.s6, { merge: 1, duration: .6, ease: 'power3.inOut' }, tt + 1.0);
+  tl.to(S.cam, { s: 1, duration: .6, ease: 'power3.inOut' }, tt + 1.0);
+  tl.set(S.jar, { x: 960, y: 560, s: .9, lid: 0, cs: 0, glow: .6, coreRed: 0, pulse: 0, breath: 1, reveal: 1, fill: 1, showCore: 0, a: 0 }, tt);
+  tl.to(S.jar, { a: 1, duration: .3 }, tt + 1.35);
+  tl.to(S.s6, { jarsA: 0, duration: .25 }, tt + 1.5);
+  return { tl, dur: M(DUR) };
+}
+
+// =====================================================================
+//  第七幕｜结尾（125–142）
+// =====================================================================
+function drawS7(ctx) {
+  const s = S.s7; if (s.orbA <= 0) return;
+  const pos = p => { const u = 1 - p, x0 = 960, y0 = 330, cx = 1190, cy = 230, x1 = 1330, y1 = -40; return { x: u * u * x0 + 2 * u * p * cx + p * p * x1, y: u * u * y0 + 2 * u * p * cy + p * p * y1 }; };
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  for (let k = 1; k < 26; k++) { const q = pos(Math.max(0, s.orbP - k * .008)); ctx.globalAlpha = s.orbA * (1 - k / 26) * .55; const r = 12 - k * .35; ctx.drawImage(SPR.gold, q.x - r, q.y - r, r * 2, r * 2); }
+  ctx.restore();
+  const p = pos(s.orbP); glowDot(ctx, p.x, p.y, s.orbA, 6 + s.orbP * 6, 50 + s.orbP * 110);
+}
+function scene7() {
+  const tl = gsap.timeline(), DUR = 19.4;
+  const Am = '希望没有错。它能<g>撑着你</g>，走过最黑的路。', Bm = '可如果它让你一直，不肯离开——', Cm = '也许，是时候让它<g>飞走</g>了。', Fm = '致每一个，<g>还在等</g>的人。';
+  const { M } = makePlan([
+    { from: .2, to: 5.8, need: mainHold(plain(Am).length, .06, .5, 4), at: 5.8 },
+    { from: 6.0, to: 10.8, need: mainHold(plain(Bm).length, .06, .5, 3.5), at: 10.8 },
+    { from: 11.2, to: 15.0, need: mainHold(plain(Cm).length, .06, .5, 3.5), at: 15.0 }]);
+  breathe(tl, M(DUR), false);
+  tl.to(S.cam, { s: 1.08, duration: M(DUR), ease: 'sine.inOut' }, 0);
+  tl.to(S.cam, { fy: 500, duration: 6, ease: 'sine.inOut' }, M(DUR) - 6);
+  Object.assign(S.s7, { orbP: 0, orbA: 0 });
+
+  // 0–6
+  const A = mkText(Am, 960, 230, 60, 'serif', { color: WHITE });
+  textIn(tl, A, .2); textOut(tl, A, M(5.8));
+  // 6–11
+  const B = mkText(Bm, 960, 230, 60, 'serif', { color: WHITE });
+  textIn(tl, B, M(6.0)); textOut(tl, B, M(10.8));
+  tl.to(S.jar, { glow: .35, showCore: .55, duration: 1.5, ease: 'sine.inOut' }, M(6.5));
+  tl.to(S.jar, { coreRed: .9, duration: .5 }, M(7.6)).to(S.jar, { coreRed: .25, duration: 1.2 }, M(8.1));
+  // 11–15 日出前的天空，罐盖轻轻打开，光点飞走
+  const t11 = M(11);
+  tl.to('#sky', { opacity: 1, duration: 3, ease: 'sine.inOut' }, t11);
+  tl.to('#horizon', { opacity: 1, duration: 4, ease: 'sine.inOut' }, t11 + .5);
+  tl.to(S, { dustWarm: 1, duration: 3, ease: 'sine.inOut' }, t11);
+  tl.to(S.jar, { lid: .6, duration: 2, ease: 'sine.inOut' }, t11);
+  tl.to(S.jar, { glow: .8, showCore: 0, coreRed: 0, duration: 1.5, ease: 'sine.inOut' }, t11);
+  const to = M(12.4);
+  tl.set(S.s7, { orbA: 1 }, to);
+  tl.to(S.s7, { orbP: 1, duration: 3.4, ease: 'sine.inOut' }, to);
+  tl.to(S.s7, { orbA: 0, duration: 1.0, ease: 'power2.in' }, to + 2.6);
+  tl.to(S.jar, { glow: .25, duration: 2 }, to + .5);
+  cue('第七幕 · 金色光点飞出罐口', to);
+  const C = mkText(Cm, 960, 230, 64, 'serif', { color: WHITE });
+  textIn(tl, C, M(11.2)); textOut(tl, C, M(15.0));
+  tl.to(S.jar, { y: 872, s: .46, duration: 1.8, ease: 'sine.inOut' }, M(14.2));
+  // 15–17 结尾句，停在最后一帧
+  const F = mkText(Fm, 960, 500, 64, 'serif', { color: WHITE });
+  const Tt = mkText('《罐底》', 960, 612, 32, 'sans', { color: 'rgba(242,242,242,.7)', letterSpacing: '.5em', paddingLeft: '.5em' });
+  textIn(tl, F, M(15.4), { stagger: .08, dur: .6 });
+  fadeIn(tl, Tt.el, M(16.6), .9, 6);
+  tl.set({}, {}, M(DUR));
+  return { tl, dur: M(DUR) };
+}
+
+// =====================================================================
+//  主渲染循环
+// =====================================================================
+function drawMain() {
+  const c = mctx; c.setTransform(K, 0, 0, K, 0, 0); c.clearRect(0, 0, W, H);
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  drawParticles(c, 0);
+  drawS2(c); drawS4(c); drawS5(c); drawS6(c);
+  const j = S.jar;
+  drawJar(c, j.x, j.y, j.s, { lidOpen: j.lid, crossSection: j.cs, innerGlow: j.glow, style: 'full', alpha: j.a, reveal: j.reveal, fill: j.fill, coreRed: j.coreRed, pulse: j.pulse, breath: j.breath, showCore: j.showCore });
+  drawS3(c); drawS1(c); drawS7(c);
+  drawParticles(c, 1);
+}
+function hopeFlicker() { // “希望”的金色发光像烛火一样摇曳（60%–100%）
+  if (!hopeKw || S.s1.hopeFlick <= 0) return;
+  const k = .6 + .4 * clamp((noise(S.t * 1.9, 3.3) - .2) / .6);
+  hopeKw.style.textShadow = `0 0 ${(16 + 14 * k).toFixed(1)}px rgba(232,194,122,${(.72 * k).toFixed(3)})`;
+}
+let lastT = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, (now - lastT) / 1000); lastT = now;
+  if (!S.frozen) { S.t += dt; updateParticles(dt); updateDust(dt); updateBokeh(dt); hopeFlicker(); }
+  applyCamera(); drawMain(); drawFar(); drawNear(); drawGrain(); applyFx();
+  requestAnimationFrame(frame);
+}
+
+// =====================================================================
+//  主时间线、静止、跳幕、重播
+// =====================================================================
+let master = null, freezeTimer = null, FREEZE_AT = Infinity;
+const SCENE_START = [];
+function freeze(sec) {
+  S.frozen = true; master.pause();
+  freezeTimer = setTimeout(() => { freezeTimer = null; S.frozen = false; master.resume(); }, sec * 1000);
+}
+function buildFilm() {
+  master = gsap.timeline({ paused: true });
+  const scenes = [scene1, scene2, scene3, scene4, scene5, scene6, scene7], allCues = [];
+  let off = 0;
+  scenes.forEach((fn, i) => {
+    CUES = []; const r = fn();
+    master.add(r.tl, off); master.addLabel('s' + (i + 1), off); SCENE_START.push(off);
+    CUES.forEach(c => allCues.push({ name: c.name, t: off + c.t }));
+    off += r.dur;
+  });
+  master.addLabel('end', off);
+  // 卡点时间表（第六幕静止 0.5 秒会让其后的实际时间整体后移 0.5 秒，表中已计入）
+  FREEZE_AT = (allCues.find(c => c.name.indexOf('静止') >= 0) || {}).t || Infinity;
+  const real = t => t > FREEZE_AT + 1e-6 ? t + .5 : t;
+  const fmt = t => `${Math.floor(t / 60)}:${(t % 60).toFixed(2).padStart(5, '0')}`;
+  console.log('%c《罐底》卡点时间表（全片绝对时间）', 'color:#E8C27A;font-weight:bold;font-size:14px');
+  console.table(allCues.map(c => ({ '卡点': c.name, '秒': +real(c.t).toFixed(2), '分:秒': fmt(real(c.t)) })));
+  console.log('各幕开始：' + SCENE_START.map((t, i) => `第${i + 1}幕 ${real(t).toFixed(2)}s`).join('  ｜ ') + `  ｜ 全片结束 ${real(off).toFixed(2)}s`);
+}
+function jump(n) {
+  if (!master) return;
+  if (freezeTimer) { clearTimeout(freezeTimer); freezeTimer = null; }
+  S.frozen = false; clearParticles(); emitters.length = 0; S.amb.acc = 0;
+  master.pause(); master.seek(n === 1 ? 0 : 's' + n, true); master.play();
+}
+addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); jump(1); }
+  else if (/^[1-7]$/.test(e.key)) { e.preventDefault(); jump(+e.key); }
+});
+
+// =====================================================================
+//  启动：等字体就绪后立即播放（第一帧已有钩子句，没有黑屏）
+// =====================================================================
+const FILM_CHARS = '两千多年前，古希腊人讲过一个故事。让你最痛苦的可能不是绝望被误解了神话第幕·文字化为黑雾普罗米修斯偷天火送给类宙大怒决定惩罚他造出女潘拉连同罐子到间打开所有灾难都飞去她慌忙盖上里只剩下后样东西— 赫俄德《工作与时日》二闪电疾病衰老战争饥荒死亡合原根本没盒世纪次译把“”写成三划掉翻错在眼也许礼物它种什么会和装？坏恶因延长尼采性太四引现等待巴胺兴奋程度科学家猴看图案每代表奖励概率然测量们脑结果而半候瘾得说呢期实验经舒尔茨团队五柱猛涨高吗未读明就好更条回消息隔几分钟份早该辞总想着刷视频停来六画面完全静止秒撑走路如直肯离致还七金色光点口底卡（片对）各始：｜红灰通关键词';
+requestAnimationFrame(frame);
+(async function boot() {
+  try {
+    await Promise.race([
+      Promise.all([
+        document.fonts.load('700 64px "Noto Serif SC"', FILM_CHARS),
+        document.fonts.load('500 40px "Noto Sans SC"', FILM_CHARS),
+        document.fonts.load('500 40px "JetBrains Mono"', '0123456789%:')
+      ]).then(() => document.fonts.ready),
+      new Promise(r => setTimeout(r, 8000))
+    ]);
+  } catch (e) { /* 字体加载失败时用系统字体继续 */ }
+  buildFilm();
+  master.play(0);
+})();
+</script>
+</body>
+</html>
