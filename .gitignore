@@ -5,3 +5,6 @@ output/*.sfx.wav
 output/render.mp4
 output/pride/parts/
 output/pride/*.mp4
+output/pride3d/parts/
+output/pride3d/*.mp4
+videos/pride3d/node_modules/
