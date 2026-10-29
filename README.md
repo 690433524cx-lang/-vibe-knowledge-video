@@ -6,6 +6,9 @@
 | 《你是不是也有选择困难？》选择过载 / 满意解 | `videos/choice/` | 精修版无音乐全片 `output/choice/full_v2.mp4`（114.5 s），关键帧 `output/choice/keyframes_full/`，分镜 `docs/choice/storyboard.md`，自检 `docs/choice/review.md`，素材来源 `docs/choice/sources.md` |
 | 《时间错觉》为什么越长大，时间过得越快？ | `videos/time/` | 无 BGM 完整片 `output/time/full_v1.mp4`（120 s），封面 `output/time/cover.jpg`，关键帧 `output/time/keyframes_full/`，时间轴 `docs/time/timeline.md`，分镜 `docs/time/storyboard.md`，验收 `docs/time/review.md`，`docs/time/CHANGELOG.md` |
 | 《你最确定的那段回忆，可能是你自己编的》被改写的记忆 | `videos/memory/` | 无 BGM 完整片 `output/memory/full_v1.mp4`（119 s），封面 `output/memory/cover.jpg`，关键帧 `output/memory/keyframes_full/`，分镜 `docs/memory/storyboard.md`，验收 `docs/memory/review.md`，`docs/memory/CHANGELOG.md` |
+| 《七宗罪·傲慢》 | `videos/pride/` | 无声全片 `output/pride/傲慢_1080p.mp4`（140 s），静帧 `output/pride/stills/`，缩略图 `output/pride/contact/`。浏览器 Canvas 管线：`index.html` 里的纯函数 `render(t)`，`stills.js` 截静帧，`render.js` 分 9 段、4 页并行渲染后拼接 |
+
+《七宗罪·傲慢》单独使用浏览器管线：先 `apt-get install fonts-noto-cjk`，再在 `videos/pride/` 下运行 `node stills.js [秒…]` 或 `node render.js`（已存在的 `output/pride/parts/p序号.mp4` 会跳过，删掉某段即可只重渲那段）。
 
 所有命令加 `--video choice` 即可切换到新片（默认 `sunk-cost`）。主重拍参数可用 `MAIN_BEAT_T`（或 `T` / `--T`）。
 渲染可加 `--workers 4` 多进程并行。新片使用第二版画面管线（`src/look2.js`、`src/lib/material.js`、`src/lib/motion.js`），上一期不受影响。

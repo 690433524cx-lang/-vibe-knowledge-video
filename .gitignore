@@ -3,3 +3,5 @@ assets/fonts/*.ttf
 output/*.video.mp4
 output/*.sfx.wav
 output/render.mp4
+output/pride/parts/
+output/pride/*.mp4
