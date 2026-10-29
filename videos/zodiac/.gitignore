@@ -1,0 +1,4 @@
+node_modules/
+out/parts/
+out/*.mp4
+out/*.boxes.json

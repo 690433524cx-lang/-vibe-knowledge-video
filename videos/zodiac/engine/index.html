@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>星座召唤</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}#glCanvas{position:absolute;left:0;top:0;visibility:hidden}</style>
+<script type="importmap">{"imports":{"three":"../node_modules/three/build/three.module.js","three/addons/":"../node_modules/three/examples/jsm/"}}</script>
+</head>
+<body>
+<!-- glCanvas：Three.js 的 WebGL 画布；outCanvas：最终输出的 2D 画布（WebGL 画面 + 文字 + 最上层后期） -->
+<canvas id="glCanvas" width="1080" height="1920"></canvas>
+<canvas id="outCanvas" width="1080" height="1920"></canvas>
+<script type="module">
+import { init, render, K, DEBUG } from './js/main.js';
+window.render = render; window.K = K; window.DEBUG = DEBUG;
+init().then(() => { window.READY = true; }).catch(e => { console.error(e); window.FAILED = String(e && e.stack || e); });
+</script>
+</body>
+</html>

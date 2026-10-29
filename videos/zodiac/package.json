@@ -1,0 +1,9 @@
+{
+  "name": "zodiac-summon",
+  "version": "1.0.0",
+  "private": true,
+  "description": "《星座召唤》粒子视频引擎：node render.js --sign leo",
+  "dependencies": {
+    "three": "0.160.0"
+  }
+}
