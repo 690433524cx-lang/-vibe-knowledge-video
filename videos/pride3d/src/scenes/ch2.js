@@ -1,4 +1,4 @@
-// 02 弯腰的人 37–54：螺旋高山与背石头的人 → 特写 → 仰望星空的大字 → 全景齐步 → 坍缩成一条线
+// 02 弯腰的人 37–54：螺旋高山与背石头的人 → 特写 → 看清脚下的大字 → 全景齐步 → 坍缩成一条线
 import * as THREE from 'three';
 import { K, points } from '../core.js';
 import { cloudMaterial, COL } from '../mat.js';
@@ -154,6 +154,6 @@ function camFar(t) {
 
 export function text(t, F) {
   if (t < 46.2 || t > 50.1) return;
-  staggerLine(t, '生前，想被所有人〔紫〕仰望〔/紫〕，', 960, 360, 64, 46.5, 50.0, { step: 0.05, dur: 0.4, weight: 700, rise: 16, keyGlow: 30 });
-  staggerLine(t, '死后，只能一直看着〔红〕地面〔/红〕。', 960, 460, 64, 47.3, 50.0, { step: 0.05, dur: 0.4, weight: 700, rise: 16, keyGlow: 30 });
+  staggerLine(t, '抬了一辈子头的人，', 960, 360, 64, 46.5, 50.0, { step: 0.05, dur: 0.4, weight: 700, rise: 16, keyGlow: 30 });
+  staggerLine(t, '在这里，第一次看清了〔紫〕脚下〔/紫〕的路。', 960, 460, 64, 47.3, 50.0, { step: 0.05, dur: 0.4, weight: 700, rise: 16, keyGlow: 30 });
 }

@@ -8,7 +8,7 @@ const path = require('path');
 const { serve } = require('./tools/server');
 
 const FPS = 30;
-const CUTS = [0, 20, 37, 54, 76.2, 96, 108, 122, 128];
+const CUTS = [0, 20, 37, 55, 77.2, 97, 109, 123, 129]; // 成片时间（第二章结尾放慢 1 秒，见 src/main.js sceneTime）
 const WORKERS = 3; // 软件 WebGL 比较吃 CPU
 const GL_ARGS = ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
 const outDir = path.resolve(process.env.OUT || path.join(__dirname, '../../output/pride3d'));

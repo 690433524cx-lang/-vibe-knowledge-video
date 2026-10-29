@@ -10,8 +10,8 @@
 <canvas id="gl" width="1920" height="1080"></canvas>
 <canvas id="out" width="1920" height="1080"></canvas>
 <script type="module">
-import { init, render } from './src/main.js';
-window.render = render;
+import { init, render, sceneTime } from './src/main.js';
+window.render = t => render(sceneTime(t)); // 参数是成片时间
 init().then(() => { render(0); window.READY = true; }).catch(e => { console.error(e); window.FAILED = String(e && e.stack || e); });
 </script>
 </body>

@@ -1,7 +1,7 @@
 // 数学、缓动与确定性随机数。全片唯一的随机来源：hash(i) 与固定种子的 PRNG。
 export const TAU = Math.PI * 2;
 export const D2R = Math.PI / 180;
-export const LOOP = 128; // 全片时长；所有周期性运动都取它的整数分之一，首尾帧才能无缝相接
+export const LOOP = 128; // 剧情时长（成片 129 秒，见 main.js sceneTime）；所有周期性运动都取它的整数分之一，首尾帧才能无缝相接
 
 export const clamp = (x, a = 0, b = 1) => (x < a ? a : x > b ? b : x);
 export const lerp = (a, b, k) => a + (b - a) * k;
