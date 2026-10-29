@@ -1,4 +1,4 @@
-// 生成封面：横版 1920×1080、竖版 1080×1440。画面取自片头加冕后的神像（17.5 秒，标题砸入之前），文字另行排版。
+// 生成封面：横版 1920×1080、竖版 1080×1440（3:4）与 1080×1350（4:5）。画面取自片头加冕后的神像（17.5 秒，标题砸入之前），文字另行排版。
 // 用法：node tools/cover.js            OUT=目录 指定输出目录（默认 output/pride3d/cover）
 const { chromium } = require('playwright');
 const fs = require('fs');
@@ -11,6 +11,7 @@ const outDir = path.resolve(process.env.OUT || path.join(__dirname, '../../../ou
 const COVERS = [
   { name: '封面_横版_1920x1080', w: 1920, h: 1080, t: 17.5, cam: null, layout: 'wide' },
   { name: '封面_竖版_1080x1440', w: 1080, h: 1440, t: 17.5, cam: { pos: [0, -0.05, 7.4], target: [0, -0.62, 0], fov: 35 }, layout: 'tall' },
+  { name: '封面_竖版_1080x1350', w: 1080, h: 1350, t: 17.5, cam: { pos: [0, -0.05, 7.4], target: [0, -0.62, 0], fov: 35 }, layout: 'tall' },
 ];
 
 async function compose(page, c) {
@@ -60,11 +61,12 @@ async function compose(page, c) {
       glowText('为什么，几乎没有人', 520, 690, fs(700, 64), C.white, { glow: 22 });
       glowText('觉得自己傲慢？', 520, 790, fs(700, 64), C.key, { glow: 30, glowColor: '#8B3DFF' });
     } else {
-      shade(540, 1160, 680, 380, 0.8);
+      const dy = c.h - 1440; // 底部文字块随画面高度整体上移
+      shade(540, 1160 + dy, 680, 380, 0.8);
       glowText('七  宗  罪  ·  第  一  集', 540, 92, fs(600, 40), C.key, { glow: 14 });
-      metal('傲慢', 540, 1080, 240);
-      glowText('为什么，几乎没有人', 540, 1250, fs(700, 58), C.white, { glow: 22 });
-      glowText('觉得自己傲慢？', 540, 1335, fs(700, 58), C.key, { glow: 30, glowColor: '#8B3DFF' });
+      metal('傲慢', 540, 1080 + dy, 240);
+      glowText('为什么，几乎没有人', 540, 1250 + dy, fs(700, 58), C.white, { glow: 22 });
+      glowText('觉得自己傲慢？', 540, 1335 + dy, fs(700, 58), C.key, { glow: 30, glowColor: '#8B3DFF' });
     }
     return out.toDataURL('image/jpeg', 0.95);
   }, c);
