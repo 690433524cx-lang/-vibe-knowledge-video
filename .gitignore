@@ -15,3 +15,7 @@ out/*.mp4
 output/sins/stills/
 out/dl/
 out/qa_*.txt
+output/envy_h/stills/
+output/envy_h/compare/envy/
+output/envy_h/compare/pride/
+output/envy_h/compare/pair_*
