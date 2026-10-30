@@ -9,3 +9,7 @@ output/pride3d/parts/
 output/pride3d/*.mp4
 videos/pride3d/node_modules/
 output/pride3d/dl/
+out/parts/
+out/preview/
+out/*.mp4
+output/sins/stills/
