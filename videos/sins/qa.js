@@ -53,7 +53,7 @@ const ranges = (ts) => { const out = []; for (const t of ts) { const l = out[out
     const file = path.join(dir, name + (q.preview ? '_预览' : '') + '.mp4');
     if (!fs.existsSync(file)) { log(false, `${name}：文件不存在`); continue; }
     const dur = Number(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file]).stdout);
-    const fr = frames(file, 2);
+    const fr = frames(file, 2).slice(0, Math.ceil((dur - 1 / 30) * 2)); // 只取视频时长以内的采样帧
     const dark = [], dull = [], still = [];
     fr.forEach((f, i) => {
       const t = i / 2, s = stats(f);
