@@ -57,7 +57,7 @@ const ranges = ts => { const out = []; for (const t of ts) { const l = out[out.l
     if (s.luma < 28) dark.push(t);
     if (s.sat < 0.25) dull.push(t);
     if (i % 2 === 0 && s.hue != null) { hues.push(s.hue); if (s.hue < 70 || s.hue > 175) offHue.push(`${t.toFixed(0)}秒(${s.hue.toFixed(0)}°)`); }
-    if (i > 0) { const d = meanDiff(f, fr[i - 1]); const pause = t > 77.6 && t < 78.2; // 结尾的停顿（剧情 77.4–77.8，成片顺延 0.3 秒） run = d < 1.5 && !pause ? run + 0.5 : 0; if (run >= 2) still.push(t); }
+    if (i > 0) { const d = meanDiff(f, fr[i - 1]); const pause = t > 77.6 && t < 78.2; /* 结尾的停顿（剧情 77.4–77.8，成片顺延 0.3 秒） */ run = d < 1.5 && !pause ? run + 0.5 : 0; if (run >= 2) still.push(t); }
   });
   log(dark.length === 0, `亮度：${dark.length ? '平均亮度<28 的时刻 ' + ranges(dark).join('、') : '全部 ≥ 28（没有黑屏或空白画面）'}`);
   log(dull.length === 0, `鲜艳度：${dull.length ? '中部饱和度<0.25 的时刻 ' + ranges(dull).join('、') : '全部 ≥ 0.25'}`);

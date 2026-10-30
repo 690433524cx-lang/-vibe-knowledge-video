@@ -16,7 +16,7 @@ export function timeline() {
   return {
     PUNCH: [[1.3, 1], [3.5, 1.7], [8.4, 1], [17.8, 1], [45.3, 1], [75.0, 0.8], [77.8, 1]],
     // 闪白：傲慢的数值（0.30 / 0.35 / 0.25）× 80%
-    FLASH: [[1.3, 0.24], [3.5, 0.28], [17.8, 0.20], [77.8, 0.20]],
+    FLASH: [[1.3, 0.24], [3.5, 0.28], [17.8, 0.15], [77.8, 0.20]],
     BOLTS: [[1.3, 0.8, 0.28, 0.65], [3.5, -0.88, 0.3, 0.75], [6.8, 0.62, 0.2, 0.7], [17.8, 0.5, 0.26, 0.9], [45.3, -0.6, 0.25, 0.8], [51.2, 0.66, 0.16, 0.45], [64.6, -0.68, 0.16, 0.45]],
     SOURCES: [
       [10.3, 14.4, '莎士比亚《奥赛罗》'],
@@ -414,7 +414,7 @@ export function text(t, F) {
   // 钩子：标题砸入画面左侧（与傲慢标题的位置、字号一致）
   if (t >= 8.4 && t <= 10.1) {
     const a = 1 - sine(prog(t, 9.75, 10.05)), p = prog(t, 8.4, 8.85);
-    const x = lerp(-300, 560, outExpo(p)), s = lerp(1.25, 1, outExpo(p));
+    const x = lerp(400, 560, outExpo(p)), s = lerp(1.25, 1, outExpo(p));   // 从左侧砸入，全程不出画（距边缘 ≥ 60px）
     glowText('嫉妒', x, 470, fs(700, 230 * s), 'metal', { alpha: a * clamp(p * 3), size: 230 * s, glow: 50, glow2: 90, glowColor: ENVY.main, sweepOffset: 0.2 });
     glowText('七  宗  罪  ·  第  二  集', x, 640, fs(500, 34), C.key, { alpha: a * clamp((t - 8.7) * 3), glow: 14 });
     TAGS.forEach(([w, x0, y0, al], i) => tag(t, w, x0, y0, 8.7 + i * 0.25, 10.0, { fo: 0.3, size: 40, align: al, color: C.text }));
