@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { K, points, glow } from './core.js';
 import { cloudMaterial } from './mat.js';
 import { FACE } from './geo.js';
-import { clamp, lerp, lerp3, prog, outExpo, sine, out3, hash, D2R, TAU, LOOP, qk } from './util.js';
+import { clamp, lerp, lerp3, prog, outExpo, sine, out3, hash, D2R, TAU, LOOP, qk, track } from './util.js';
 import { staggerLine, glowText, fs, C } from './text.js';
 
 // 傲慢长版的七张脸（位置、大小、间距、角度原样照搬 hook.js）；中间那张与傲慢一样用高密度的人脸，所以更大更亮
@@ -22,19 +22,20 @@ export function camIntro(s) {
   return { pos: lerp3(LINEUP_CAM.pos, CLOSE_CAM.pos, k), target: lerp3(LINEUP_CAM.target, CLOSE_CAM.target, k), fov: 35 };
 }
 
-// 扫描光（转盘式，每一期相同，只是最后停的位置不同；时间为成片时间）：
-// 0.2–0.8 从最左扫到最右；0.8–1.6 往回扫、outCubic 减速，停在第 N 张脸上
-const X0 = -4.4, X1 = 4.4;
+// 扫描光：逐帧照抄傲慢 hook.js 的关键帧（左→右→左，越扫越慢，3.4 秒停住）；
+// 傲慢停在正中（x=0），这里把后半段的来回晃动整体平移到第 N 张脸上
+const PRIDE_SCAN = [[0.3, -4.4], [1.35, 4.4], [2.35, -2.1], [2.95, 1.05], [3.25, -0.42], [3.4, 0]];
 export function scanX(t, N) {
-  if (t < 0.8) return lerp(X0, X1, sine(prog(t, 0.2, 0.8)));
-  return lerp(X1, SLOTS[N - 1].x, out3(prog(t, 0.8, 1.6)));
+  const xN = SLOTS[N - 1].x;
+  const keys = PRIDE_SCAN.map(([tk, x], i) => [tk, i < 2 ? x : x + xN]);
+  return track(keys, t);
 }
 // 光带经过某张脸时，那张脸的眼缝闪亮一下（0.3 秒内回落）
 function slitFlash(t, N, xi) {
   let v = 0;
   for (let k = 0; k <= 18; k++) {
-    const tau = k / 60, tt = t - tau; if (tt < 0.2) break;
-    if (Math.abs(scanX(tt, N) - xi) < 0.32) v = Math.max(v, 1 - tau / 0.3);
+    const tau = k / 60, tt = t - tau; if (tt < 0) break;
+    if (Math.abs(scanX(tt, N) - xi) < 0.35) v = Math.max(v, 1 - tau / 0.3);
   }
   return v;
 }
@@ -82,9 +83,9 @@ function setFaces(t, st) {
 
 // 扫描阶段（成片时间 0–1.6）：七张脸静止排成一排，转盘式扫描光来回扫过
 export function scanIntro(t, N, F) {
-  const sx = scanX(t, N), amt = sine(prog(t, 0.2, 0.32));
+  const sx = scanX(t, N), amt = sine(prog(t, 0, 0.3));   // 与傲慢相同的扫描光强度
   setFaces(t, SLOTS.map((s, i) => ({ slit: 0.4 + 0.6 * slitFlash(t, N, s.x), scanX: sx, scanAmt: amt })));
-  band.visible = t > 0.2;
+  band.visible = true;
   if (band.visible) { band.position.set(sx, 0.05, 0.6); band.material.uniforms.uInt.value = 0.16 * amt; }
   return { hand: 0, faceRY: SLOTS[N - 1].ry };
 }

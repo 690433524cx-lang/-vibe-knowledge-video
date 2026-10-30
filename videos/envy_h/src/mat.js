@@ -335,7 +335,7 @@ export const FinalShader = {
         float inside = smoothstep(uInk, uInk - 0.06, r);
         float edge = exp(-pow((r - uInk + 0.03)*30.0, 2.0));
         float tex = 0.75 + 0.5*fbm(ip*4.0 - uInk*0.8);
-        c = mix(c, uInkCol*tex + c*0.12, inside*0.94) + uInkEdge*edge*0.55*step(0.001, uInk);
+        c = mix(c, uInkCol*tex + c*0.35, inside*0.72) + uInkEdge*edge*0.55*step(0.001, uInk);
       }
       float v = smoothstep(1.05, 0.25, length(d*vec2(1.25, 1.0)));
       c *= mix(1.0, v, uVig);

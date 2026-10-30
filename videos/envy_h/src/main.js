@@ -12,13 +12,25 @@ import { ENVY } from './assets.js';
 const q = new URLSearchParams(location.search);
 export const PREVIEW = q.get('preview') === '1';
 // 剧情时间 84 秒；成片 84.3 秒：片头扫描光多了 0.3 秒（成片 0–1.6 秒），之后所有事件整体顺延 0.3 秒
-export const TL = 84, TOUT = 84.3, SCAN_END = 1.6, DELAY = 0.3;
+// 剧情时间 84 秒；成片 86.5 秒。成片时间轴（照抄傲慢的扫描节奏）：
+//   0–3.4 扫描光（傲慢 hook.js 的关键帧）；3.4 选中（剧情 1.3）；3.4–4.4 推近特写（剧情 1.3–2.0）
+//   4.4–6.0 闭眼台词（剧情 2.0–3.5）；6.0 睁眼（剧情 3.5）；之后成片 = 剧情 + 2.5
+export const TL = 84, TOUT = 86.5, SCAN_END = 3.4, DELAY = 2.5;
 setLoop(TL); SHARED.uLoop.value = TL;
-// 成片时间 → 剧情时间（连续）；周期性运动用按比例换算的时间，首尾帧仍无缝相接
-export const storyTime = t => t < SCAN_END ? t * (SCAN_END - DELAY) / SCAN_END : t - DELAY;
+const MAP = [[0, 0], [3.4, 1.3], [4.4, 2.0], [6.0, 3.5]];
+export const storyTime = t => {
+  if (t >= 6.0) return t - DELAY;
+  for (let i = 0; i < MAP.length - 1; i++) if (t <= MAP[i + 1][0]) return lerp(MAP[i][1], MAP[i + 1][1], (t - MAP[i][0]) / (MAP[i + 1][0] - MAP[i][0]));
+  return t - DELAY;
+};
+export const outTime = s => {
+  if (s >= 3.5) return s + DELAY;
+  for (let i = 0; i < MAP.length - 1; i++) if (s <= MAP[i + 1][1]) return lerp(MAP[i][0], MAP[i + 1][0], (s - MAP[i][1]) / (MAP[i + 1][1] - MAP[i][1]));
+  return s + DELAY;
+};
 const loopTime = t => t * TL / TOUT;
 const TABLE = EP.timeline();
-window.META = { duration: TOUT, fps: PREVIEW ? 15 : 30, subs: TABLE.SUBS.map(s => ({ t0: s[0] + DELAY, t1: s[1] + DELAY, text: s[2], exempt: !!(s[3] && s[3].exempt) })) };
+window.META = { duration: TOUT, fps: PREVIEW ? 15 : 30, subs: TABLE.SUBS.map(s => ({ t0: outTime(s[0]), t1: outTime(s[1]), text: s[2], exempt: !!(s[3] && s[3].exempt) })) };
 // 文字颜色：正文偏绿的白、中性关键词亮色、负面关键词毒绿色、外发光主色
 Object.assign(C, { text: ENVY.high, key: ENVY.bright, neg: ENVY.toxic, glow: ENVY.main, metal: 'envy' });
 

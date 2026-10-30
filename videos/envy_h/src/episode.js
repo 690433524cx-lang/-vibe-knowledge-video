@@ -7,7 +7,7 @@ import { clamp, lerp, lerp3, prog, outExpo, sine, out3, inOut, D2R, hash, TAU, L
 import { glowText, staggerLine, tag, plain, fs, C, getCtx } from './text.js';
 import { HERO_RY, CLOSE_CAM } from './intro.js';
 import { buildHero, applyHero, CRACK_T0 } from './hero.js';
-import { ENVY, buildOther } from './assets.js';
+import { ENVY, buildOther, buildBeamPB, beamMaterial } from './assets.js';
 import { EYE, buildGiantEye, giantEyeMaterial, buildCliff, buildSitter, SITTER_EYES, buildStitchLines, BRAIN2, buildBrainSide, buildStitches, PHONE, buildPhone, cardMaterial, buildViewer } from './long_assets.js';
 import { PB, FACE } from './geo.js';
 
@@ -15,8 +15,8 @@ export const N = 2;
 export function timeline() {
   return {
     PUNCH: [[1.3, 1], [3.5, 1.7], [8.4, 1], [17.8, 1], [45.3, 1], [75.0, 0.8], [77.8, 1]],
-    // 闪白：傲慢的数值（0.30 / 0.35 / 0.25）× 80%
-    FLASH: [[1.3, 0.24], [3.5, 0.28], [17.8, 0.15], [77.8, 0.20]],
+    // 闪白：傲慢的数值（0.30 / 0.35 / 0.25）× 70%
+    FLASH: [[1.3, 0.21], [3.5, 0.245], [17.8, 0.175], [77.8, 0.175]],
     BOLTS: [[1.3, 0.8, 0.28, 0.65], [3.5, -0.88, 0.3, 0.75], [6.8, 0.62, 0.2, 0.7], [17.8, 0.5, 0.26, 0.9], [45.3, -0.6, 0.25, 0.8], [51.2, 0.66, 0.16, 0.45], [64.6, -0.68, 0.16, 0.45]],
     SOURCES: [
       [10.3, 14.4, '莎士比亚《奥赛罗》'],
@@ -45,18 +45,18 @@ export function timeline() {
 
 // ------------------------------------------------------------ 布局常量
 const OTHER_HOOK = { pos: [2.68, 0.4, -6], scale: 0.745 };              // 钩子：画面右上方远处，约占画面高度 25%
-const ROW = { n: 8, dx: 0.74, mid: 4 };                                  // 第四个（序号 4）坐着的人的头在原点
+const ROW = { n: 8, dx: 0.7, mid: 4 };                                  // 第四个（序号 4）坐着的人的头在原点
 // 8 个人的姿态：高矮、倾斜、头的前倾与侧偏（hx > 0 表示头靠向右边那个人的肩）
-const SITTER_POSE = [
-  { h: 0.97, lean: -7, ry: 0.08, hx: 0.0, hf: 0.14 }, { h: 1.04, lean: 9, ry: -0.05, hx: 0.12, hf: 0.1 }, { h: 0.93, lean: -5, ry: 0.1, hx: -0.04, hf: 0.18 },
-  { h: 1.0, lean: 11, ry: -0.08, hx: 0.14, hf: 0.12 }, { h: 1.02, lean: -8, ry: 0.04, hx: 0.0, hf: 0.15 }, { h: 0.95, lean: 6, ry: -0.1, hx: -0.12, hf: 0.1 },
-  { h: 1.06, lean: -10, ry: 0.06, hx: 0.05, hf: 0.2 }, { h: 0.98, lean: 8, ry: -0.04, hx: -0.1, hf: 0.13 },
+const SITTER_POSE = [   // 大多侧着身（3/4 侧面，看得出鼻子、下巴、膝盖的轮廓），低头 / 靠肩，高矮与倾斜都不同
+  { h: 0.96, lean: -6, ry: -0.85, hx: 0.0, hf: 0.2 }, { h: 1.05, lean: 10, ry: -0.6, hx: 0.16, hf: 0.06 }, { h: 0.9, lean: -4, ry: -1.0, hx: -0.05, hf: 0.24 },
+  { h: 1.0, lean: 12, ry: -0.7, hx: 0.17, hf: 0.08 }, { h: 1.03, lean: -9, ry: -0.55, hx: -0.15, hf: 0.12 }, { h: 0.94, lean: 5, ry: -0.95, hx: 0.02, hf: 0.18 },
+  { h: 1.08, lean: -11, ry: -0.65, hx: -0.16, hf: 0.1 }, { h: 0.98, lean: 7, ry: -0.8, hx: 0.08, hf: 0.22 },
 ];
-const sitterBase = i => [(i - ROW.mid) * ROW.dx, -0.62, -0.05];
-const GROUND = -0.62 - 1.05, WALL_Z = -0.85;
+const sitterBase = i => [(i - ROW.mid) * ROW.dx, -0.62 + 0.18, -0.05];
+const GROUND = -0.62 + 0.18 - 0.9, WALL_Z = -0.85;
 const SEWN = [40, 0, 0];                                                 // 缝眼特写的那张脸（单独放在远处，硬切过去）
 const PLAT = { pos: [2.55, -0.62, -0.5], scale: 0.66 };                  // 第三章：高台上的「别人」
-const VIEWER = { pos: [3.98, -2.33, 0.0], s: 2.45 };                     // 第四章：看手机的人（画面右侧，约占画面高度 70%）
+const VIEWER = { pos: [3.97, -2.29, 0.0], s: 2.63 };                     // 第四章：看手机的人（画面右侧，约占画面高度 70%）
 const HERO5 = [0, 0, 0.6];                                               // 结尾：主角在手机前方
 
 // ------------------------------------------------------------ 资产
@@ -80,8 +80,8 @@ export function build(preview) {
     const P = SITTER_POSE[i];
     g.position.set(...sitterBase(i)); g.rotation.set(0, P.ry, P.lean * D2R); g.scale.set(1, P.h, 1);
     // 有体积的粒子剪影：受光面亮、背光面暗，轮廓边缘亮色勾边
-    const body = points(buildSitter(311 + i, k, P), cloudMaterial({ size: 0.028, bright: 2.6, depthRef: 6, maxPx: 10, facing: 0.0, light: 0.85, colA: ENVY.main, colB: ENVY.dark,
-      colHook: 'float rr = 1.0 - clamp(abs(facing), 0.0, 1.0); b *= 0.9 + 0.4*pow(rr, 2.5); col = mix(mix(uColB*2.4, uColA, clamp(lit*0.6, 0.0, 1.0)), vec3(0.65, 0.95, 0.79), smoothstep(0.55, 0.9, rr));' }), g);
+    const body = points(buildSitter(311 + i, k, P), cloudMaterial({ size: 0.03, bright: 2.2, depthRef: 6, maxPx: 10, facing: 0.0, light: 0.85, colA: ENVY.main, colB: ENVY.dark,
+      colHook: 'float rr = 1.0 - clamp(abs(facing), 0.0, 1.0); b *= (hasN > 0.5 ? 0.45 + 0.6*pow(rr, 3.0) : 1.0); col = mix(mix(uColB*2.4, uColA, 0.7), vec3(0.65, 0.95, 0.79), smoothstep(0.6, 0.95, rr)*hasN);' }), g);
     const lines = points(buildStitchLines(401, P), cloudMaterial({ size: 0.012, bright: 1.5, depthRef: 4, maxPx: 6, colA: ENVY.bright, colB: ENVY.bright }), g);
     sitters.push({ g, body, lines });
   }
@@ -123,7 +123,7 @@ export function build(preview) {
   // 「别人」跌落时的拖影：几份滞后的副本
   const ghosts = [0, 1, 2].map(() => points(K.envyHero.other.geometry, cloudMaterial({ size: 0.022, bright: 1.0, depthRef: 8, maxPx: 10, colA: ENVY.high, colB: ENVY.bright }), K.scene));
   // 手机与看手机的人
-  const phoneG = new THREE.Group(); K.scene.add(phoneG);
+  const phoneG = new THREE.Group(); phoneG.scale.setScalar(1.18); K.scene.add(phoneG);   // 约占画面高度 75%
   const ph = buildPhone(601, k);
   const frame = points(ph.frame, cloudMaterial({ size: 0.022, bright: 1.0, depthRef: 8, maxPx: 10, colA: ENVY.main, colB: ENVY.main,
     uniforms: { uScr: { value: new THREE.Color(ENVY.dark) } }, uniformDecl: 'uniform vec3 uScr;', colHook: 'if (aMisc.y == 1.0) col = uScr*2.4;' }), phoneG);
@@ -132,12 +132,14 @@ export function build(preview) {
   cards.material.uniforms.uWarmHi.value.set(ENVY.high);
   const screenGlow = glow(0, ENVY.bright, [3.6, 6.2], phoneG, { core: ENVY.dark, order: -6, billboard: false }); screenGlow.position.z = -0.2;
   const viewerG = new THREE.Group(); K.scene.add(viewerG);
-  const viewer = points(buildViewer(701, k), cloudMaterial({ size: 0.026, bright: 1.0, depthRef: 8, maxPx: 12, facing: 0.3, light: 0.4, colA: ENVY.bright, colB: ENVY.main,
+  // 屏幕照到脸上的一道光
+  const screenBeam = points(buildBeamPB(181), beamMaterial(), K.scene); screenBeam.material.uniforms.uSize.value = 0.03;
+  const viewer = points(buildViewer(701, k), cloudMaterial({ size: 0.03, bright: 1.0, depthRef: 8, maxPx: 12, facing: 0.0, light: 0.4, colA: ENVY.bright, colB: ENVY.main,
     uniforms: { uLit: { value: 1 }, uDk: { value: new THREE.Color(ENVY.dark) } }, uniformDecl: 'uniform float uLit; uniform vec3 uDk;',
     // 脸朝向手机（局部 +z）的一面被屏幕照亮
-    colHook: 'float lz = max(aNormal.z, 0.0); float rr = 1.0 - clamp(abs(facing), 0.0, 1.0); b *= (0.6 + 1.4*pow(rr, 1.5)) * (0.6 + 1.8*lz*uLit); col = mix(uDk*2.4, uColA, clamp(lz*uLit + rr*0.6, 0.0, 1.0));' }), viewerG);
+    colHook: 'float lz = max(aNormal.z, 0.0); float rr = 1.0 - clamp(abs(facing), 0.0, 1.0); if (hasN > 0.5) { b *= (0.9 + 0.6*pow(rr, 2.0)) * (0.8 + 1.8*lz*uLit); col = mix(uDk*2.6, uColA, clamp(0.35 + lz*uLit + rr*0.4, 0.0, 1.0)); } else { b *= 1.6; col = mix(uDk*2.6, uColB, 0.75); }' }), viewerG);
   for (const p of [frame, cards, brain, viewer, plat]) p.material.uniforms.uSwirl.value = 1.0;
-  A = { eyeG, eye, hl, cliffG, cliff, sitters, sewnG, sewnFace, stitches, stitchGlows, brainG, brain, painGlow, painRing, rewGlow, platG, plat, ghosts, phoneG, frame, cards, screenGlow, viewerG, viewer };
+  A = { screenBeam, eyeG, eye, hl, cliffG, cliff, sitters, sewnG, sewnFace, stitches, stitchGlows, brainG, brain, painGlow, painRing, rewGlow, platG, plat, ghosts, phoneG, frame, cards, screenGlow, viewerG, viewer };
   hideAll();
 }
 
@@ -173,7 +175,7 @@ function buildPillar(seed) {
   }
   return pb;
 }
-function hideAll() { for (const g of [A.eyeG, A.cliffG, A.sewnG, A.brainG, A.platG, A.phoneG, A.viewerG]) g.visible = false; A.ghosts.forEach(g => { g.visible = false; }); }
+function hideAll() { for (const g of [A.eyeG, A.cliffG, A.sewnG, A.brainG, A.platG, A.phoneG, A.viewerG, A.screenBeam]) g.visible = false; A.ghosts.forEach(g => { g.visible = false; }); }
 
 // ------------------------------------------------------------ 镜头
 const camL = (a, b, k) => ({ pos: lerp3(a.pos, b.pos, k), target: lerp3(a.target, b.target, k), shift: lerp(a.shift ?? 0, b.shift ?? 0, k), fov: 35 });
@@ -181,9 +183,9 @@ const orbit = (ang, d, y, ty, tx = 0) => ({ pos: [tx + Math.sin(ang * D2R) * d, 
 const IDOL = { pos: [-0.85, -0.3, 5.3], target: [-0.85, -0.42, 0] };     // 傲慢神像的构图：胸像在画面右侧
 const EYE_CAM = d => ({ pos: [0, 0, d], target: [0, 0, 0] });
 const BRAIN_CAM = { pos: [0.39, 0.05, 4.2], target: [0.39, 0, 0] };
-// 手机段的相机：距离 d 时，手机（原点）在屏幕 (620,560)、人在 (1300,580)
-const PHONE_CAM = (d, dy = 0) => { const cx = 0.1983 * d, cy = 0.0117 * d + dy; return { pos: [cx, cy, d], target: [cx, cy, 0] }; };
-const HERO5_CAM = { pos: [HERO5[0], 0.05, HERO5[2] + 3.0], target: [HERO5[0], 0.03, HERO5[2]], shift: 170 };
+// 手机段的相机：距离 d 时，手机（原点）在屏幕 (620,612)、人在 (1300,600)
+const PHONE_CAM = (d, dy = 0) => { const cx = 0.1983 * d, cy = 0.042 * d + dy; return { pos: [cx, cy, d], target: [cx, cy, 0] }; };
+const HERO5_CAM = { pos: [HERO5[0], 0.05, HERO5[2] + 3.6], target: [HERO5[0], 0.03, HERO5[2]], shift: 255 };   // 脸在画面上部，下方留给大字
 
 function camAt(t) {
   // 钩子
@@ -196,7 +198,7 @@ function camAt(t) {
   // 01 巨眼
   if (t < 24.0) {
     const push = 0.8 * outExpo(prog(t, 17.8, 18.1));
-    const c = EYE_CAM(lerp(9, 8.0, sine(prog(t, 10.6, 24.0))) - push);
+    const c = EYE_CAM(lerp(9, 7.4, sine(prog(t, 10.6, 24.0))) - push);
     return t < 11.2 ? camL(idol10(), c, inOut(prog(t, 10.0, 11.2))) : c;
   }
   // 02 缝上的眼睛
@@ -238,7 +240,7 @@ export function update(t, F) {
   hideAll();
   const s = heroState(t, F);
   applyHero(s, t, F.bursts);
-  if (t >= 10.4 && t < 24.6) updateEye(t, F);
+  if (t >= 10.4 && t < 24.8) updateEye(t, F);
   if (t >= 23.6 && t < 41.0) updateCliff(t, F);
   if (t >= 28.9 && t < 33.0) updateSewn(t);
   if (t >= 39.9 && t < 59.4) updateBrain(t, F);
@@ -251,8 +253,8 @@ export function update(t, F) {
 }
 function bloomAt(t) {
   if (t < 3.5) return 1.4;
-  // 睁眼瞬间的辉光峰值为傲慢（1.4 × 1.2 × 2.7）的 85%
-  if (t < 4.1) { const d = t - 3.5; return d < 0.05 ? lerp(1.4, 2.25, d / 0.05) : 1.6 + 0.65 * Math.exp(-(d - 0.05) * 9); }
+  // 睁眼瞬间的辉光峰值为傲慢（1.4 × 1.2 × 2.7 ≈ 4.5）的 80%，持续 0.3 秒
+  if (t < 4.1) { const d = t - 3.5; return d < 0.04 ? lerp(1.4, 2.14, d / 0.04) : lerp(2.14, 1.6, sine(clamp((d - 0.04) / 0.26))); }
   const keys = [[4.1, 1.6], [23.8, 1.6], [24.6, 1.1], [39.8, 1.1], [40.8, 1.4], [57.9, 1.4], [58.6, 1.3], [73.8, 1.3], [74.5, 1.5]];
   let v = 1.6;
   for (let i = 0; i < keys.length - 1; i++) if (t >= keys[i][0] && t <= keys[i + 1][0]) v = lerp(keys[i][1], keys[i + 1][1], sine(prog(t, keys[i][0], keys[i + 1][0])));
@@ -280,13 +282,13 @@ function heroState(t, F) {
   // 结尾：粒子汇聚成胸像（72.8–75.0），75.0 睁眼、直视观众
   if (t >= 71.6) {
     Object.assign(s, full, { pos: HERO5, ry: 0, beam: 0, other: 0 });
-    s.alpha = sine(prog(t, 71.6, 72.1)); s.scatter = 1.8 * (1 - out3(prog(t, 71.8, 75.0))); s.scatFade = t < 75.5 ? 0.25 : 1; // 汇聚时粒子不隐去
+    s.alpha = sine(prog(t, 71.6, 71.9)); s.scatter = 1.3 * (1 - out3(prog(t, 71.6, 74.8))); s.scatFade = t < 75.5 ? 0.25 : 1; // 汇聚时粒子不隐去
     if (t >= 75.0) {
       const o = outExpo(prog(t, 75.0, 75.25));
       Object.assign(s, { eyeOpen: 0.6 * o, gaze: 1 - outExpo(prog(t, 75.15, 75.5)), irisB: 0.1 + 0.32 * o + 0.6 * Math.exp(-(t - 75.0) * 9) * o, sparkT0: 75.0 });
     } else Object.assign(s, { eyeOpen: 0, gaze: 1 });
     if (F.outro) s.scatter = F.outro.heroScatter;
-    s.eyeScale = 1.45;   // 结尾特写里眼睛放大，看得清虹膜圆环、竖向瞳孔和高光点
+    s.eyeScale = 2.5;   // 结尾特写里眼睛放大，看得清虹膜圆环、竖向瞳孔和高光点
     return s;
   }
   s.visible = false;
@@ -302,23 +304,23 @@ function updateEye(t, F) {
   const wide = outExpo(prog(t, 17.8, 18.05));
   u.uScatter.value = 2 * (1 - out3(prog(t, 10.5, 11.4))); u.uScatterDist.value = 1.2; u.uScatSpread.value = 0.4; u.uScatFade.value = 0.25;
   u.uOpenE.value = lerp(0.6, 1.0, wide) + 0.04 * Math.sin(t * 1.3);
-  u.uRot.value = (t - 10) * 0.05;                                         // 虹膜纤维缓缓旋转
-  u.uSpring.value = 0.9 * Math.exp(-Math.max(0, t - 17.8) * 3) * (t >= 17.8 ? 1 : 0);   // 触须向外弹开
-  A.eyeG.rotation.set(0.04 * Math.sin(t * 0.5), 0.14 * Math.sin(t * 0.37), 0);                 // 眼睛缓慢左右转动
+  u.uRot.value = (t - 10) * 0.16;                                         // 虹膜纤维缓缓旋转
+  u.uSpring.value = 1.6 * Math.exp(-Math.max(0, t - 17.8) * 3) * (t >= 17.8 ? 1 : 0);   // 触须向外弹开
+  A.eyeG.rotation.set(0.08 * Math.sin(t * 0.55), 0.3 * Math.sin(t * 0.42), 0);                 // 眼睛缓慢左右转动
   u.uPupil.value = lerp(EYE.pupil, EYE.pupilS, wide);
-  u.uFlareE.value = 0.9 * Math.exp(-Math.max(0, t - 17.8) * 2.5) * (t >= 17.8 ? 1 : 0);
-  u.uAlpha.value = 1 - sine(prog(t, 23.8, 24.4));
+  u.uFlareE.value = 1.1 * Math.exp(-Math.max(0, t - 17.8) * 2.5) * (t >= 17.8 ? 1 : 0);
+  u.uAlpha.value = 1 - sine(prog(t, 23.9, 24.7));
   A.hl.position.set(-u.uPupil.value * 0.3, u.uPupil.value * 0.55, 0.15);
   A.hl.material.uniforms.uInt.value = 0.3 * (1 - u.uScatter.value / 2) * u.uAlpha.value;
-  if (t >= 20.5) { F.ink = lerp(0, 1.3, sine(prog(t, 20.5, 23.9))); F.inkC = [0.5, 0.5]; }
+  if (t >= 20.5) { F.ink = lerp(0, 1.3, sine(prog(t, 20.5, 23.5))); F.inkC = [0.5, 0.5]; }
   if (t >= 17.8 && t < 18.6) F.bursts.push({ t0: 17.8, pos: [0, 0, 0.4], n: 260, speed: 2.4, life: 0.8, grav: 0, seed: 17, bright: 2 });
 }
 // ---------- 02 山崖与坐着的人
 function updateCliff(t, F) {
   A.cliffG.visible = t < 28.9 || t >= 33.0;
-  const a = Math.min(sine(prog(t, 24.0, 25.0)), 1 - sine(prog(t, 40.2, 40.9)));
+  const a = Math.min(sine(prog(t, 23.5, 24.5)), 1 - sine(prog(t, 40.2, 40.9)));
   A.cliff.material.uniforms.uAlpha.value = a;
-  if (t < 25.0) { F.ink = lerp(1.3, 0, sine(prog(t, 24.0, 25.0))); F.inkC = [0.5, 0.5]; }
+  if (t < 24.9 && t >= 23.5) { F.ink = lerp(1.3, 0, sine(prog(t, 23.5, 24.9))); F.inkC = [0.5, 0.5]; }
   A.sitters.forEach((S, i) => {
     let al = a;
     if (i === ROW.mid && t > 40.0) al = 1 - sine(prog(t, 40.25, 40.7)); // 这个人的头化成大脑
@@ -395,7 +397,7 @@ function updatePhone(t, F) {
   for (const p of [A.frame, A.cards]) {
     const u = p.material.uniforms;
     u.uAlpha.value = appear; u.uScatter.value = 2.4 * out3(shatter); u.uScatterDist.value = 0.6;
-    u.uScatterBias.value.set(0, 0, HERO5[2] + 0.6); u.uScatSpread.value = 0.5; u.uSwirl.value = 2.0; u.uScatFade.value = 0.35;
+    u.uScatterBias.value.set(0, 0, HERO5[2] + 0.6); u.uScatSpread.value = 0.5; u.uSwirl.value = 2.0; u.uScatFade.value = 0.1;
     u.uTintAll.value = sine(prog(t, 71.6, 72.2)); u.uColTint.value.set(ENVY.main);
   }
   A.cards.material.uniforms.uScroll.value = scrollAt(t);
@@ -406,7 +408,12 @@ function updatePhone(t, F) {
   const dim = 1 - 0.7 * Math.min(sine(prog(t, 67.2, 67.7)), 1 - sine(prog(t, 71.3, 71.7)));
   A.frame.material.uniforms.uAlpha.value *= dim; A.cards.material.uniforms.uAlpha.value *= dim;
   const vu = A.viewer.material.uniforms;
-  vu.uAlpha.value = appear * (1 - sine(prog(t, 71.8, 73.0))) * dim; vu.uBright.value = lerp(2.8, 1.0, heat); vu.uLit.value = lerp(0.9, 1.2, heat);
+  vu.uAlpha.value = appear * (1 - sine(prog(t, 71.8, 73.0))) * dim;
+  // 屏幕到脸的光：手机屏幕中心 → 低着头的脸
+  A.screenBeam.visible = appear * dim * (1 - shatter) > 0.02;
+  const bu = A.screenBeam.material.uniforms;
+  bu.uA.value.set(0.4 * 1.18, 0.9 * 1.18, 0.15); bu.uB.value.set(VIEWER.pos[0] - 0.22 * VIEWER.s, VIEWER.pos[1] + 1.5 * VIEWER.s, 0.05);
+  bu.uReach.value = 1; bu.uBeam.value = lerp(0.6, 1.1, heat) * appear * dim * (1 - shatter); vu.uBright.value = lerp(3.4, 1.4, heat); vu.uLit.value = lerp(0.9, 1.2, heat);
 }
 
 // ------------------------------------------------------------ 文字
@@ -429,10 +436,10 @@ export function text(t, F) {
   if (t >= 45.4 && t < 56.0) brainLabel(t, '疼痛相关区域', BRAIN2.pain, 45.4, 55.8, [-360, -150]);
   if (t >= 53.1 && t < 56.0) brainLabel(t, '奖励相关区域', BRAIN2.reward, 53.1, 55.8, [-380, 170]);
   // 结尾
-  staggerLine(t, '看到这里——', 960, 820, 64, 75.2, 77.4, { step: 0.09, dur: 0.4, weight: 700, rise: 16, fadeOut: 0.3 });
+  staggerLine(t, "看到这里——", 960, 905, 64, 75.2, 77.4, { step: 0.09, dur: 0.4, weight: 700, rise: 16, fadeOut: 0.3 });
   if (t >= 77.8 && t <= 81.6) {
     const p = prog(t, 77.8, 78.0), s = lerp(1.4, 1, outExpo(p)), a = clamp(p * 4) * (1 - sine(prog(t, 81.2, 81.6)));
-    glowText('你是不是已经，想起了某个人？', 960, 900, fs(700, 72 * s), C.key, { alpha: a, glow: 34, glow2: 70, glowColor: ENVY.main });
+    glowText('你是不是已经，想起了某个人？', 960, 975, fs(700, 72 * s), C.key, { alpha: a, glow: 34, glow2: 70, glowColor: ENVY.main });
   }
   const ea = vis(t, 81.6, 83.0, 0.4, 0.4);
   if (ea > 0) {
@@ -446,7 +453,7 @@ function brainLabel(t, s, wp, t0, t1, off) {
   const a = vis(t, t0, t1, 0.35, 0.35); if (a <= 0) return;
   const p = new THREE.Vector3(...wp).applyMatrix4(A.brainG.matrixWorld).toArray(), sp = project(p);
   const lx = clamp(sp[0] + off[0], 220, 1700), ly = clamp(sp[1] + off[1], 130, 900);
-  const ctx = getCtx(), w = 6 * 40 + 36, h = 64;
+  const ctx = getCtx(), w = 6 * 44 + 40, h = 70;
   ctx.save(); ctx.globalAlpha *= a;
   ctx.fillStyle = 'rgba(2,10,6,0.62)'; ctx.strokeStyle = 'rgba(167,243,201,0.55)'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.roundRect(lx - w / 2, ly - h / 2, w, h, 10); ctx.fill(); ctx.stroke();
@@ -456,5 +463,5 @@ function brainLabel(t, s, wp, t0, t1, off) {
   ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(sp[0], sp[1]); ctx.stroke();
   ctx.fillStyle = ENVY.high; ctx.beginPath(); ctx.arc(sp[0], sp[1], 6, 0, TAU); ctx.fill();
   ctx.restore();
-  glowText(s, lx, ly, fs(600, 40), C.text, { alpha: a, glow: 14 });
+  glowText(s, lx, ly, fs(600, 44), C.text, { alpha: a, glow: 14 });
 }

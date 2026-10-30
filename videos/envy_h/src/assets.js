@@ -412,18 +412,14 @@ export function buildSnakeBody(seed, L) {
     pb.add([0, -999, 0], [0, 0, 0], R(), [0, 0, 0], [d / L, 0, 0, 1], [band && dorsal ? 2.2 : (dorsal ? 0.9 : 0.35), 0]);
     meta.push({ k: 0, d, ang });
   }
-  // 楔形蛇头：长 0.3、宽 0.22 的三角形（尖端朝前），只有轮廓发亮，内部稀疏；放大 1.3 倍保证可读
-  const tri = [[0.3, 0], [0, 0.11], [0, -0.11]];
-  for (let i = 0; i < 700; i++) {          // 轮廓
-    const e = Math.floor(R() * 3), f = R(), A = tri[e], B = tri[(e + 1) % 3];
-    pb.add([0, -999, 0], [0, 0, 0], R(), [0, 0, 0], [0, 0, 0, 1], [1.5, 1]);
-    meta.push({ k: 1, a: (A[0] + (B[0] - A[0]) * f) * 1.1, w: (A[1] + (B[1] - A[1]) * f) * 1.1, h: (R() - 0.5) * 0.01 });
-  }
-  for (let i = 0; i < 260; i++) {          // 内部
-    let u = R(), v = R(); if (u + v > 1) { u = 1 - u; v = 1 - v; }
-    const x = tri[0][0] * u + tri[1][0] * v + tri[2][0] * (1 - u - v), y = tri[0][1] * u + tri[1][1] * v + tri[2][1] * (1 - u - v);
-    pb.add([0, -999, 0], [0, 0, 0], R(), [0, 0, 0], [0, 0, 0, 1], [0.35, 1]);
-    meta.push({ k: 1, a: x * 1.1, w: y * 1.1, h: (R() - 0.5) * 0.03 });
+  // 立体的楔形蛇头（长 0.3）：后宽前尖，头顶较平、两颊鼓起、下颌收窄；截面是上下不对称的椭圆
+  for (let i = 0; i < 2400; i++) {
+    const a = Math.pow(R(), 0.8), ph = R() * TAU;
+    const w = 0.105 * (1 - Math.pow(a, 1.6)) + 0.01, hTop = 0.045 * (1 - a * 0.7), hBot = 0.035 * (1 - a * 0.5);
+    const sn = Math.sin(ph), y = sn > 0 ? sn * hTop * (0.75 + 0.25 * Math.abs(Math.cos(ph))) : sn * hBot;   // 头顶较平
+    const edge = Math.abs(Math.cos(ph)) > 0.92 || a > 0.95;
+    pb.add([0, -999, 0], [0, 0, 0], R(), [0, 0, 0], [0, 0, 0, 1], [edge ? 0.55 : (sn > 0 ? 0.3 : 0.16), 1]);
+    meta.push({ k: 1, a: a * 0.3, w: Math.cos(ph) * w, h: y });
   }
   for (let i = 0; i < 160; i++) { // 分叉的信子
     const f = R(), fork = f > 0.7 ? (R() < 0.5 ? -1 : 1) : 0;
@@ -434,7 +430,7 @@ export function buildSnakeBody(seed, L) {
 }
 export function snakeBodyMaterial() {
   return cloudMaterial({
-    size: 0.016, bright: 1.5, depthRef: 3, maxPx: 12, drift: 0, colA: ENVY.main, colB: ENVY.dark,
+    size: 0.016, bright: 3.75, depthRef: 3, maxPx: 12, drift: 0, colA: ENVY.main, colB: ENVY.dark,
     uniforms: { uBr: { value: new THREE.Color(ENVY.bright) }, uDk: { value: new THREE.Color(ENVY.dark) } },
     uniformDecl: 'uniform vec3 uBr, uDk;',
     colHook: /* glsl */`

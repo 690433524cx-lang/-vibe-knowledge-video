@@ -50,19 +50,32 @@ const ranges = ts => { const out = []; for (const t of ts) { const l = out[out.l
   const log = (ok, s) => { report.push(`${ok ? '通过' : '不合格'}  ${s}`); if (!ok) fail++; };
   const dur = Number(spawnSync('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', file]).stdout);
   const fr = frames(file, 2).slice(0, Math.floor(dur * 2));
-  const dark = [], dull = [], still = [], hues = [], offHue = [];
+  const dark = [], bright = [], dull = [], still = [], hues = [], offHue = [];
   let run = 0;
   fr.forEach((f, i) => {
     const t = i / 2, s = stats(f);
     if (s.luma < 28) dark.push(t);
+    if (s.luma > 190) bright.push(t);
     if (s.sat < 0.25) dull.push(t);
     if (i % 2 === 0 && s.hue != null) { hues.push(s.hue); if (s.hue < 70 || s.hue > 175) offHue.push(`${t.toFixed(0)}秒(${s.hue.toFixed(0)}°)`); }
-    if (i > 0) { const d = meanDiff(f, fr[i - 1]); const pause = t > 77.6 && t < 78.2; /* 结尾的停顿（剧情 77.4–77.8，成片顺延 0.3 秒） */ run = d < 1.5 && !pause ? run + 0.5 : 0; if (run >= 2) still.push(t); }
+    if (i > 0) { const d = meanDiff(f, fr[i - 1]); const pause = t > 79.8 && t < 80.4; /* 结尾的停顿（剧情 77.4–77.8，成片 79.9–80.3） */ run = d < 1.5 && !pause ? run + 0.5 : 0; if (run >= 2) still.push(t); }
   });
   log(dark.length === 0, `亮度：${dark.length ? '平均亮度<28 的时刻 ' + ranges(dark).join('、') : '全部 ≥ 28（没有黑屏或空白画面）'}`);
+  log(bright.length === 0, `过曝：${bright.length ? '平均亮度>190 的时刻 ' + ranges(bright).join('、') : '所有抽帧平均亮度 ≤ 190'}`);
   log(dull.length === 0, `鲜艳度：${dull.length ? '中部饱和度<0.25 的时刻 ' + ranges(dull).join('、') : '全部 ≥ 0.25'}`);
   log(still.length === 0, `静止：${still.length ? '超过 2 秒几乎不动的时刻 ' + ranges(still).join('、') : '没有超过 2 秒的静止画面'}`);
   log(offHue.length === 0, `色相：每秒抽帧 ${hues.length} 张，发光部分平均色相 ${Math.min(...hues).toFixed(0)}°–${Math.max(...hues).toFixed(0)}°${offHue.length ? '；不在绿色范围：' + offHue.join('、') : '，全部在绿色范围（70°–175°）'}`);
+  // 逐帧检查（10 帧/秒）：最大平均亮度；画面主体（亮像素）消失超过 0.3 秒
+  const fr10 = frames(file, 10); let maxL = 0, maxAt = 0, gone = 0; const blank = [];
+  fr10.forEach((f, i) => {
+    let L = 0, lit = 0;
+    for (let k = 0; k < f.length; k += 3) { const l = 0.299 * f[k] + 0.587 * f[k + 1] + 0.114 * f[k + 2]; L += l; if (l > 90) lit++; }
+    L /= f.length / 3; if (L > maxL) { maxL = L; maxAt = i / 10; }
+    gone = lit / (f.length / 3) < 0.004 ? gone + 0.1 : 0;
+    if (gone > 0.3 + 1e-6) blank.push(i / 10);
+  });
+  log(maxL <= 190, `逐帧最大平均亮度：${maxL.toFixed(1)}（${maxAt.toFixed(1)} 秒，要求 ≤ 190）`);
+  log(blank.length === 0, `空白画面：${blank.length ? '画面主体消失超过 0.3 秒的时刻 ' + ranges(blank).join('、') : '没有主体消失超过 0.3 秒的画面'}`);
   const d0 = meanDiff(edgeFrame(file, false), edgeFrame(file, true));
   log(d0 < 4, `首尾帧差：${d0.toFixed(2)}（要求 < 4）`);
   // 页面检查

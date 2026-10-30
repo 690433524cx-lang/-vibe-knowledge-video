@@ -7,10 +7,10 @@ async function openBrowser() { const { srv, url } = await serve(path.resolve(__d
 async function openPage(browser, url, preview, errors = []) {
   const page = await browser.newPage({ viewport: { width: preview ? 960 : 1920, height: preview ? 540 : 1080 }, deviceScaleFactor: 1 });
   page.on('pageerror', e => errors.push(String(e)));
-  page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
+  page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); if (process.env.DEBUG_LOG) console.log('LOG', m.text()); });
   await page.goto(`${url}/index.html${preview ? '?preview=1' : ''}`);
   await page.evaluate(() => document.fonts.ready);
-  await page.waitForFunction(() => window.READY === true || window.FAILED, null, { timeout: 240000 });
+  await page.waitForFunction(() => window.READY === true || window.FAILED, null, { timeout: 900000 });
   const failed = await page.evaluate(() => window.FAILED);
   if (failed) throw new Error(failed);
   return page;

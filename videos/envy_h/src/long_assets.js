@@ -8,7 +8,7 @@ import { ENVY, sampleSDF, humanSDF } from './assets.js';
 // ============================================================ 巨眼
 // 原设定宽约 6 个单位；竖屏 9 个单位外的可见宽度只有约 4.7，所以整体按 4.4/6 缩小（虹膜、瞳孔同比例）
 // 宽约占画面宽度的 60%（相机 9 个单位外，横屏可见宽度约 10.1）
-export const EYE = { W: 6, f: 1, R: 1.1, pupil: 0.35, pupilS: 0.2, H: 1.3 };
+export const EYE = { W: 6, f: 1, R: 1.1, pupil: 0.35, pupilS: 0.13, H: 1.3 };
 // kind（aMisc.y）：10 虹膜纤维 11 眼白 12 上眼睑 13 下眼睑 14 暗影触须
 export function buildGiantEye(seed = 201, k = 1) {
   const R = rng(seed), pb = new PB();
@@ -69,7 +69,7 @@ export function giantEyeMaterial() {
         vec3 q = vec3(x, lidY(x)*up, 0.0);
         float ang = 1.5708*up + sin(sd)*0.9 + (aA*0.9);
         float s = aT*len*(1.0 + uSpring);
-        float curl = sin(s*4.0 + uTime*qf(30.0 + mod(sd, 9.0)) + sd)*0.9 + s*1.6*sign(sin(sd*3.1));
+        float curl = sin(s*4.0 + uTime*qf(110.0 + mod(sd, 9.0)*6.0) + sd)*1.4 + s*1.6*sign(sin(sd*3.1));   // 明显地扭动
         q += vec3(cos(ang + curl*0.6), sin(ang + curl*0.6), 0.0)*s + vec3(0.0, 0.0, -0.1 - s*0.3);
         p = q + vec3(sin(uTime*qf(20.0) + sd + aT*5.0), cos(uTime*qf(26.0) + sd*1.3 + aT*4.0), 0.0)*0.04*aT;
       }`,
@@ -102,32 +102,41 @@ export function buildCliff(seed = 301, k = 1) {
   }
   return pb;
 }
-// 坐着的人：兜帽、低垂的头（P.hf 前倾、P.hx 侧偏，头靠向旁边人的肩）、宽肩、弓起的背、盘起的腿；有体积的剪影
+// 坐着的人（抱膝而坐）：兜帽包住的头（侧面能看出鼻子和下巴）、肩膀、弓起的背、抬起的膝盖、垂下的手；致密粒子填出实心身体
+// P：hx 头的侧偏（靠向旁边人的肩）、hf 低头前倾、tw 侧身角度
 function sitterSDF(P = { hx: 0, hf: 0.14 }) {
   const sph = (p, c, r) => Math.hypot(p[0] - c[0], p[1] - c[1], p[2] - c[2]) - r;
   const ell = (p, c, r) => (Math.hypot((p[0] - c[0]) / r[0], (p[1] - c[1]) / r[1], (p[2] - c[2]) / r[2]) - 1) * Math.min(...r);
+  const cap = (p, a, b, r) => { const pa = [p[0] - a[0], p[1] - a[1], p[2] - a[2]], ba = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]; const h = clamp((pa[0] * ba[0] + pa[1] * ba[1] + pa[2] * ba[2]) / (ba[0] * ba[0] + ba[1] * ba[1] + ba[2] * ba[2])); return Math.hypot(pa[0] - ba[0] * h, pa[1] - ba[1] * h, pa[2] - ba[2] * h) - r; };
   const smin = (a, b, kk) => { const h = clamp(0.5 + 0.5 * (b - a) / kk); return lerp(b, a, h) - kk * h * (1 - h); };
-  const hc = [P.hx, 0.55 - Math.abs(P.hx) * 0.4, P.hf];
+  const hc = [P.hx, 0.5 - Math.abs(P.hx) * 0.35 - P.hf * 0.4, 0.06 + P.hf];
   return p => {
-    const head = sph(p, hc, 0.19);
-    let hood = Math.abs(sph(p, [hc[0] * 0.9, hc[1] + 0.03, hc[2] - 0.06], 0.28)) - 0.03;
-    hood = Math.max(hood, -(sph(p, [hc[0], hc[1] - 0.03, hc[2] + 0.26], 0.22)));
-    const shoulders = ell(p, [0, 0.3, 0.0], [0.4, 0.15, 0.25]);
-    const back = ell(p, [0, 0.1, -0.14], [0.36, 0.42, 0.3]);
-    const y = p[1], t = clamp((0.3 - y) / 1.2), r = lerp(0.38, 0.55, Math.sqrt(t));
-    const cloak = Math.max(Math.hypot(p[0], (p[2] + 0.02) * 1.3) - r, Math.max(y - 0.3, -0.92 - y));
-    const legs = ell(p, [0, -0.93, 0.28], [0.6, 0.14, 0.3]);                     // 盘起的腿
-    return Math.min(head, smin(hood, smin(smin(shoulders, back, 0.1), smin(cloak, legs, 0.1), 0.12), 0.08));
+    let head = ell(p, hc, [0.15, 0.19, 0.17]);
+    head = smin(head, ell(p, [hc[0], hc[1] - 0.02, hc[2] + 0.16], [0.03, 0.05, 0.04]), 0.03);              // 鼻子
+    head = smin(head, ell(p, [hc[0], hc[1] - 0.15, hc[2] + 0.09], [0.08, 0.05, 0.06]), 0.04);              // 下巴
+    let hood = Math.abs(ell(p, [hc[0] * 0.92, hc[1] + 0.04, hc[2] - 0.05], [0.23, 0.26, 0.25])) - 0.03;
+    hood = Math.max(hood, -ell(p, [hc[0], hc[1] - 0.04, hc[2] + 0.24], [0.17, 0.2, 0.2]));             // 兜帽前面开口
+    const shoulders = ell(p, [0, 0.24, 0.0], [0.38, 0.13, 0.22]);
+    const back = ell(p, [0, 0.0, -0.12], [0.33, 0.4, 0.27]);                                               // 弓起的背
+    const hips = ell(p, [0, -0.62, 0.0], [0.36, 0.2, 0.3]);
+    const knees = Math.min(ell(p, [-0.14, -0.3, 0.36], [0.13, 0.22, 0.15]), ell(p, [0.14, -0.3, 0.36], [0.13, 0.22, 0.15]));   // 抱起的膝盖
+    const shins = Math.min(cap(p, [-0.14, -0.38, 0.42], [-0.16, -0.78, 0.36], 0.08), cap(p, [0.14, -0.38, 0.42], [0.16, -0.78, 0.36], 0.08));
+    const arms = Math.min(cap(p, [-0.3, 0.2, 0.05], [-0.16, -0.18, 0.5], 0.06), cap(p, [0.3, 0.2, 0.05], [0.16, -0.18, 0.5], 0.06));   // 垂下抱膝的手
+    const cloak = Math.max(cap(p, [0, 0.2, -0.05], [0, -0.65, -0.05], 0.36), -p[1] - 0.82);
+    let body = smin(smin(shoulders, back, 0.1), smin(cloak, hips, 0.12), 0.1);
+    body = smin(body, smin(knees, shins, 0.06), 0.1);
+    body = smin(body, arms, 0.05);
+    return Math.min(head, smin(hood, body, 0.07));
   };
 }
 export function buildSitter(seed, k = 1, P) {
-  const sdf = sitterSDF(P), pb = sampleSDF(sdf, Math.round(11000 * k), [[-0.8, -1.1, -0.7], [0.8, 1.0, 0.7]], seed, [1, 0]);
-  // 内部也填上较暗的粒子，让剪影有体积，而不是空心线框
+  const sdf = sitterSDF(P), pb = sampleSDF(sdf, Math.round(9000 * k), [[-0.6, -0.9, -0.5], [0.6, 0.85, 0.7]], seed, [1, 0]);
+  // 内部也填满粒子（实心的身体）
   const R = rng(seed + 77); let n = 0, guard = 0;
-  while (n < 7000 * k && guard++ < 200000) {
-    const p = [lerp(-0.8, 0.8, R()), lerp(-1.1, 1.0, R()), lerp(-0.7, 0.7, R())];
-    if (sdf(p) > -0.01) continue;
-    pb.add(p, [0, 0, 0], R(), [0, 0, 0], [R(), 0, 0, 1], [0.5, 0]); n++;
+  while (n < 9000 * k && guard++ < 120000) {
+    const p = [lerp(-0.6, 0.6, R()), lerp(-0.9, 0.85, R()), lerp(-0.5, 0.7, R())];
+    if (sdf(p) > -0.015) continue;
+    pb.add(p, [0, 0, 0], R(), [0, 0, 0], [R(), 0, 0, 1], [0.75, 0]); n++;
   }
   return pb;
 }
@@ -136,11 +145,11 @@ export const SITTER_EYES = [[-0.07, 0.57, 0.322], [0.07, 0.57, 0.322]];
 // 坐着的人闭着的眼睛：一道细细的亮线（跟着头的位置）
 export function buildStitchLines(seed = 401, P = { hx: 0, hf: 0.14 }) {
   const R = rng(seed), pb = new PB();
-  const hc = [P.hx, 0.55 - Math.abs(P.hx) * 0.4, P.hf];
-  const eyes = [[hc[0] - 0.07, hc[1] + 0.02, hc[2] + 0.18], [hc[0] + 0.07, hc[1] + 0.02, hc[2] + 0.18]];
+  const hc = [P.hx, 0.5 - Math.abs(P.hx) * 0.35 - P.hf * 0.4, 0.06 + P.hf];
+  const eyes = [[hc[0] - 0.055, hc[1] + 0.03, hc[2] + 0.155], [hc[0] + 0.055, hc[1] + 0.03, hc[2] + 0.155]];
   for (const e of eyes) for (let i = 0; i < 160; i++) {
     const u = R() * 2 - 1;
-    pb.add([e[0] + u * 0.05, e[1] - 0.006 * (1 - u * u) + (R() - 0.5) * 0.003, e[2] - 0.012 * u * u], [0, 0, 0], R(), [0, 0, 0], [R(), 0, 0, 1], [1.2, 0]);
+    pb.add([e[0] + u * 0.035, e[1] - 0.005 * (1 - u * u) + (R() - 0.5) * 0.003, e[2] - 0.01 * u * u], [0, 0, 0], R(), [0, 0, 0], [R(), 0, 0, 1], [1.2, 0]);
   }
   return pb;
 }
@@ -274,7 +283,15 @@ export function buildViewer(seed = 701, k = 1) {
     }
     return base(p);
   };
-  return sampleSDF(sdf, Math.round(9000 * k), [[-0.6, 0.6, -0.4], [0.6, 1.85, 0.5]], seed, [1, 0]);
+  // 致密的实心身体：表面 + 内部填充（整个人，不只是上半身）
+  const pb = sampleSDF(sdf, Math.round(16000 * k), [[-0.6, 0.0, -0.4], [0.6, 1.85, 0.5]], seed, [1, 0]);
+  const R = rng(seed + 5); let n = 0, guard = 0;
+  while (n < 12000 * k && guard++ < 500000) {
+    const p = [lerp(-0.6, 0.6, R()), lerp(0.0, 1.85, R()), lerp(-0.4, 0.5, R())];
+    if (sdf(p) > -0.012) continue;
+    pb.add(p, [0, 0, 0], R(), [0, 0, 0], [R(), 0, 0, 1], [0.6, 0]); n++;
+  }
+  return pb;
 }
 
 
