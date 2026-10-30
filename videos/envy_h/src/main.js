@@ -11,10 +11,14 @@ import { ENVY } from './assets.js';
 
 const q = new URLSearchParams(location.search);
 export const PREVIEW = q.get('preview') === '1';
-export const TL = 84;
+// 剧情时间 84 秒；成片 84.3 秒：片头扫描光多了 0.3 秒（成片 0–1.6 秒），之后所有事件整体顺延 0.3 秒
+export const TL = 84, TOUT = 84.3, SCAN_END = 1.6, DELAY = 0.3;
 setLoop(TL); SHARED.uLoop.value = TL;
+// 成片时间 → 剧情时间（连续）；周期性运动用按比例换算的时间，首尾帧仍无缝相接
+export const storyTime = t => t < SCAN_END ? t * (SCAN_END - DELAY) / SCAN_END : t - DELAY;
+const loopTime = t => t * TL / TOUT;
 const TABLE = EP.timeline();
-window.META = { duration: TL, fps: PREVIEW ? 15 : 30, subs: TABLE.SUBS.map(s => ({ t0: s[0], t1: s[1], text: s[2], exempt: !!(s[3] && s[3].exempt) })) };
+window.META = { duration: TOUT, fps: PREVIEW ? 15 : 30, subs: TABLE.SUBS.map(s => ({ t0: s[0] + DELAY, t1: s[1] + DELAY, text: s[2], exempt: !!(s[3] && s[3].exempt) })) };
 // 文字颜色：正文偏绿的白、中性关键词亮色、负面关键词毒绿色、外发光主色
 Object.assign(C, { text: ENVY.high, key: ENVY.bright, neg: ENVY.toxic, glow: ENVY.main, metal: 'envy' });
 
@@ -48,11 +52,11 @@ export async function init() {
 
 // ------------------------------------------------------------ 相机：场景镜头 + 手持漂移 + 冲击
 const camLerp = (a, b, k) => ({ pos: lerp3(a.pos, b.pos, k), target: lerp3(a.target, b.target, k), fov: lerp(a.fov ?? 35, b.fov ?? 35, k), shift: lerp(a.shift ?? 0, b.shift ?? 0, k) });
-function applyCam(c, t, hand) {
+function applyCam(c, t, hand, u) {
   const pos = new THREE.Vector3(...c.pos), tgt = new THREE.Vector3(...c.target);
   const fwd = tgt.clone().sub(pos), dist = fwd.length(); fwd.normalize();
-  pos.x += 0.02 * hand * loopSin(t, 16, 0.3) * (dist / 2.5); pos.y += 0.02 * hand * loopSin(t, 20, 1.7) * (dist / 2.5); pos.z += 0.015 * hand * loopSin(t, 24, 2.9);
-  tgt.x += 0.012 * hand * loopSin(t, 20, 4.1) * (dist / 2.5); tgt.y += 0.012 * hand * loopSin(t, 16, 5.3) * (dist / 2.5);
+  pos.x += 0.02 * hand * loopSin(u, 16, 0.3) * (dist / 2.5); pos.y += 0.02 * hand * loopSin(u, 20, 1.7) * (dist / 2.5); pos.z += 0.015 * hand * loopSin(u, 24, 2.9);
+  tgt.x += 0.012 * hand * loopSin(u, 20, 4.1) * (dist / 2.5); tgt.y += 0.012 * hand * loopSin(u, 16, 5.3) * (dist / 2.5);
   let pk = 0;
   for (const [t0, s] of TABLE.PUNCH) {
     const d = t - t0; if (d < 0 || d > 0.6) continue;
@@ -66,10 +70,12 @@ function applyCam(c, t, hand) {
 }
 
 // ------------------------------------------------------------ 每帧
-export function render(t) {
-  tickMaterials(t);
+export function render(tOut) {
+  const t = storyTime(tOut), u = loopTime(tOut);
+  tickMaterials(u);
   const F = { t, tl: TL, bursts: [], cam: null, bloom: 1.4, nebula: 2.1, ink: 0, inkC: [0.5, 0.5], glitch: 0, outro: null, intro: null };
-  if (t < 2.0) F.intro = intro.seriesIntro(t, EP.N, F);
+  if (tOut < SCAN_END) F.intro = intro.scanIntro(tOut, EP.N, F);
+  else if (t < 2.0) F.intro = intro.seriesIntro(t, EP.N, F);
   else if (t >= TL - 1) F.outro = intro.seriesOutro(t, TL, F);
   else intro.hideFaces();
   EP.update(t, F);
@@ -78,7 +84,7 @@ export function render(t) {
   if (t < 2.0) { cam = intro.camIntro(t); hand = 0; }
   else if (F.outro) { const k = inOut(F.outro.k); cam = camLerp(cam, intro.LINEUP_CAM, k); hand = 1 - k; F.bloom = lerp(F.bloom, 1.4, k); F.nebula = lerp(F.nebula, 2.1, k) * (1 + 1.1 * Math.sin(Math.PI * Math.pow(k, 0.7))); } // 片尾过渡时主角已溶散、七张脸还没飞回，背景略提亮；最后一帧不变
   hand *= clamp((t - 2.0) / 1.0);
-  const pk = applyCam(cam, t, hand);
+  const pk = applyCam(cam, t, hand, u);
   const bs = boltState(t);
   const bu = K.bolts.material.uniforms; for (let i = 0; i < 32; i++) { bu.uProg.value[i] = bs.prog[i]; bu.uInten.value[i] = bs.inten[i]; }
   K.bolts.visible = bs.prog.some(v => v > 0);
@@ -95,7 +101,7 @@ export function render(t) {
   K.bloom.strength = F.bloom * (1 + 0.7 * clamp(pk));
   if (window.DBG) window.DBG(K, t);
   fu.uCA.value = 0.0012 + 0.006 * pk;
-  fu.uGlitch.value = F.glitch; fu.uTime.value = t;
+  fu.uGlitch.value = F.glitch; fu.uTime.value = u;
   K.composer.render();
 
   // 2D 合成（文字坐标按 1920×1080 书写）
@@ -103,7 +109,7 @@ export function render(t) {
   outCtx.setTransform(1, 0, 0, 1, 0, 0); outCtx.globalAlpha = 1; outCtx.globalCompositeOperation = 'source-over';
   outCtx.drawImage(glCanvas, 0, 0);
   outCtx.setTransform(K.scale, 0, 0, K.scale, 0, 0);
-  setCtx(outCtx, t);
+  setCtx(outCtx, u);
   drawChapterBar(t);
   if (t < 2.0) intro.introText(t, '嫉妒');
   for (const [t0, t1, s] of TABLE.SOURCES) source(t, s, t0, t1);
@@ -118,7 +124,7 @@ export function render(t) {
     const d = t - t0; if (d >= 0 && d < 0.25) { outCtx.fillStyle = `rgba(235,255,242,${k * (1 - d / 0.25)})`; outCtx.fillRect(0, 0, FW, FH); }
   }
   outCtx.setTransform(1, 0, 0, 1, 0, 0);
-  outCtx.save(); outCtx.globalAlpha = 0.04; outCtx.drawImage(grain[Math.floor(t * 30 + 0.5) % 4], 0, 0, K.W, K.H); outCtx.restore();
+  outCtx.save(); outCtx.globalAlpha = 0.04; outCtx.drawImage(grain[Math.floor(tOut * 30 + 0.5) % 4], 0, 0, K.W, K.H); outCtx.restore();
   window.LAST_BOXES = BOXES.slice();
 }
 

@@ -22,7 +22,7 @@ function waitExit(proc, label) {
   fs.mkdirSync(tmpDir, { recursive: true });
   const { srv, url, browser } = await openBrowser();
   const errors = [];
-  const total = 84 * fps, nSeg = 21;
+  const total = Math.round(84.3 * fps), nSeg = 21;
   const segs = Array.from({ length: nSeg }, (_, i) => ({ i: i + 1, f0: Math.round(total * i / nSeg), f1: Math.round(total * (i + 1) / nSeg) }));
   const queue = segs.slice();
   const worker = async () => {
@@ -55,7 +55,7 @@ function waitExit(proc, label) {
   // 校验：时长、帧数、分辨率
   const pr = spawnSync('ffprobe', ['-v', 'error', '-count_frames', '-select_streams', 'v', '-show_entries', 'stream=nb_read_frames,width,height,r_frame_rate,pix_fmt,codec_name', '-show_entries', 'format=duration', '-of', 'json', finalFile]).stdout.toString();
   const j = JSON.parse(pr), st = j.streams[0];
-  const ok = st.nb_read_frames == total && Math.abs(Number(j.format.duration) - 84) < 0.05 && st.width == (preview ? 960 : 1920) && st.height == (preview ? 540 : 1080) && st.pix_fmt === 'yuv420p';
+  const ok = st.nb_read_frames == total && Math.abs(Number(j.format.duration) - 84.3) < 0.05 && st.width == (preview ? 960 : 1920) && st.height == (preview ? 540 : 1080) && st.pix_fmt === 'yuv420p';
   console.log(`校验：${st.width}×${st.height} ${st.r_frame_rate} ${st.codec_name} ${st.pix_fmt}，${st.nb_read_frames} 帧，${Number(j.format.duration).toFixed(3)} 秒 → ${ok ? '通过' : '不通过'}`);
   if (!ok) process.exit(1);
   fs.rmSync(tmpDir, { recursive: true, force: true });

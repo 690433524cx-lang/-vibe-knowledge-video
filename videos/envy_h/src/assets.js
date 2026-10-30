@@ -381,14 +381,18 @@ export function beamMaterial() {
 
 // ============================================================ 两条粒子蛇（第二版）：从脖子两侧的裂纹钻出，沿肩膀 S 形向上，蛇头停在脸颊两侧
 // 尺寸按「人头高 2 个单位」；路径控制点（side=+1 为画面右侧），逐帧在 JS 里算出位置
-const SNAKE_CTRL = [[0.40, -1.32, 0.28], [0.95, -1.55, 0.42], [1.12, -1.10, 0.42], [0.78, -0.78, 0.58], [1.02, -0.42, 0.58], [0.90, -0.12, 0.74]];
+// 两条蛇的路径各不相同（不对称）：从脖子侧面钻出，S 形贴着下颌、脸颊向上，蛇头停在颧骨旁
+const SNAKE_CTRL = {
+  '1': [[0.36, -1.42, 0.12], [0.74, -1.18, 0.36], [0.5, -0.94, 0.66], [0.86, -0.66, 0.56], [0.72, -0.34, 0.74], [0.86, -0.02, 0.82]],
+  '-1': [[-0.44, -1.56, 0.2], [-0.9, -1.36, 0.36], [-0.62, -1.12, 0.66], [-1.0, -0.92, 0.52], [-0.86, -0.66, 0.74], [-1.02, -0.5, 0.82]],
+};
 function catmull(P, u) {
   const n = P.length - 1, f = Math.min(n - 1e-6, Math.max(0, u * n)), i = Math.floor(f), t = f - i;
   const p0 = P[Math.max(0, i - 1)], p1 = P[i], p2 = P[i + 1], p3 = P[Math.min(n, i + 2)];
   return [0, 1, 2].map(k => 0.5 * (2 * p1[k] + (-p0[k] + p2[k]) * t + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * t * t + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * t * t * t));
 }
 export function snakePath(side) {
-  const P = SNAKE_CTRL.map(p => [p[0] * side, p[1], p[2]]);
+  const P = SNAKE_CTRL[String(side)];
   const N = 400, pts = [], arc = [0];
   for (let i = 0; i <= N; i++) pts.push(catmull(P, i / N));
   for (let i = 1; i <= N; i++) arc.push(arc[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]));
@@ -396,23 +400,30 @@ export function snakePath(side) {
   const at = d => { d = Math.max(0, Math.min(L, d)); let lo = 0, hi = N; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (arc[m] < d) lo = m; else hi = m; } const f = (d - arc[lo]) / Math.max(1e-6, arc[hi] - arc[lo]); return [0, 1, 2].map(k => pts[lo][k] + (pts[hi][k] - pts[lo][k]) * f); };
   return { L, at };
 }
-export const SNAKE = { ring: 0.015, per: 16, rMax: 0.15, rTail: 0.02, band: 0.08 };
+export const SNAKE = { ring: 0.009, per: 22, rMax: 0.11, rTail: 0.02, band: 0.08 };
 // 粒子布局：身体每圈 16 个点（aMisc.y=0），蛇头楔形（1），信子（2）；颜色系数与鳞片亮带是固定的
 export function buildSnakeBody(seed, L) {
   const R = rng(seed), pb = new PB(), meta = [];
   const rings = Math.floor(L / SNAKE.ring);
   for (let i = 0; i < rings; i++) for (let j = 0; j < SNAKE.per; j++) {
-    const d = i * SNAKE.ring, band = Math.abs(((d + 0.02) % SNAKE.band) - SNAKE.band / 2) < 0.009;
-    const ang = (j + (R() - 0.5) * 0.3) / SNAKE.per * TAU;
-    const dorsal = Math.cos(ang) > 0.3; // 背上
-    pb.add([0, -999, 0], [0, 0, 0], R(), [0, 0, 0], [d / L, 0, 0, 1], [band && dorsal ? 2.0 : (dorsal ? 1.0 : 0.7), 0]);
+    const d = (i + R()) * SNAKE.ring, band = Math.abs(((d + 0.02) % SNAKE.band) - SNAKE.band / 2) < 0.009;
+    const ang = R() * TAU;
+    const dorsal = Math.cos(ang) > 0.2; // 背上（朝向镜头的一面）
+    pb.add([0, -999, 0], [0, 0, 0], R(), [0, 0, 0], [d / L, 0, 0, 1], [band && dorsal ? 2.2 : (dorsal ? 0.9 : 0.35), 0]);
     meta.push({ k: 0, d, ang });
   }
-  for (let i = 0; i < 1300; i++) { // 楔形蛇头：长 0.28、宽 0.2、厚 0.08
-    const a = R(), w = (1 - a) * 0.1 * (R() * 2 - 1), h = (R() - 0.5) * 0.08 * (1 - a * 0.6);
-    const edge = Math.abs(Math.abs(w) - (1 - a) * 0.1) < 0.008 || a > 0.93;
-    pb.add([0, -999, 0], [0, 0, 0], R(), [0, 0, 0], [0, 0, 0, 1], [edge ? 1.8 : 1.1, 1]);
-    meta.push({ k: 1, a: a * 0.28, w, h });
+  // 楔形蛇头：长 0.3、宽 0.22 的三角形（尖端朝前），只有轮廓发亮，内部稀疏；放大 1.3 倍保证可读
+  const tri = [[0.3, 0], [0, 0.11], [0, -0.11]];
+  for (let i = 0; i < 700; i++) {          // 轮廓
+    const e = Math.floor(R() * 3), f = R(), A = tri[e], B = tri[(e + 1) % 3];
+    pb.add([0, -999, 0], [0, 0, 0], R(), [0, 0, 0], [0, 0, 0, 1], [1.5, 1]);
+    meta.push({ k: 1, a: (A[0] + (B[0] - A[0]) * f) * 1.1, w: (A[1] + (B[1] - A[1]) * f) * 1.1, h: (R() - 0.5) * 0.01 });
+  }
+  for (let i = 0; i < 260; i++) {          // 内部
+    let u = R(), v = R(); if (u + v > 1) { u = 1 - u; v = 1 - v; }
+    const x = tri[0][0] * u + tri[1][0] * v + tri[2][0] * (1 - u - v), y = tri[0][1] * u + tri[1][1] * v + tri[2][1] * (1 - u - v);
+    pb.add([0, -999, 0], [0, 0, 0], R(), [0, 0, 0], [0, 0, 0, 1], [0.35, 1]);
+    meta.push({ k: 1, a: x * 1.1, w: y * 1.1, h: (R() - 0.5) * 0.03 });
   }
   for (let i = 0; i < 160; i++) { // 分叉的信子
     const f = R(), fork = f > 0.7 ? (R() < 0.5 ? -1 : 1) : 0;
@@ -423,7 +434,7 @@ export function buildSnakeBody(seed, L) {
 }
 export function snakeBodyMaterial() {
   return cloudMaterial({
-    size: 0.022, bright: 2.4, depthRef: 3, maxPx: 12, drift: 0, colA: ENVY.main, colB: ENVY.dark,
+    size: 0.016, bright: 1.5, depthRef: 3, maxPx: 12, drift: 0, colA: ENVY.main, colB: ENVY.dark,
     uniforms: { uBr: { value: new THREE.Color(ENVY.bright) }, uDk: { value: new THREE.Color(ENVY.dark) } },
     uniformDecl: 'uniform vec3 uBr, uDk;',
     colHook: /* glsl */`

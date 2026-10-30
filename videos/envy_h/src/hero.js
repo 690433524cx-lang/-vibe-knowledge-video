@@ -16,7 +16,7 @@ export function buildHero(preview) {
   const { lines } = buildCracks(K.headPB, K.faceCount, 11);
   const crackPB = linesToPB(lines, 0.0022, 13, 0.0022);
   tagCrackProximity(K.headPB, crackPB, 0.026);
-  const head = points(K.headPB, cloudMaterial({ size: 0.0135, bright: 0.62, depthRef: 2.6, maxPx: 16, colA: ENVY.bright, colB: ENVY.main, colCrack: ENVY.toxic,
+  const head = points(K.headPB, cloudMaterial({ size: 0.0135, bright: 0.62, depthRef: 2.6, maxPx: 16, colA: ENVY.high, colB: ENVY.main, colCrack: ENVY.toxic,
     uniforms: { uEyeDim: { value: 0 } }, uniformDecl: 'uniform float uEyeDim;',
     colHook: `
       if (aMisc.y == 1.0 || aMisc.y == 2.0) b *= 0.25;
@@ -54,7 +54,7 @@ export function buildHero(preview) {
     const path = snakePath(side);
     const body = buildSnakeBody(300 + i, path.L);
     const pts = points(body.pb, snakeBodyMaterial(), snakeG); pts.renderOrder = 28;
-    const eyesS = [0, 1].map(() => glow(0, ENVY.toxic, [0.06, 0.06], snakeG, { core: '#FFFFFF', order: 43 }));
+    const eyesS = [0, 1].map(() => glow(0, ENVY.toxic, [0.07, 0.07], snakeG, { core: ENVY.toxic, order: 43 }));
     return { side, path, meta: body.meta, pts, eyes: eyesS };
   });
   // 荆棘光环（头部后方）
@@ -123,6 +123,7 @@ export function applyHero(s0, t, bursts) {
   // 眼睛与视线光束
   const otherW = new THREE.Vector3(...s.otherPos).add(new THREE.Vector3(0, 1.45 * s.otherScale, 0));
   h.eyes.forEach(e => {
+    e.g.scale.setScalar(U * (s.eyeScale ?? 1)); e.pts.material.uniforms.uSize.value = 0.0105 * (s.eyeScale ?? 1);
     const u = e.pts.material.uniforms, fade = s.alpha * (1 - clamp(sc * 2));
     u.uOpenL.value = s.eyeOpen; u.uGazeX.value = 0.11 * s.gaze; u.uIrisB.value = s.irisB;
     u.uAlpha.value = fade; u.uBright.value = 0.42; e.pts.visible = fade > 0.003;
@@ -176,13 +177,15 @@ function updateSnake(S, g, t, s, sc) {
   const frame = d => {
     const c = S.path.at(d), c2 = S.path.at(d + 0.01), c0 = S.path.at(d - 0.01);
     const T = norm3([c2[0] - c0[0], c2[1] - c0[1], c2[2] - c0[2]]);
-    const N1 = norm3(cross3(T, [0, 0, 1])), N2 = cross3(N1, T);
+    const N1 = norm3(cross3(T, [0, 0, 1])), N2 = cross3(N1, T); // N2 大致朝向镜头（背）
     return { c, T, N1, N2 };
   };
-  const radius = sd => sd < 0.18 ? lerp(0.09, SNAKE.rMax, sd / 0.18) : lerp(SNAKE.rMax, SNAKE.rTail, clamp((sd - 0.18) / Math.max(0.3, L - 0.18)));
+  // 从蛇头后的颈部到尾巴逐渐变细
+  const radius = sd => sd < 0.15 ? lerp(0.07, SNAKE.rMax, sd / 0.15) : lerp(SNAKE.rMax, SNAKE.rTail, Math.pow(clamp((sd - 0.15) / Math.max(0.3, L - 0.15)), 0.8));
   // 蛇头朝向：沿路径方向，略微转向镜头
-  const hf = frame(headD), fwd = norm3([hf.T[0], hf.T[1], hf.T[2] + 0.8]);
-  const side = norm3(cross3([0, 1, 0], fwd)), up = cross3(fwd, side);
+  // 蛇头：三角形平面基本朝向镜头（轮廓清楚），尖端沿游动方向朝前，略微探向镜头
+  const hf = frame(headD), fwd = norm3([hf.T[0], hf.T[1], 0.25]);
+  const side = norm3(cross3([0, 0, 1], fwd)), up = cross3(fwd, side);
   const tongue = ((t % TONGUE_PER) / TONGUE_PER);
   const tOut = tongue < 0.3 ? Math.sin(tongue / 0.3 * Math.PI) : 0;
   S.meta.forEach((m, k) => {
@@ -193,18 +196,18 @@ function updateSnake(S, g, t, s, sc) {
       else {
         const f = frame(d), r = radius(m.d + 0.12);
         const wave = Math.sin(m.d * 9 - t * wv) * r * 0.6 * clamp(m.d / 0.3);
-        p = [f.c[0] + f.N1[0] * (Math.cos(m.ang) * r + wave) + f.N2[0] * Math.sin(m.ang) * r,
-             f.c[1] + f.N1[1] * (Math.cos(m.ang) * r + wave) + f.N2[1] * Math.sin(m.ang) * r,
-             f.c[2] + f.N1[2] * (Math.cos(m.ang) * r + wave) + f.N2[2] * Math.sin(m.ang) * r];
+        p = [f.c[0] + f.N1[0] * (Math.sin(m.ang) * r + wave) + f.N2[0] * Math.cos(m.ang) * r,
+             f.c[1] + f.N1[1] * (Math.sin(m.ang) * r + wave) + f.N2[1] * Math.cos(m.ang) * r,
+             f.c[2] + f.N1[2] * (Math.sin(m.ang) * r + wave) + f.N2[2] * Math.cos(m.ang) * r];
       }
     } else if (m.k === 1) {
-      const b = [hf.c[0] - fwd[0] * 0.1, hf.c[1] - fwd[1] * 0.1, hf.c[2] - fwd[2] * 0.1];
+      const b = [hf.c[0] - fwd[0] * 0.12, hf.c[1] - fwd[1] * 0.12, hf.c[2] - fwd[2] * 0.12];
       p = [b[0] + fwd[0] * m.a + side[0] * m.w + up[0] * m.h, b[1] + fwd[1] * m.a + side[1] * m.w + up[1] * m.h, b[2] + fwd[2] * m.a + side[2] * m.w + up[2] * m.h];
     } else {
       if (tOut <= 0.01) { p = [0, -999, 0]; }
       else {
         const L1 = 0.13 * tOut, f = m.f;
-        const tip = [hf.c[0] + fwd[0] * 0.18, hf.c[1] + fwd[1] * 0.18, hf.c[2] + fwd[2] * 0.18];
+        const tip = [hf.c[0] + fwd[0] * 0.27, hf.c[1] + fwd[1] * 0.27, hf.c[2] + fwd[2] * 0.27];
         const along = f * L1, spread = m.fork * Math.max(0, f - 0.7) * 0.15 * tOut;
         p = [tip[0] + fwd[0] * along + side[0] * spread, tip[1] + fwd[1] * along + side[1] * spread, tip[2] + fwd[2] * along + side[2] * spread];
       }
@@ -214,8 +217,8 @@ function updateSnake(S, g, t, s, sc) {
   S.pts.geometry.attributes.position.needsUpdate = true;
   S.eyes.forEach((E, k) => {
     const sd = k ? 1 : -1;
-    E.position.set(hf.c[0] + fwd[0] * 0.03 + side[0] * 0.06 * sd + up[0] * 0.04, hf.c[1] + fwd[1] * 0.03 + side[1] * 0.06 * sd + up[1] * 0.04, hf.c[2] + fwd[2] * 0.03 + side[2] * 0.06 * sd + up[2] * 0.04);
-    E.material.uniforms.uInt.value = 0.6 * s.alpha * (1 - clamp(sc * 2.5)) * clamp(g * 8);
+    E.position.set(hf.c[0] - fwd[0] * 0.02 + side[0] * 0.065 * sd + up[0] * 0.02, hf.c[1] - fwd[1] * 0.02 + side[1] * 0.065 * sd + up[1] * 0.02, hf.c[2] - fwd[2] * 0.02 + side[2] * 0.065 * sd + up[2] * 0.02);
+    E.material.uniforms.uInt.value = 0.9 * s.alpha * (1 - clamp(sc * 2.5)) * clamp(g * 8);
     E.visible = sc < 0.4;
   });
 }

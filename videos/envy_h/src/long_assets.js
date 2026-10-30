@@ -46,16 +46,16 @@ export function giantEyeMaterial() {
   return cloudMaterial({
     size: 0.045, bright: 1.1, depthRef: 8, maxPx: 10, drift: 0.006, colA: ENVY.bright, colB: ENVY.main,
     attrDecl: 'attribute float aA; attribute float aT;',
-    uniforms: { uOpenE: { value: 0.6 }, uPupil: { value: EYE.pupil }, uFlareE: { value: 0 }, uIn: { value: new THREE.Color(ENVY.high) },
+    uniforms: { uOpenE: { value: 0.6 }, uPupil: { value: EYE.pupil }, uFlareE: { value: 0 }, uRot: { value: 0 }, uSpring: { value: 0 }, uIn: { value: new THREE.Color(ENVY.high) },
       uWh: { value: new THREE.Color('#5E7A68') }, uTd: { value: new THREE.Color(ENVY.dark) } },
-    uniformDecl: `uniform float uOpenE, uPupil, uFlareE; uniform vec3 uIn, uWh, uTd; varying float vK; varying float vT;
+    uniformDecl: `uniform float uOpenE, uPupil, uFlareE, uRot, uSpring; uniform vec3 uIn, uWh, uTd; varying float vK; varying float vT;
       float lidY(float x){ float k = clamp(1.0 - pow(x/${(EYE.W / 2).toFixed(3)}, 2.0), 0.0, 1.0); return ${EYE.H.toFixed(3)}*uOpenE*pow(k, 0.85); }`,
     posHook: /* glsl */`
       vK = aMisc.y; vT = aT;
       float HW = ${(EYE.W / 2).toFixed(3)};
       if (aMisc.y == 10.0) {
         float rr = mix(uPupil + 0.02, ${EYE.R.toFixed(3)}, aT);
-        float a = aA + sin(aT*9.0 + aSeed*20.0)*0.012;
+        float a = aA + uRot + sin(aT*9.0 + aSeed*20.0)*0.012;
         p = vec3(cos(a)*rr, sin(a)*rr, 0.05 - aT*0.04);
         vis *= step(abs(p.y), lidY(p.x) - 0.02);
       } else if (aMisc.y == 11.0) {
@@ -68,7 +68,7 @@ export function giantEyeMaterial() {
         float x = aA*HW*1.02; float up = position.x; float len = position.y; float sd = position.z;
         vec3 q = vec3(x, lidY(x)*up, 0.0);
         float ang = 1.5708*up + sin(sd)*0.9 + (aA*0.9);
-        float s = aT*len;
+        float s = aT*len*(1.0 + uSpring);
         float curl = sin(s*4.0 + uTime*qf(30.0 + mod(sd, 9.0)) + sd)*0.9 + s*1.6*sign(sin(sd*3.1));
         q += vec3(cos(ang + curl*0.6), sin(ang + curl*0.6), 0.0)*s + vec3(0.0, 0.0, -0.1 - s*0.3);
         p = q + vec3(sin(uTime*qf(20.0) + sd + aT*5.0), cos(uTime*qf(26.0) + sd*1.3 + aT*4.0), 0.0)*0.04*aT;
@@ -102,30 +102,43 @@ export function buildCliff(seed = 301, k = 1) {
   }
   return pb;
 }
-// 坐着的人：低着头（头前倾），兜帽包住头（前面开口），宽肩、弓起的背，斗篷从肩垂到地面
-function sitterSDF() {
+// 坐着的人：兜帽、低垂的头（P.hf 前倾、P.hx 侧偏，头靠向旁边人的肩）、宽肩、弓起的背、盘起的腿；有体积的剪影
+function sitterSDF(P = { hx: 0, hf: 0.14 }) {
   const sph = (p, c, r) => Math.hypot(p[0] - c[0], p[1] - c[1], p[2] - c[2]) - r;
   const ell = (p, c, r) => (Math.hypot((p[0] - c[0]) / r[0], (p[1] - c[1]) / r[1], (p[2] - c[2]) / r[2]) - 1) * Math.min(...r);
   const smin = (a, b, kk) => { const h = clamp(0.5 + 0.5 * (b - a) / kk); return lerp(b, a, h) - kk * h * (1 - h); };
+  const hc = [P.hx, 0.55 - Math.abs(P.hx) * 0.4, P.hf];
   return p => {
-    const head = sph(p, [0, 0.55, 0.14], 0.19);
-    let hood = Math.abs(sph(p, [0, 0.58, 0.08], 0.28)) - 0.025;
-    hood = Math.max(hood, -(sph(p, [0, 0.52, 0.4], 0.22)));
-    const shoulders = ell(p, [0, 0.3, 0.0], [0.42, 0.16, 0.26]);
-    const back = ell(p, [0, 0.12, -0.12], [0.38, 0.42, 0.3]);                    // 弓起的背
-    const y = p[1], t = clamp((0.3 - y) / 1.35), r = lerp(0.4, 0.62, Math.sqrt(t));
-    const cone = Math.max(Math.hypot(p[0], (p[2] + 0.02) * 1.3) - r, Math.max(y - 0.3, -1.05 - y));
-    return Math.min(head, smin(hood, smin(smin(shoulders, back, 0.1), cone, 0.12), 0.08));
+    const head = sph(p, hc, 0.19);
+    let hood = Math.abs(sph(p, [hc[0] * 0.9, hc[1] + 0.03, hc[2] - 0.06], 0.28)) - 0.03;
+    hood = Math.max(hood, -(sph(p, [hc[0], hc[1] - 0.03, hc[2] + 0.26], 0.22)));
+    const shoulders = ell(p, [0, 0.3, 0.0], [0.4, 0.15, 0.25]);
+    const back = ell(p, [0, 0.1, -0.14], [0.36, 0.42, 0.3]);
+    const y = p[1], t = clamp((0.3 - y) / 1.2), r = lerp(0.38, 0.55, Math.sqrt(t));
+    const cloak = Math.max(Math.hypot(p[0], (p[2] + 0.02) * 1.3) - r, Math.max(y - 0.3, -0.92 - y));
+    const legs = ell(p, [0, -0.93, 0.28], [0.6, 0.14, 0.3]);                     // 盘起的腿
+    return Math.min(head, smin(hood, smin(smin(shoulders, back, 0.1), smin(cloak, legs, 0.1), 0.12), 0.08));
   };
 }
-export function buildSitter(seed, k = 1) {
-  return sampleSDF(sitterSDF(), Math.round(9000 * k), [[-0.75, -1.1, -0.7], [0.75, 1.0, 0.7]], seed, [1, 0]);
+export function buildSitter(seed, k = 1, P) {
+  const sdf = sitterSDF(P), pb = sampleSDF(sdf, Math.round(11000 * k), [[-0.8, -1.1, -0.7], [0.8, 1.0, 0.7]], seed, [1, 0]);
+  // 内部也填上较暗的粒子，让剪影有体积，而不是空心线框
+  const R = rng(seed + 77); let n = 0, guard = 0;
+  while (n < 7000 * k && guard++ < 200000) {
+    const p = [lerp(-0.8, 0.8, R()), lerp(-1.1, 1.0, R()), lerp(-0.7, 0.7, R())];
+    if (sdf(p) > -0.01) continue;
+    pb.add(p, [0, 0, 0], R(), [0, 0, 0], [R(), 0, 0, 1], [0.5, 0]); n++;
+  }
+  return pb;
 }
 // 缝上的眼睛：闭合的细线 + 每只眼 3 个针脚亮点（局部坐标，脸朝 +z）
 export const SITTER_EYES = [[-0.07, 0.57, 0.322], [0.07, 0.57, 0.322]];
-export function buildStitchLines(seed = 401) {
+// 坐着的人闭着的眼睛：一道细细的亮线（跟着头的位置）
+export function buildStitchLines(seed = 401, P = { hx: 0, hf: 0.14 }) {
   const R = rng(seed), pb = new PB();
-  for (const e of SITTER_EYES) for (let i = 0; i < 160; i++) {
+  const hc = [P.hx, 0.55 - Math.abs(P.hx) * 0.4, P.hf];
+  const eyes = [[hc[0] - 0.07, hc[1] + 0.02, hc[2] + 0.18], [hc[0] + 0.07, hc[1] + 0.02, hc[2] + 0.18]];
+  for (const e of eyes) for (let i = 0; i < 160; i++) {
     const u = R() * 2 - 1;
     pb.add([e[0] + u * 0.05, e[1] - 0.006 * (1 - u * u) + (R() - 0.5) * 0.003, e[2] - 0.012 * u * u], [0, 0, 0], R(), [0, 0, 0], [R(), 0, 0, 1], [1.2, 0]);
   }
@@ -178,7 +191,8 @@ export function brainMaterial() {
 }
 
 // ============================================================ 手机信息流
-export const PHONE = { w: 2.5, h: 5.0, r: 0.35, cardH: 0.95, cardW: 2.0, gap: 1.15, n: 7 };
+// 正常手机的比例（约 1:2）
+export const PHONE = { w: 2.0, h: 4.0, r: 0.28, cardH: 0.76, cardW: 1.6, gap: 0.92, n: 7 };
 function roundRect(R, pb, w, h, r, n, misc, z = 0, extra = [0, 0, 0, 1]) {
   const per = 2 * (w + h - 4 * r) + TAU * r;
   for (let i = 0; i < n; i++) {
@@ -216,13 +230,13 @@ export function buildPhone(seed = 601, k = 1) {
     for (const stroke of icon) {
       for (let s = 0; s < stroke.length - 1; s++) {
         const a = stroke[s], b = stroke[s + 1], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.round(L * 420 * k);
-        for (let i = 0; i < n; i++) { const f = R(); cards.add([lerp(a[0], b[0], f) * 0.95 - 0.42, lerp(a[1], b[1], f) * 0.95, 0.03], [0, 0, 0], R(), [0, 0, 0], [0, 0, 0, 1], [1.5, 1]); }
+        for (let i = 0; i < n; i++) { const f = R(); cards.add([lerp(a[0], b[0], f) * 0.76 - 0.34, lerp(a[1], b[1], f) * 0.76, 0.03], [0, 0, 0], R(), [0, 0, 0], [0, 0, 0, 1], [1.5, 1]); }
       }
     }
     // 卡片右侧两三条「内容」光点线（不写文字）
     for (let ln = 0; ln < 3; ln++) {
       const L = [0.9, 0.7, 0.5][ln];
-      for (let i = 0; i < 160 * k; i++) cards.add([0.12 + R() * L * 0.75, 0.22 - ln * 0.22 + (R() - 0.5) * 0.02, 0.03], [0, 0, 0], R(), [0, 0, 0], [0, 0, 0, 1], [0.6, 2]);
+      for (let i = 0; i < 160 * k; i++) cards.add([0.1 + R() * L * 0.6, 0.18 - ln * 0.18 + (R() - 0.5) * 0.02, 0.03], [0, 0, 0], R(), [0, 0, 0], [0, 0, 0, 1], [0.6, 2]);
     }
     for (let i = before; i < cards.count; i++) aCard.push(c);
   }
@@ -287,11 +301,11 @@ export function buildBrainSide(seed = 511, k = 1) {
     let line;
     if (inCere) line = Math.abs(Math.sin(y * 70 + x * 8)) < 0.22;                 // 小脑的细密横纹
     else if (inStem) line = false;
-    else line = Math.abs(n3(x * 1.25, y * 1.25, z * 1.25)) < 0.16;               // 沟回
+    else line = Math.abs(n3(x * 1.35, y * 1.35, z * 1.35)) < 0.24;               // 沟回
     // 外侧裂与中央沟两条主沟更亮
     const sylvian = !inCere && !inStem && Math.abs(y - (-0.08 - 0.25 * x)) < 0.025 && x > -0.75 && x < 0.45;
     const central = !inCere && !inStem && Math.abs(x - (0.05 - 0.25 * y)) < 0.02 && y > -0.05;
-    surf.m[i * 2] = sylvian || central ? 2.2 : line ? 1.5 : 0.32;
+    surf.m[i * 2] = sylvian || central ? 2.4 : line ? 1.8 : 0.32;
     surf.m[i * 2 + 1] = sylvian || central || line ? 1 : 0;
   }
   // 内部：较暗的半透明粒子
@@ -310,9 +324,9 @@ export function buildStitches(eyes, seed = 421) {
   const R = rng(seed), pb = new PB();
   eyes.forEach((e, ei) => {
     for (let k = 0; k < 4; k++) {
-      const x = e[0] + (k - 1.5) * 0.03 * (ei ? -1 : 1), tilt = (R() - 0.5) * 0.3 + 0.2 * (ei ? -1 : 1);
+      const x = e[0] + (k - 1.5) * 0.028 * (ei ? -1 : 1), tilt = 0;
       for (let i = 0; i < 220; i++) {
-        const f = R() * 2 - 1, len = 0.03;
+        const f = R() * 2 - 1, len = 0.02;
         pb.add([x + Math.sin(tilt) * f * len, e[1] - 0.004 + Math.cos(tilt) * f * len, e[2] + 0.012 - 0.01 * f * f], [0, 0, 0], R(), [0, 0, 0], [ei * 4 + k, 0, 0, 1], [1.6, 1]);
       }
     }
