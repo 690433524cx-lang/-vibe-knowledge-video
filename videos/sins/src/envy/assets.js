@@ -294,3 +294,85 @@ export function sampleSDF(sdf, n, box, seed, misc = [1, 0]) {
 export function buildOther(seed = 91, n = 12000, pose) {
   return sampleSDF(humanSDF(pose), n, [[-0.55, 0, -0.25], [0.55, 1.8, 0.25]], seed);
 }
+
+// ============================================================ 粒子眼睛（第二版）：全部由光和粒子构成，在辉光之前渲染
+// 坐标为世界单位，眼睛中心在原点，x 指向画面右侧；整体放大 EYE_K 倍保证竖屏特写里可读
+// kind（aMisc.y）：20 上眼睑 21 下眼睑 22 眼球（暗绿稀疏） 23 虹膜光纹 24 瞳孔周围的微光
+export const EYE_K = 1.45;
+const EW2 = 0.15; // 半宽（长 0.30）
+export function buildEyePB(seed) {
+  const R = rng(seed), pb = new PB(), aA = [], aT = [];
+  const add = (kind, a, t, bright, pos = [0, 0, 0]) => { pb.add(pos, [0, 0, 0], R(), [0, 0, 0], [R(), 0, 0, 1], [bright, kind]); aA.push(a); aT.push(t); };
+  for (let i = 0; i < 2600; i++) add(20, R() * 2 - 1, R() * 2 - 1, 1.0 + 0.4 * R());       // 上眼睑：较粗、较亮
+  for (let i = 0; i < 700; i++) add(21, R() * 2 - 1, R() * 2 - 1, 0.5 + 0.2 * R());        // 下眼睑：很淡
+  for (let i = 0; i < 1600; i++) add(22, R() * 2 - 1, R() * 2 - 1, 0.6 + 0.4 * R());        // 眼球
+  for (let f = 0; f < 60; f++) {                                                           // 虹膜：60 条辐射光纹
+    const a = f / 60 * TAU + (R() - 0.5) * 0.04;
+    for (let i = 0; i < 70; i++) add(23, a + (R() - 0.5) * 0.03, Math.pow(R(), 0.85), 1.0 + 0.5 * R());
+  }
+  for (let i = 0; i < 500; i++) add(24, R() * TAU, R(), 0.5);
+  pb.x.aA = [1, aA]; pb.x.aT = [1, aT];
+  return pb;
+}
+export function eyePointMaterial(outer) {
+  return cloudMaterial({
+    size: 0.014, bright: 1.0, depthRef: 4.2, maxPx: 6, drift: 0.0006, colA: ENVY.bright, colB: ENVY.main,
+    attrDecl: 'attribute float aA; attribute float aT;',
+    uniforms: { uOpenL: { value: 0 }, uGazeX: { value: 0 }, uIrisB: { value: 1 }, uOuter: { value: outer },
+      uHi: { value: col(ENVY.high) }, uDk: { value: col(ENVY.dark) } },
+    uniformDecl: `uniform float uOpenL, uGazeX, uIrisB, uOuter; uniform vec3 uHi, uDk; varying float vK; varying float vT;
+      const float EW = ${EW2.toFixed(3)}, K = ${EYE_K.toFixed(3)};
+      float shp(float x){ float xn = clamp(x/EW, -1.0, 1.0); return pow(max(1.0 - xn*xn, 0.0), 0.7); }
+      // 眼尾（外侧眼角）比内眼角低约 0.02；闭眼时是一道微微下弯的细缝
+      float droop(float x){ float xn = clamp(x/EW, -1.0, 1.0); return -0.02*pow(max(xn*uOuter, 0.0), 1.6) - 0.006*(1.0 - xn*xn); }
+      float topY(float x){ return droop(x) + mix(-0.0005, 0.047, uOpenL)*shp(x); }
+      float botY(float x){ return droop(x)*0.7 - mix(0.0005, 0.05, clamp(uOpenL*2.2, 0.0, 1.0))*shp(x); }
+      bool inEye(vec2 q){ return abs(q.x) < EW && q.y < topY(q.x) - 0.002 && q.y > botY(q.x) + 0.002; }`,
+    posHook: /* glsl */`
+      vK = aMisc.y; vT = aT;
+      vec2 q = vec2(0.0);
+      if (aMisc.y == 20.0) { float x = aA*EW*1.02; q = vec2(x, topY(x) + aT*0.004*(0.4 + uOpenL)); }
+      else if (aMisc.y == 21.0) { float x = aA*EW*0.96; q = vec2(x, botY(x) + aT*0.0015); vis *= smoothstep(0.03, 0.2, uOpenL); }
+      else if (aMisc.y == 22.0) { q = vec2(aA*EW, aT*0.06); vis *= inEye(q) ? 1.0 : 0.0; }
+      else {
+        // 瞳孔：竖向细长的暗区（半径 0.016，宽高比 0.6）；虹膜光纹从它的边缘一直到外半径 0.05
+        float a = aA;
+        float rp = 1.0/sqrt(pow(cos(a)/0.0096, 2.0) + pow(sin(a)/0.016, 2.0));
+        float r = aMisc.y == 23.0 ? mix(0.022, 0.05, aT) : mix(rp + 0.001, 0.022, aT);
+        q = vec2(uGazeX + cos(a)*r, sin(a)*r);
+        vis *= inEye(q) ? 1.0 : 0.0;
+      }
+      p = vec3(q*K, 0.0) + (p - position);`,
+    colHook: /* glsl */`
+      if (vK == 20.0) { col = uColA; b *= 1.0 + 0.4*uOpenL; }
+      else if (vK == 21.0) { col = uColB; b *= 1.3; }
+      else if (vK == 22.0) { col = uDk*2.2; b *= 0.6; }
+      else if (vK == 23.0) { col = mix(uHi, uColB, smoothstep(0.0, 0.85, vT)); b *= uIrisB*(1.35 - 0.4*vT); }
+      else { col = uColB; b *= 0.35*uIrisB; }`,
+  });
+}
+// 视线光束：从虹膜一直延伸到「别人」，透明度 25% → 0，带颗粒；少量光点沿着光束流向「别人」
+export function buildBeamPB(seed) {
+  const R = rng(seed), pb = new PB(), aT = [];
+  for (let i = 0; i < 6000; i++) { const flow = i < 500; pb.add([R() - 0.5, R() - 0.5, R() - 0.5], [0, 0, 0], R(), [0, 0, 0], [R(), 0, 0, 1], [flow ? 2.2 : 0.8, flow ? 1 : 0]); aT.push(R()); }
+  pb.x.aT = [1, aT];
+  return pb;
+}
+export function beamMaterial() {
+  return cloudMaterial({
+    size: 0.02, bright: 1, depthRef: 4, maxPx: 5, drift: 0, colA: ENVY.bright, colB: ENVY.main,
+    attrDecl: 'attribute float aT;',
+    uniforms: { uA: { value: new THREE.Vector3() }, uB: { value: new THREE.Vector3() }, uReach: { value: 0 }, uBeam: { value: 0 } },
+    uniformDecl: 'uniform vec3 uA, uB; uniform float uReach, uBeam; varying float vS;',
+    posHook: /* glsl */`
+      float s = aT;
+      if (aMisc.y == 1.0) s = fract(aT + uTime*qf(40.0 + floor(aSeed*20.0)));   // 流向「别人」的小光点
+      vec3 d = uB - uA; float L = length(d);
+      p = uA + d*s + position*(0.006 + 0.03*s);
+      vis *= step(s, uReach);
+      vS = s;`,
+    colHook: /* glsl */`
+      float flick = 0.65 + 0.35*sin(uTime*qf(90.0) + aSeed*6.0 + vS*12.0);
+      b *= uBeam*0.6*(1.0 - 0.85*vS)*flick*(aMisc.y == 1.0 ? 2.5 : 1.0);`,
+  });
+}

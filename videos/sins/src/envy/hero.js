@@ -4,7 +4,7 @@ import { K, HS, points, glow, reg } from '../core.js';
 import { cloudMaterial, lineMaterial } from '../mat.js';
 import { FACE, buildCracks, linesToPB, tagCrackProximity, buildBust } from '../geo.js';
 import { clamp, lerp, prog, hash, D2R, LOOP, qk, TAU } from '../util.js';
-import { ENVY, eyeMaterials, SNAKES, buildSnakePB, snakeMaterial, snakePathJS, buildThorns, thornMaterial, buildHeart, buildOther } from './assets.js';
+import { ENVY, buildEyePB, eyePointMaterial, EYE_K, buildBeamPB, beamMaterial, SNAKES, buildSnakePB, snakeMaterial, snakePathJS, buildThorns, thornMaterial, buildHeart, buildOther } from './assets.js';
 
 export const OTHER_POS = [2.25, 2.3, -6.5];
 // 裂纹在 3.5 秒开始，1.7 秒内长满半张脸：把傲慢项目的裂纹时刻表（从 9.0 起）压缩 0.7 倍
@@ -14,27 +14,30 @@ let H = null;
 export function buildHero(preview) {
   const root = new THREE.Group(); K.scene.add(root);
   const hs = new THREE.Group(); hs.scale.setScalar(HS); root.add(hs);
-  const head = points(K.headPB, cloudMaterial({ size: 0.024, bright: 0.66, depthRef: 4.6, maxPx: 16, colA: ENVY.bright, colB: ENVY.main, colCrack: ENVY.toxic, colHook: 'if (aMisc.y == 2.0) b *= 0.45;' }), hs);
+  const head = points(K.headPB, cloudMaterial({ size: 0.024, bright: 0.86, depthRef: 4.6, maxPx: 16, colA: ENVY.bright, colB: ENVY.main, colCrack: ENVY.toxic,
+    uniforms: { uEyeDim: { value: 0 } }, uniformDecl: 'uniform float uEyeDim;',
+    colHook: `
+      if (aMisc.y == 1.0 || aMisc.y == 2.0) b *= 0.25;
+      { vec2 d1 = (position.xy - vec2(${FACE.eyeL[0].toFixed(4)}, ${FACE.eyeL[1].toFixed(4)}))/vec2(0.1, 0.055);
+        vec2 d2 = (position.xy - vec2(${FACE.eyeR[0].toFixed(4)}, ${FACE.eyeR[1].toFixed(4)}))/vec2(0.1, 0.055);
+        b *= 1.0 - uEyeDim*0.95*(exp(-dot(d1, d1)) + exp(-dot(d2, d2))); }
+      b *= 1.0 - ct*0.45;` }), hs);
   head.material.uniforms.uSwirl.value = 1.4;
   // 裂纹：从两只眼角炸开
   const { lines } = buildCracks(K.headPB, K.faceCount, 11);
   const crackPB = linesToPB(lines, 0.0022, 13, 0.0022);
   tagCrackProximity(K.headPB, crackPB, 0.026);
   head.geometry.attributes.aExtra.array.set(K.headPB.e); head.geometry.attributes.aExtra.needsUpdate = true;
-  const cracks = points(crackPB, lineMaterial({ size: 0.028, bright: 1.5, col: ENVY.toxic, hot: ENVY.high }), hs); cracks.renderOrder = 30;
-  // 眼睛：内层放在辉光之后的场景里，跟随头部的世界矩阵
-  const eyeRoot = new THREE.Group(); eyeRoot.matrixAutoUpdate = false; K.postScene.add(eyeRoot);
-  const eyes = [FACE.eyeL, FACE.eyeR].map(p => {
-    const m = eyeMaterials();
-    const inner = new THREE.Mesh(new THREE.PlaneGeometry(0.6 / HS, 0.32 / HS), reg(m.inner)); inner.renderOrder = 34; inner.frustumCulled = false;
-    const outer = new THREE.Mesh(new THREE.PlaneGeometry(0.6 / HS, 0.32 / HS), reg(m.outer)); outer.renderOrder = 42; outer.frustumCulled = false;
-    m.u.uHalf.value.set(0.3, 0.16);
-    for (const o of [inner, outer]) o.position.set(p[0], p[1] - 0.003, p[2] + 0.016);
-    eyeRoot.add(inner); hs.add(outer);
-    // 闭眼时的一道眼缝光（与片头相同）
-    const slit = glow(5, ENVY.main, [0.6 / HS, 0.16 / HS], hs, { billboard: false, order: 41, half: [0.3 / HS, 0.08 / HS], ell: [0.08 / HS, 0.006 / HS] });
-    slit.position.set(p[0], p[1] - 0.004, p[2] + 0.014);
-    return { inner, outer, u: m.u, slit };
+  const cracks = points(crackPB, lineMaterial({ size: 0.028, bright: 0.9, col: ENVY.toxic, hot: ENVY.high }), hs); cracks.renderOrder = 30;
+  // 眼睛：粒子构成（眼睑、暗绿眼球、辐射光纹虹膜、竖向细长的瞳孔暗区），挂在头上、在辉光之前渲染
+  const eyes = [[FACE.eyeL, 1], [FACE.eyeR, -1]].map(([p, outer], i) => {
+    const g = new THREE.Group(); g.position.set(p[0], p[1] - 0.004, p[2] + 0.02); g.scale.setScalar(1 / HS); hs.add(g);
+    const pts = points(buildEyePB(150 + i), eyePointMaterial(outer), g); pts.renderOrder = 36;
+    const hl = glow(0, ENVY.high, [0.035, 0.035], g, { core: '#FFFFFF', order: 44 });
+    // 闭眼时柔和的绿色辉光
+    const slit = glow(5, ENVY.main, [0.6, 0.16], g, { billboard: false, order: 35, half: [0.3, 0.08], ell: [0.15 * EYE_K, 0.008] });
+    const beam = points(buildBeamPB(170 + i), beamMaterial(), K.scene); beam.renderOrder = 27;
+    return { g, pts, hl, slit, beam, outer };
   });
   // 胸像（傲慢项目的胸像造型，改成绿色）
   const bust = points(buildBust(41), cloudMaterial({ size: 0.03, bright: 1.1, depthRef: 6, maxPx: 16, light: 0.4, colA: ENVY.bright, colB: ENVY.main }), hs);
@@ -64,7 +67,7 @@ export function buildHero(preview) {
   const other = points(buildOther(91, preview ? 7000 : 12000), cloudMaterial({ size: 0.03, bright: 1.0, depthRef: 10, maxPx: 10, colA: '#FFE7B0', colB: ENVY.other, light: 0.5 }), otherG);
   other.material.uniforms.uSwirl.value = 0.5;
   const otherLight = glow(0, ENVY.other, [2.2, 3.0], otherG, { core: '#FFE7B0', order: -8 }); otherLight.position.set(0, 0.95, -0.3);
-  H = { root, hs, eyeRoot, head, cracks, lines, eyes, bust, heartG, heart, vines, heartGlow, snakes, thornG, thorns, thornSeed, thornGlow, otherG, other, otherLight };
+  H = { root, hs, head, cracks, lines, eyes, bust, heartG, heart, vines, heartGlow, snakes, thornG, thorns, thornSeed, thornGlow, otherG, other, otherLight };
   K.envyHero = H;
   return H;
 }
@@ -79,7 +82,7 @@ const lerp3 = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2],
 export function applyHero(s0, t, bursts) {
   const s = { ...HERO_DEFAULT, ...s0 };
   const h = H;
-  h.root.visible = s.visible && s.alpha > 0.003; h.eyeRoot.visible = h.root.visible;
+  h.root.visible = s.visible && s.alpha > 0.003;
   h.otherG.visible = s.other > 0.003;
   if (h.otherG.visible) {
     const br = 1 + 0.012 * Math.sin(TAU * qk(128 / 3.2) * t / LOOP);
@@ -89,16 +92,16 @@ export function applyHero(s0, t, bursts) {
     h.otherG.position.set(...(s.otherPos ?? OTHER_POS));
     h.otherLight.material.uniforms.uInt.value = 0.13 * s.other * (s.otherBright ?? 1) * (1 - clamp(s.otherScatter ?? 0));
   }
-  if (!h.root.visible) return;
+  if (!h.root.visible) { h.eyes.forEach(e => { e.beam.visible = false; }); return; }
   h.root.position.set(...s.pos); h.root.rotation.set(s.rx, s.ry, 0);
-  h.root.updateMatrixWorld(true); h.eyeRoot.matrix.copy(h.hs.matrixWorld); h.eyeRoot.matrixWorldNeedsUpdate = true;
+  h.root.updateMatrixWorld(true);
   const sc = s.scatter;
   const setCommon = (m, extraBright = 1) => {
     const u = m.uniforms; u.uAlpha.value = s.alpha; u.uScatter.value = sc; u.uScatterDist.value = 0.5; u.uScatSpread.value = 0.5; u.uWhite.value = s.white;
   };
   // 脸
   const hu = h.head.material.uniforms; setCommon(h.head.material);
-  hu.uBright.value = 0.66 * s.bright; hu.uEyeOpen.value = clamp(s.eyeOpen); hu.uCrackTint.value = 1;
+  hu.uBright.value = 0.86 * s.bright; hu.uEyeDim.value = clamp(s.eyeOpen * 2.5); hu.uEyeOpen.value = clamp(s.eyeOpen); hu.uCrackTint.value = 1;
   if (s.colA) { hu.uColA.value.setRGB(...s.colA); hu.uColB.value.setRGB(...s.colB); }
   // 裂纹
   const cu = h.cracks.material.uniforms;
@@ -121,16 +124,30 @@ export function applyHero(s0, t, bursts) {
       }
     });
   }
-  // 眼睛
+  // 眼睛：open 为上眼睑抬起的比例（闭合 0，斜瞟 0.45，直视 0.6）；gaze 为虹膜向画面右侧的偏移（0–1）
+  const otherW = new THREE.Vector3(...(s.otherPos ?? OTHER_POS)).add(new THREE.Vector3(0, 1.45 * (s.otherScale ?? 1), 0));
   h.eyes.forEach(e => {
-    const u = e.u;
-    u.uOpen.value = clamp(s.eyeOpen); u.uGaze.value = s.gaze; u.uSquint.value = clamp(Math.abs(s.gaze) / 0.85) * clamp(s.eyeOpen);
-    u.uFlare.value = s.flare; u.uAlpha.value = s.alpha * (1 - clamp(sc * 2)); u.uIrisB.value = s.bright;
-    e.inner.visible = s.eyeOpen > 0.01 && sc < 0.5;
-    e.outer.visible = sc < 0.5;
+    const u = e.pts.material.uniforms, fade = s.alpha * (1 - clamp(sc * 2));
+    u.uOpenL.value = s.eyeOpen; u.uGazeX.value = 0.11 * s.gaze; u.uIrisB.value = s.irisB ?? 1;
+    u.uAlpha.value = fade; u.uBright.value = 1.0;
+    e.pts.visible = fade > 0.003;
+    // 高光点：瞳孔右上方
+    e.hl.position.set((0.11 * s.gaze + 0.009) * EYE_K, 0.011 * EYE_K, 0.003);
+    e.hl.material.uniforms.uInt.value = 0.9 * clamp((s.eyeOpen - 0.2) / 0.2) * fade * (s.irisB ?? 1); e.hl.visible = s.eyeOpen > 0.2;
     const su = e.slit.material.uniforms;
-    su.uInt.value = 0.085 * s.slit * (1 - clamp(s.eyeOpen * 3)) * s.alpha * (1 - clamp(sc * 2));
-    e.slit.visible = su.uInt.value > 0.0005;
+    su.uInt.value = 0.05 * s.slit * (1 - clamp(s.eyeOpen * 3)) * fade; e.slit.visible = su.uInt.value > 0.0005;
+    // 视线光束
+    const beamOn = (s.beam ?? 0) * fade;
+    e.beam.visible = beamOn > 0.003 && (s.beamReach ?? 0) > 0.001;
+    // 睁眼瞬间：虹膜向外迸出一圈细小的绿色火花
+    if (s.sparkT0 != null && t >= s.sparkT0 && t < s.sparkT0 + 0.6) {
+      const c = new THREE.Vector3(0.11 * s.gaze * EYE_K, 0, 0.01); e.g.localToWorld(c);
+      bursts.push({ t0: s.sparkT0, pos: c.toArray(), n: 40, speed: 0.35, life: 0.55, grav: 0.05, seed: 900 + e.outer, bright: 2.0, dir: [0, 0, 0.3], spread: 1.0 });
+    }
+    if (e.beam.visible) {
+      const a = new THREE.Vector3(0.11 * s.gaze * EYE_K, 0, 0.004); e.g.localToWorld(a);
+      const bu = e.beam.material.uniforms; bu.uA.value.copy(a); bu.uB.value.copy(otherW); bu.uReach.value = s.beamReach; bu.uBeam.value = beamOn;
+    }
   });
   // 胸像
   h.bust.visible = s.bust > 0.003;

@@ -59,7 +59,7 @@ export function update(t, F) {
   if (F.outro) s.scatter = F.outro.heroScatter;
   applyHero(s, t);
   F.cam = cam(t);
-  F.bloom = t < 3.5 ? INTRO_BLOOM : t < 4.1 ? (t - 3.5 < 0.05 ? lerp(1.4, 2.4, (t - 3.5) / 0.05) : lerp(2.4, 1.6, sine((t - 3.55) / 0.55))) : 1.6;
+  F.bloom = t < 3.5 ? INTRO_BLOOM : t < 4.1 ? (t - 3.5 < 0.05 ? lerp(1.4, 2.4, (t - 3.5) / 0.05) : 1.6 + 0.8 * Math.exp(-(t - 3.55) * 9)) : 1.6;
 }
 
 export function text(t) {

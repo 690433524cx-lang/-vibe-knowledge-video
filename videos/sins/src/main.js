@@ -19,6 +19,7 @@ setLoop(TL); SHARED.uLoop.value = TL;
 const TABLE = E.timeline(VER);
 window.META = { ep: EP, ver: VER, duration: TL, fps: PREVIEW ? 15 : 30, subs: TABLE.SUBS.map(s => ({ t0: s[0], t1: s[1], text: s[2], exempt: !!(s[3] && s[3].exempt) })) };
 
+const BLOOM_K = 0.45;
 let outCtx, glCanvas, outCanvas, grain = [];
 export async function init() {
   glCanvas = document.getElementById('gl'); outCanvas = document.getElementById('out');
@@ -28,7 +29,7 @@ export async function init() {
   initCore(glCanvas, { W, H, bolts: TABLE.BOLTS });
   window.K = K;
   const objText = await (await fetch('assets/canonical_face_model.obj')).text();
-  buildFaces(objText, { face: PREVIEW ? 50000 : 85000 });
+  buildFaces(objText, { face: PREVIEW ? 65000 : 110000 });
   intro.build();
   E.build(VER, PREVIEW);
   for (let k = 0; k < 4; k++) {
@@ -119,7 +120,8 @@ export function render(t) {
   const qn = new THREE.Quaternion(); K.camera.getWorldQuaternion(qn);
   for (const g of K.glows) if (g.userData.billboard && g.visible) { const pq = new THREE.Quaternion(); g.parent.getWorldQuaternion(pq); g.quaternion.copy(pq.invert().multiply(qn)); }
   // 后期：冲击时辉光强度 ×1.7，0.4 秒内回落
-  K.bloom.strength = F.bloom * (1 + 0.7 * clamp(pk));
+  // 辉光：分镜给的强度乘一个统一的校准系数（这套粒子亮度下，原值会把整张脸冲白）；冲击时 ×1.7，0.4 秒内回落
+  K.bloom.strength = BLOOM_K * F.bloom * (1 + 0.7 * clamp(pk));
   if (window.DBG) window.DBG(K, t);
   fu.uCA.value = 0.0012 + 0.005 * pk;
   fu.uGlitch.value = F.glitch; fu.uTime.value = t;

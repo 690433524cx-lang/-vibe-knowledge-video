@@ -179,9 +179,11 @@ export function update(t, F) {
     const asm = 1 - out3(prog(t, 74.0, 75.0));
     Object.assign(hs, hookFinal(t), { visible: true, scatter: Math.max(asm * 2.5, 0), alpha: sine(prog(t, 73.6, 74.4)), other: 0, bright: 0.85 });
     if (t >= 75.0) {
-      const o = outExpo(prog(t, 75.0, 75.2));
-      hs.eyeOpen = o; hs.gaze = 0.85 * (1 - outExpo(prog(t, 75.1, 75.45))); hs.flare = 0.9 * Math.exp(-(t - 75.0) * 6);
-    } else { hs.eyeOpen = 0; hs.gaze = 0; }
+      // 直视观众：上眼睑抬到 60%，虹膜从右侧移回中央、更亮；视线光束收回
+      const o = outExpo(prog(t, 75.0, 75.25));
+      hs.eyeOpen = 0.6 * o; hs.gaze = 1 - outExpo(prog(t, 75.15, 75.5)); hs.irisB = 0.2 + 1.15 * o + 1.2 * Math.exp(-(t - 75.0) * 9) * o; hs.sparkT0 = 75.0;
+      hs.beam = 0;
+    } else { hs.eyeOpen = 0; hs.gaze = 1; hs.beam = 0; }
     hs.crackT = 9; // 裂纹保持长满
     if (F.outro) hs.scatter = F.outro.heroScatter;
   }
@@ -191,7 +193,7 @@ export function update(t, F) {
   F.nebula = t >= 24.5 && t < 40 ? lerp(1.7, 1.15, sine(prog(t, 24.5, 26))) : (t >= 40 && t < 41 ? lerp(1.15, 1.7, prog(t, 40, 41)) : 1.7);
 }
 function hookFinal(t) {
-  return { pos: [0, 0.25, 0], ry: 10 * D2R, eyeOpen: 1, gaze: 0.85, crackT: 9, snakes: [1, 1, 1, 1], thorn: 1, thornRot: (t - 6.4) * 6 * D2R, bust: 1, bustAsm: 1, heart: 1, other: 1 };
+  return { pos: [0, 0.25, 0], ry: 10 * D2R, eyeOpen: 0.45, gaze: 1, beam: 1, beamReach: 1, crackT: 9, snakes: [1, 1, 1, 1], thorn: 1, thornRot: (t - 6.4) * 6 * D2R, bust: 1, bustAsm: 1, heart: 1, other: 1 };
 }
 function bloomAt(t) {
   const keys = [[10, 1.6], [23.8, 1.6], [24.6, 1.1], [39.8, 1.1], [40.8, 1.4], [57.9, 1.4], [58.6, 1.3], [73.8, 1.3], [74.5, 1.5]];

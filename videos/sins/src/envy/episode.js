@@ -58,8 +58,10 @@ function hookHero(t, F) {
   if (t < 2.0) { s.alpha = F.intro ? F.intro.hand : 1; s.ry = F.intro ? F.intro.faceRY : HERO_RY; s.colA = F.palA; s.colB = F.palB; s.slit = 1.4; }
   // 睁眼：3.5 秒，0.2 秒张开，眼珠斜向画面右侧
   if (t >= 3.5) {
-    const o = outExpo(prog(t, 3.5, 3.7));
-    s.eyeOpen = o; s.gaze = 0.85 * o; s.flare = 1.5 * Math.exp(-(t - 3.5) * 4.5);
+    // 0.25 秒内上眼睑抬到 45%，虹膜从暗到亮爆开；视线光束在睁眼后 0.2 秒射出，0.4 秒射到「别人」
+    const o = outExpo(prog(t, 3.5, 3.75));
+    s.eyeOpen = 0.45 * o; s.gaze = 1; s.irisB = 0.2 + 0.8 * o + 1.4 * Math.exp(-(t - 3.5) * 9) * o; s.sparkT0 = 3.5;
+    s.beam = 1; s.beamReach = outExpo(prog(t, 3.7, 4.1));
     s.crackT = t - CRACK_T0;
   }
   // 远处的「别人」：3.5–4.0 从暗处浮现
@@ -90,7 +92,8 @@ export function update(t, F) {
 }
 function hookBloom(t) {
   if (t < 3.5) return INTRO_BLOOM;
-  if (t < 4.1) { const d = t - 3.5; return d < 0.05 ? lerp(1.4, 2.4, d / 0.05) : lerp(2.4, 1.6, sine(clamp((d - 0.05) / 0.55))); }
+  // 睁眼瞬间升到 2.4，0.6 秒内指数回落到 1.6
+  if (t < 4.1) { const d = t - 3.5; return d < 0.05 ? lerp(1.4, 2.4, d / 0.05) : 1.6 + 0.8 * Math.exp(-(d - 0.05) * 9); }
   return 1.6;
 }
 
