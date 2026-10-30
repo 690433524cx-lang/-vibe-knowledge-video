@@ -16,7 +16,7 @@ export function buildHero(preview) {
   const { lines } = buildCracks(K.headPB, K.faceCount, 11);
   const crackPB = linesToPB(lines, 0.0022, 13, 0.0022);
   tagCrackProximity(K.headPB, crackPB, 0.026);
-  const head = points(K.headPB, cloudMaterial({ size: 0.0135, bright: 0.62, depthRef: 2.6, maxPx: 16, colA: ENVY.high, colB: ENVY.main, colCrack: ENVY.toxic,
+  const head = points(K.headPB, cloudMaterial({ size: 0.0135, bright: 0.62, depthRef: 2.6, maxPx: 16, colA: ENVY.bright, colB: ENVY.main, colCrack: ENVY.toxic,
     uniforms: { uEyeDim: { value: 0 } }, uniformDecl: 'uniform float uEyeDim;',
     colHook: `
       if (aMisc.y == 1.0 || aMisc.y == 2.0) b *= 0.25;
