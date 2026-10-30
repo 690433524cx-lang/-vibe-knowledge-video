@@ -48,7 +48,7 @@ export function build(col) {
     });
     return { g, pts, slits };
   });
-  band = glow(3, col.high, [0.32, 2.6], K.scene, { core: '#FFFFFF', order: 45 });
+  band = glow(3, col.bright, [0.32, 2.6], K.scene, { core: col.high, order: 45 });
 }
 const breath = (t, i) => 0.5 + 0.5 * Math.sin(TAU * qk(128 / 2.4) * t / LOOP - i * 0.9);
 
@@ -92,7 +92,7 @@ export function seriesIntro(t, N, F) {
   });
   setFaces(t, st);
   band.visible = t > 0.2 && t < 1.5;
-  if (band.visible) { band.position.set(sx, 0.05, 0.6); band.material.uniforms.uInt.value = 0.22 * scanAmt; }
+  if (band.visible) { band.position.set(sx, 0.05, 0.6); band.material.uniforms.uInt.value = 0.16 * scanAmt; }
   if (t >= 1.3 && t < 2.0) { const s = SLOTS[sel]; F.bursts.push({ t0: 1.3, pos: [s.x, s.y, s.z + 0.3], n: 160, speed: 1.6, life: 0.8, grav: 0.3, seed: 3, bright: 2 }); }
   return { hand, faceRY: lerp(SLOTS[sel].ry, HERO_RY, fly) };
 }

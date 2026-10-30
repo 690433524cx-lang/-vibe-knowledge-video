@@ -80,7 +80,7 @@ export function build(preview) {
   }
   // 缝眼特写：复用粒子人脸，闭着眼；每只眼的眼缝上横跨 4 道针脚
   const sewnG = new THREE.Group(); sewnG.position.set(...SEWN); K.scene.add(sewnG);
-  const sewnFace = points(K.headPB, cloudMaterial({ size: 0.0135, bright: 0.55, depthRef: 2.2, maxPx: 16, colA: ENVY.bright, colB: ENVY.main, colHook: 'if (aMisc.y == 2.0) b *= 0.3; if (aMisc.y == 1.0) b *= 0.55;' }), sewnG);
+  const sewnFace = points(K.headPB, cloudMaterial({ size: 0.0135, bright: 0.55, depthRef: 2.2, maxPx: 16, colA: ENVY.main, colB: ENVY.main, colHook: 'if (aMisc.y == 2.0) b *= 0.3; if (aMisc.y == 1.0) b *= 0.55;' }), sewnG);
   const stitchPB = buildStitches([FACE.eyeL, FACE.eyeR]);
   const stitches = points(stitchPB, cloudMaterial({ size: 0.007, bright: 2.2, depthRef: 1.6, maxPx: 8, colA: ENVY.high, colB: ENVY.high,
     uniforms: { uSeq: { value: 0 } }, uniformDecl: 'uniform float uSeq;',
@@ -121,8 +121,8 @@ export function build(preview) {
   const frame = points(ph.frame, cloudMaterial({ size: 0.022, bright: 1.0, depthRef: 8, maxPx: 10, colA: ENVY.main, colB: ENVY.main,
     uniforms: { uScr: { value: new THREE.Color(ENVY.dark) } }, uniformDecl: 'uniform vec3 uScr;', colHook: 'if (aMisc.y == 1.0) col = uScr*2.4;' }), phoneG);
   const cards = points(ph.cards, cardMaterial(), phoneG);
-  cards.material.uniforms.uSize.value = 0.022; cards.material.uniforms.uColA.value.set(ENVY.high); cards.material.uniforms.uColB.value.set(ENVY.high);
-  cards.material.uniforms.uWarmHi.value.set('#FFFFFF');
+  cards.material.uniforms.uSize.value = 0.022; cards.material.uniforms.uColA.value.set(ENVY.bright); cards.material.uniforms.uColB.value.set(ENVY.bright);
+  cards.material.uniforms.uWarmHi.value.set(ENVY.high);
   const screenGlow = glow(0, ENVY.bright, [3.6, 6.2], phoneG, { core: ENVY.dark, order: -6, billboard: false }); screenGlow.position.z = -0.2;
   const viewerG = new THREE.Group(); K.scene.add(viewerG);
   const viewer = points(buildViewer(701, k), cloudMaterial({ size: 0.026, bright: 1.0, depthRef: 8, maxPx: 12, facing: 0.3, light: 0.4, colA: ENVY.bright, colB: ENVY.main,
@@ -204,7 +204,7 @@ function camAt(t) {
     else c = camL(into, BRAIN_CAM, inOut(prog(t, 40.5, 41.3)));
     // 48.8：向右横移跟随高台上的「别人」；53.0 前移回大脑
     const pan = sine(prog(t, 48.8, 49.8)) * (1 - sine(prog(t, 52.2, 53.1)));
-    if (pan > 0) c = camL(c, { pos: [2.35, -0.2, 4.4], target: [2.35, -0.55, 0] }, pan);
+    if (pan > 0) c = camL(c, { pos: [1.35, -0.25, 4.6], target: [1.35, -0.6, 0] }, pan);
     if (t > 57.6) c = camL(c, OVER(58.2), inOut(prog(t, 57.6, 59.0)));
     return c;
   }
@@ -236,7 +236,8 @@ export function update(t, F) {
   if (t >= 57.9 && t < 74.4) updatePhone(t, F);
   F.cam = camAt(t);
   F.bloom = bloomAt(t);
-  F.nebula = t >= 24.5 && t < 40 ? lerp(1, 0.85, sine(prog(t, 24.5, 26))) : (t >= 40 && t < 41 ? lerp(0.85, 1, prog(t, 40, 41)) : 1);
+  // 第三章（大脑）背景云团较少，提亮一些保证平均亮度
+  F.nebula = 2.1 * (t >= 24.5 && t < 40 ? lerp(1, 0.85, sine(prog(t, 24.5, 26))) : (t >= 40 && t < 41 ? lerp(0.85, 1.35, prog(t, 40, 41)) : (t >= 41 && t < 58.2 ? 1.35 : (t >= 58.2 && t < 59.2 ? lerp(1.35, 1, prog(t, 58.2, 59.2)) : 1))));
 }
 function bloomAt(t) {
   if (t < 3.5) return 1.4;
@@ -416,8 +417,8 @@ export function text(t, F) {
   }
   const ea = vis(t, 81.6, 83.0, 0.4, 0.4);
   if (ea > 0) {
-    glowText('七宗罪 · 下一集：愤怒', 960, 978, fs(500, 34), C.key, { alpha: ea, glow: 10 });
-    glowText('参考：莎士比亚《奥赛罗》｜但丁《神曲·炼狱篇》｜高桥英彦等，《科学》2009｜费斯廷格，1954', 960, 1016, fs(400, 22), C.key, { alpha: ea * 0.85, glow: 6 });
+    glowText('七宗罪 · 下一集：愤怒', 960, 962, fs(500, 34), C.key, { alpha: ea, glow: 10 });
+    glowText('参考：莎士比亚《奥赛罗》｜但丁《神曲·炼狱篇》｜高桥英彦等，《科学》2009｜费斯廷格，1954', 960, 1000, fs(400, 22), C.key, { alpha: ea * 0.85, glow: 6 });
   }
 }
 // 特征词：分布在胸像四周（屏幕坐标，完整显示在画面内），不压住脸、眼睛和标题

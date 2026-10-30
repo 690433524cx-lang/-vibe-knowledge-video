@@ -68,7 +68,7 @@ function applyCam(c, t, hand) {
 // ------------------------------------------------------------ 每帧
 export function render(t) {
   tickMaterials(t);
-  const F = { t, tl: TL, bursts: [], cam: null, bloom: 1.4, nebula: 1, ink: 0, inkC: [0.5, 0.5], glitch: 0, outro: null, intro: null };
+  const F = { t, tl: TL, bursts: [], cam: null, bloom: 1.4, nebula: 2.1, ink: 0, inkC: [0.5, 0.5], glitch: 0, outro: null, intro: null };
   if (t < 2.0) F.intro = intro.seriesIntro(t, EP.N, F);
   else if (t >= TL - 1) F.outro = intro.seriesOutro(t, TL, F);
   else intro.hideFaces();
@@ -76,7 +76,7 @@ export function render(t) {
   updateSparks(t, F.bursts);
   let cam = F.cam || intro.LINEUP_CAM, hand = 1;
   if (t < 2.0) { cam = intro.camIntro(t); hand = 0; }
-  else if (F.outro) { const k = inOut(F.outro.k); cam = camLerp(cam, intro.LINEUP_CAM, k); hand = 1 - k; F.bloom = lerp(F.bloom, 1.4, k); F.nebula = lerp(F.nebula, 1, k); }
+  else if (F.outro) { const k = inOut(F.outro.k); cam = camLerp(cam, intro.LINEUP_CAM, k); hand = 1 - k; F.bloom = lerp(F.bloom, 1.4, k); F.nebula = lerp(F.nebula, 2.1, k); }
   hand *= clamp((t - 2.0) / 1.0);
   const pk = applyCam(cam, t, hand);
   const bs = boltState(t);
@@ -127,9 +127,9 @@ const CHAPTERS = [['01', '绿眼睛的怪物', 10, 24], ['02', '缝上的眼睛'
 function drawChapterBar(t) {
   const a = (t < 10 || t > 74) ? 0 : Math.min(sine(prog(t, 10, 10.5)), 1 - sine(prog(t, 73.5, 74)));
   if (a <= 0) return;
-  glowText('七宗罪 · 第二集 · 嫉妒', 60, 62, fs(500, 28), C.key, { alpha: 0.8 * a, align: 'left', glow: 10 });
+  glowText('七宗罪 · 第二集 · 嫉妒', 60, 78, fs(500, 28), C.key, { alpha: 0.8 * a, align: 'left', glow: 10 });
   for (const [no, name, t0, t1] of CHAPTERS) {
     const av = (t < t0 || t > t1) ? 0 : Math.min(sine(prog(t, t0, t0 + 0.45)), 1 - sine(prog(t, t1 - 0.45, t1)));
-    if (av > 0) glowText(`${no}  ${name}`, 1860, 62, fs(500, 28), C.key, { alpha: av * a, align: 'right', glow: 10 });
+    if (av > 0) glowText(`${no}  ${name}`, 1860, 78, fs(500, 28), C.key, { alpha: av * a, align: 'right', glow: 10 });
   }
 }
