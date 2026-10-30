@@ -76,7 +76,7 @@ export function render(t) {
   updateSparks(t, F.bursts);
   let cam = F.cam || intro.LINEUP_CAM, hand = 1;
   if (t < 2.0) { cam = intro.camIntro(t); hand = 0; }
-  else if (F.outro) { const k = inOut(F.outro.k); cam = camLerp(cam, intro.LINEUP_CAM, k); hand = 1 - k; F.bloom = lerp(F.bloom, 1.4, k); F.nebula = lerp(F.nebula, 2.1, k); }
+  else if (F.outro) { const k = inOut(F.outro.k); cam = camLerp(cam, intro.LINEUP_CAM, k); hand = 1 - k; F.bloom = lerp(F.bloom, 1.4, k); F.nebula = lerp(F.nebula, 2.1, k) * (1 + 1.1 * Math.sin(Math.PI * Math.pow(k, 0.7))); } // 片尾过渡时主角已溶散、七张脸还没飞回，背景略提亮；最后一帧不变
   hand *= clamp((t - 2.0) / 1.0);
   const pk = applyCam(cam, t, hand);
   const bs = boltState(t);
