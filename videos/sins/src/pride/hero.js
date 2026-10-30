@@ -13,7 +13,7 @@ export function buildHero() {
   const { lines } = buildCracks(K.headPB, K.faceCount, 11);
   const crackPB = linesToPB(lines, 0.0022, 13, 0.0022);
   tagCrackProximity(K.headPB, crackPB, 0.026);
-  const head = points(K.headPB, cloudMaterial({ size: 0.024, bright: 0.66, depthRef: 4.6, maxPx: 16, colA: P.white, colB: P.purple, colCrack: P.crack }), hs);
+  const head = points(K.headPB, cloudMaterial({ size: 0.024, bright: 0.66, depthRef: 4.6, maxPx: 16, colA: '#C9A8FF', colB: P.purple, colCrack: P.crack }), hs);
   head.material.uniforms.uSwirl.value = 1.4;
   const cracks = points(crackPB, lineMaterial({ size: 0.028, bright: 1.8, col: P.crack, hot: P.white }), hs); cracks.renderOrder = 30;
   const eyes = [FACE.eyeL, FACE.eyeR].map(p => {
@@ -60,7 +60,7 @@ export function applyHero(s0, t) {
   }
   const hu = h.head.material.uniforms;
   hu.uBright.value = 0.66 * s.bright; hu.uEyeOpen.value = s.eyeOpen; hu.uCrackTint.value = 1;
-  if (s.colA) { hu.uColA.value.setRGB(...s.colA); hu.uColB.value.setRGB(...s.colB); } else { hu.uColA.value.set(P.white); hu.uColB.value.set(P.purple); }
+  if (s.colA) { hu.uColA.value.setRGB(...s.colA); hu.uColB.value.setRGB(...s.colB); } else { hu.uColA.value.set('#C9A8FF'); hu.uColB.value.set(P.purple); }
   // 裂纹：傲慢项目的时刻表从 9.0 起，这里从 3.5 起并压缩 0.7 倍
   const cu = h.cracks.material.uniforms;
   h.lines.forEach((L, i) => {

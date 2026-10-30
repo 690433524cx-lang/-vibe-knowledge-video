@@ -14,7 +14,7 @@ let H = null;
 export function buildHero(preview) {
   const root = new THREE.Group(); K.scene.add(root);
   const hs = new THREE.Group(); hs.scale.setScalar(HS); root.add(hs);
-  const head = points(K.headPB, cloudMaterial({ size: 0.024, bright: 0.86, depthRef: 4.6, maxPx: 16, colA: ENVY.bright, colB: ENVY.main, colCrack: ENVY.toxic,
+  const head = points(K.headPB, cloudMaterial({ size: 0.024, bright: 0.86, depthRef: 4.6, maxPx: 16, colA: '#5FE49A', colB: ENVY.main, colCrack: ENVY.toxic,
     uniforms: { uEyeDim: { value: 0 } }, uniformDecl: 'uniform float uEyeDim;',
     colHook: `
       if (aMisc.y == 1.0 || aMisc.y == 2.0) b *= 0.25;

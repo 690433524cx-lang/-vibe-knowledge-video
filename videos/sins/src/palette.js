@@ -21,11 +21,11 @@ export const PALETTES = {
     dust: ['#C8C4D8', '#F2F0FA'], bolt: '#B8B4CC', text: '#F4F3F8', key: '#E8E8F0', neg: '#E8E8F0', glow: '#B8B4CC', flash: '#E8E8F0',
   },
   pride: {
-    neb: ['#07030F', '#2A0E4A', '#6D28D9', '#A78BFA'], faceA: '#F5F0FF', faceB: '#8B5CF6', crack: '#C084FC',
+    neb: ['#07030F', '#2A0E4A', '#6D28D9', '#A78BFA'], faceA: '#C9A8FF', faceB: '#8B5CF6', crack: '#C084FC',
     dust: ['#BF9EFF', '#F5F0FF'], bolt: '#B794F6', text: '#F5F0FF', key: '#C9A8FF', neg: '#F0457A', glow: '#7C3AED', flash: '#F0E6FF',
   },
   envy: {
-    neb: ['#020A06', '#0B3A22', '#3DDC84', '#A7F3C9'], faceA: '#A7F3C9', faceB: '#3DDC84', crack: '#C6F432',
+    neb: ['#020A06', '#0B3A22', '#3DDC84', '#A7F3C9'], faceA: '#5FE49A', faceB: '#3DDC84', crack: '#C6F432',
     dust: ['#7FE8B0', '#F0FFF5'], bolt: '#A7F3C9', text: '#F0FFF5', key: '#A7F3C9', neg: '#C6F432', glow: '#3DDC84', flash: '#A7F3C9',
     main: '#3DDC84', dark: '#0B3A22', bright: '#A7F3C9', high: '#F0FFF5', toxic: '#C6F432', other: '#FFD27A',
   },

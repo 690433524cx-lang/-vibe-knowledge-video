@@ -152,15 +152,16 @@ export function introText(t, N) {
 // ------------------------------------------------------------ 片尾循环：tl = 成片时长，最后 1 秒
 // 返回 { heroScatter, cam(k) }：主角溶散进度；镜头由导演按 k 从当前镜头插值回 CAM0
 export function seriesOutro(t, tl, N, F) {
-  const a = tl - 1, k = prog(t, a, tl);
-  const back = sine(prog(t, a + 0.15, tl));          // 七张脸飞回
+  // 所有动作在最后一帧（tl − 1/30）之前完成，最后一帧就是第 0 帧的样子（只是没有字幕）
+  const a = tl - 1, e = tl - 0.12, k = prog(t, a, e);
+  const back = sine(prog(t, a + 0.15, e));          // 七张脸飞回
   const st = SLOTS.map((s, i) => ({
-    scatter: 2.5 * (1 - out3(prog(t, a + 0.15, tl - 0.04))), fly: 1 - back, alpha: sine(prog(t, a + 0.1, a + 0.6)),
+    scatter: 2.5 * (1 - out3(prog(t, a + 0.15, e))), fly: 1 - back, alpha: sine(prog(t, a + 0.1, a + 0.6)),
     slit: 0.4, scanAmt: 0,
   }));
   setFaces(t, st);
   band.visible = false;
-  F.tide = 1 - sine(prog(t, a + 0.1, tl - 0.05)); F.tideC = [0.5, 1 - 820 / 1920];
+  F.tide = 1 - sine(prog(t, a + 0.1, e)); F.tideC = [0.5, 1 - 820 / 1920];
   return { heroScatter: 2.5 * out3(prog(t, a, a + 0.75)), k };
 }
 export function hideFaces() { faces.forEach(f => { f.g.visible = false; }); band.visible = false; }

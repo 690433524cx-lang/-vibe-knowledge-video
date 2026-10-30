@@ -76,6 +76,8 @@ function applyPalette(F) {
   // 片头：潮水从选中的脸向外推进；片尾：整体退回中性色
   if (F.outro) { fu.uTide.value = 2.0; fu.uTideMix.value = F.tide; } else { fu.uTide.value = F.tide * 1.05; fu.uTideMix.value = 1; }
   fu.uTideC.value.set(...F.tideC);
+  // 底色抬亮：中性色需要多一些，本期配色（中间色本身更亮）少一些
+  fu.uLift.value = lerp(0.75, 0.32, F.tide);
   PAL.ep = E.PAL; PAL.tide = F.tide;
   const du = K.dust.material.uniforms; du.uColA.value.setRGB(...palRGB('dust', 0)); du.uColB.value.setRGB(...palRGB('dust', 1));
   K.bolts.material.uniforms.uCol.value.setRGB(...palRGB('bolt'));
@@ -87,7 +89,7 @@ function applyPalette(F) {
 // ------------------------------------------------------------ 每帧
 export function render(t) {
   tickMaterials(t);
-  const F = { t, ver: VER, tl: TL, bursts: [], cam: null, bloom: 1.4, tide: 1, tideC: [0.5, 0.58], hand: 1, outro: null, nebula: 1.7, ink: 0, inkC: [0.5, 0.5], glitch: 0 };
+  const F = { t, ver: VER, tl: TL, bursts: [], cam: null, bloom: 1.4, tide: 1, tideC: [0.5, 0.58], hand: 1, outro: null, nebula: 1.8, ink: 0, inkC: [0.5, 0.5], glitch: 0 };
   // 配色潮水：片头 1.3–2.0 由中性色淹到本期配色；片尾最后 1 秒退回中性色
   const te = TL - 1;
   if (t < 2.0) { F.tide = t < 1.3 ? 0 : sine(prog(t, 1.3, 2.0)); F.tideC = [0.5, 0.58]; }

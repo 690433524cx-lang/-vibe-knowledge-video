@@ -224,7 +224,7 @@ export function glowMaterial(mode, color, opts = {}) {
 // ------------------------------------------------------------ 星云（在辉光之后叠加）
 // 两套配色：0 为片头的中性色，1 为本期配色；uTide 是换色潮水的半径（屏幕高度为 1），从 uTideC 向外推进
 export const NEBULA_GLSL = /* glsl */`
-      uniform float uBright, uStars, uTide, uTideMix, uDrift; uniform vec2 uRes, uOff, uTideC; uniform vec3 uFlash;
+      uniform float uBright, uStars, uTide, uTideMix, uDrift, uLift; uniform vec2 uRes, uOff, uTideC; uniform vec3 uFlash;
       uniform vec3 uN0b, uN0d, uN0m, uN0h, uN1b, uN1d, uN1m, uN1h;
       float hh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7)))*43758.5453); }
       float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f);
@@ -232,7 +232,7 @@ export const NEBULA_GLSL = /* glsl */`
       float fbm(vec2 p){ float v = 0.0, a = 0.5; mat2 m = mat2(1.6, 1.2, -1.2, 1.6); for (int i = 0; i < 5; i++){ v += a*noise(p); p = m*p; a *= 0.5; } return v; }
       vec3 nebula(vec2 uv){ vec2 p = (uv - 0.5)*vec2(uRes.x/uRes.y, 1.0);
         float ang = uTime*6.28318/uLoop;
-        vec2 drift = vec2(cos(ang), sin(ang))*0.35*uDrift;     // 一个循环绕一圈；幅度按时长缩放，漂移速度与傲慢一致
+        vec2 drift = vec2(cos(ang) - 1.0, sin(ang))*0.35*uDrift;   // t=0 时为零：各版本的第 0 帧完全一致     // 一个循环绕一圈；幅度按时长缩放，漂移速度与傲慢一致
         float rot = 0.06*uDrift*sin(ang);
         p = mat2(cos(rot), -sin(rot), sin(rot), cos(rot))*p + uOff;
         vec2 q = p*1.6 + drift;
@@ -256,7 +256,8 @@ export const NEBULA_GLSL = /* glsl */`
         vec2 id = floor(sg); float st = hh(id);
         if (st > 0.985) { vec2 f = fract(sg) - 0.5; float tw = 0.5 + 0.5*sin(uTime*qf(30.0 + floor(st*1000.0)*0.1) + st*80.0);
           col += mix(vec3(0.9), Hc*1.2 + 0.2, 0.5)*exp(-dot(f, f)*30.0)*tw*uStars*(st - 0.985)*50.0; }
-        col *= uBright;
+        // 底色抬亮：在最暗的地方也留一层与配色相同的环境光，保证整体亮度
+        col = col*uBright + (D*0.28 + M*0.06)*uLift;
         return clamp(col, 0.0, 1.2);
       }`;
 
@@ -300,9 +301,9 @@ export function dustMaterial() {
 // ------------------------------------------------------------ 最终合成：色差 + 暗角 + 故障错位 + 星云 + 绿色墨水
 const V2 = (x, y) => new THREE.Vector2(x, y), V3c = h => new THREE.Color(h);
 export const FinalShader = {
-  uniforms: { ...SHARED, tDiffuse: { value: null }, uCA: { value: 0.0015 }, uVig: { value: 0.9 }, uGlitch: { value: 0 }, uTime: { value: 0 },
+  uniforms: { ...SHARED, tDiffuse: { value: null }, uCA: { value: 0.0015 }, uVig: { value: 0.6 }, uGlitch: { value: 0 }, uTime: { value: 0 },
     uRes: { value: V2(1080, 1920) }, uOff: { value: V2(0, 0) }, uFlash: { value: new THREE.Vector3(0.5, 0.6, 0) },
-    uBright: { value: 1 }, uStars: { value: 1 }, uNeb: { value: 1 }, uDrift: { value: 1 }, uTide: { value: 0 }, uTideMix: { value: 1 }, uTideC: { value: V2(0.5, 0.6) },
+    uBright: { value: 1 }, uStars: { value: 1 }, uNeb: { value: 1 }, uDrift: { value: 1 }, uTide: { value: 0 }, uTideMix: { value: 1 }, uLift: { value: 0.75 }, uTideC: { value: V2(0.5, 0.6) },
     uN0b: { value: V3c('#07060C') }, uN0d: { value: V3c('#1C1A2A') }, uN0m: { value: V3c('#3A3550') }, uN0h: { value: V3c('#8E88A8') },
     uN1b: { value: V3c('#07060C') }, uN1d: { value: V3c('#1C1A2A') }, uN1m: { value: V3c('#3A3550') }, uN1h: { value: V3c('#8E88A8') },
     uInk: { value: 0 }, uInkC: { value: V2(0.5, 0.5) }, uInkCol: { value: V3c('#0B3A22') }, uInkEdge: { value: V3c('#3DDC84') } },

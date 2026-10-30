@@ -190,7 +190,8 @@ export function update(t, F) {
   applyHero(hs, t, F.bursts);
   F.cam = camAt(t);
   F.bloom = bloomAt(t);
-  F.nebula = t >= 24.5 && t < 40 ? lerp(1.7, 1.15, sine(prog(t, 24.5, 26))) : (t >= 40 && t < 41 ? lerp(1.15, 1.7, prog(t, 40, 41)) : 1.7);
+  // 第二章更暗、更安静（但仍保证平均亮度 ≥ 28）
+  F.nebula = t >= 24.5 && t < 40 ? lerp(1.8, 1.6, sine(prog(t, 24.5, 26))) : (t >= 40 && t < 41 ? lerp(1.6, 1.9, prog(t, 40, 41)) : (t >= 41 && t < 58.2 ? 1.9 : 1.8));
 }
 function hookFinal(t) {
   return { pos: [0, 0.25, 0], ry: 10 * D2R, eyeOpen: 0.45, gaze: 1, beam: 1, beamReach: 1, crackT: 9, snakes: [1, 1, 1, 1], thorn: 1, thornRot: (t - 6.4) * 6 * D2R, bust: 1, bustAsm: 1, heart: 1, other: 1 };
@@ -253,7 +254,7 @@ function updateBrain(t, F) {
   A.brainG.rotation.set(0.38, (t - 40.0) * 8 * D2R + 0.95, 0);
   const u = A.brain.material.uniforms;
   u.uAssemble.value = prog(t, 40.0, 41.1); u.uAlpha.value = 1 - shrink * 0.3;
-  u.uBright.value = 0.75 * (1 + 2 * shrink);
+  u.uBright.value = 1.05 * (1 + 2 * shrink);
   // 45.3：疼痛区像被针扎了一下，短促闪两次
   const pain = t >= 45.3 ? (Math.exp(-Math.pow((t - 45.32) / 0.07, 2)) + 0.8 * Math.exp(-Math.pow((t - 45.58) / 0.07, 2)) + 0.45 * Math.exp(-(t - 45.3) * 0.9)) : 0;
   u.uPain.value = pain * (1 - shrink);
@@ -298,7 +299,7 @@ function updatePhone(t, F) {
 function questionTitle(t) {
   for (const [a, b, s] of QTITLES) {
     if (t < a - 0.01 || t > b + 0.6) continue;
-    const inP = outExpo(prog(t, a, a + 0.55)), outP = sine(prog(t, b - 0.05, b + 0.45));
+    const inP = outExpo(prog(t, a + 0.02, a + 0.57)), outP = sine(prog(t, b - 0.4, b));
     const y = 280 + (1 - inP) * 70 - outP * 60;
     const al = clamp(inP * 1.6) * (1 - outP);
     glowText(s, 540, y, fs(700, 52), C.key, { alpha: al, glow: 26, glow2: 40, glowColor: '#3DDC84' });
