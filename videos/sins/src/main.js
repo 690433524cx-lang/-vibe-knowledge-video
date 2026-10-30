@@ -77,7 +77,7 @@ function applyPalette(F) {
   if (F.outro) { fu.uTide.value = 2.0; fu.uTideMix.value = F.tide; } else { fu.uTide.value = F.tide * 1.05; fu.uTideMix.value = 1; }
   fu.uTideC.value.set(...F.tideC);
   // 底色抬亮：中性色需要多一些，本期配色（中间色本身更亮）少一些
-  fu.uLift.value = lerp(0.75, 0.32, F.tide);
+  fu.uLift.value = lerp(0.9, 0.32, F.tide);
   PAL.ep = E.PAL; PAL.tide = F.tide;
   const du = K.dust.material.uniforms; du.uColA.value.setRGB(...palRGB('dust', 0)); du.uColB.value.setRGB(...palRGB('dust', 1));
   K.bolts.material.uniforms.uCol.value.setRGB(...palRGB('bolt'));
