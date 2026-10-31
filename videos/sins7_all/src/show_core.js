@@ -11,13 +11,13 @@ import * as H from './halo.js';
 import * as PR from './props.js';
 
 export const SINS = [
-  { id: 'pride', name: '傲慢', col: '#A24BFF', icon: 'crown', first: '〔傲慢〕说：我也会犯错。', twist: '只是〔还没发生过〕。', fact: '多数人觉得，自己比平均强。' },
-  { id: 'envy', name: '嫉妒', col: '#2BE36B', icon: 'snake', first: '〔嫉妒〕说：我真心为你高兴。', twist: '只要你〔别比我好太多〕。', fact: '别人比你好时，大脑的疼痛区会亮。' },
-  { id: 'wrath', name: '愤怒', col: '#FF2A2A', icon: 'bolt', first: '〔愤怒〕说：我一点都没生气。', twist: '〔你再说一遍？〕', fact: '怒气走近路，比理智快一步。' },
-  { id: 'sloth', name: '懒惰', col: '#2BC8E0', icon: 'moon', first: '〔懒惰〕说：明天我一定开始。', twist: '这句话我〔说了三年〕。', fact: '大脑天生爱省电，能躺就不想动。' },
-  { id: 'greed', name: '贪婪', col: '#FFC23D', icon: 'coin', first: '〔贪婪〕说：我一点也不贪心。', twist: '我只是〔全都想要〕。', fact: '多巴胺爱的，是‘快得到’。' },
-  { id: 'gluttony', name: '暴食', col: '#FF7A1F', icon: 'bowl', first: '〔暴食〕说：我就尝一口。', twist: '这是今晚的〔第七口〕。', fact: '吃饱的信号，要晚到约20分钟。' },
-  { id: 'lust', name: '色欲', col: '#FF3D8B', icon: 'heart', first: '〔色欲〕说：我很专一的。', twist: '〔每一次〕都是。', fact: '心动时，大脑的奖励回路全亮。' },
+  { id: 'pride', tags: ['目中无人', '自命不凡', '唯我独尊', '不可一世'], name: '傲慢', col: '#A24BFF', icon: 'crown', first: '〔傲慢〕说：我也会犯错。', twist: '只是〔还没发生过〕。', fact: '多数人觉得，自己比平均强。' },
+  { id: 'envy', tags: ['眼红心热', '患得患失', '耿耿于怀', '心有不甘'], name: '嫉妒', col: '#2BE36B', icon: 'snake', first: '〔嫉妒〕说：我真心为你高兴。', twist: '只要你〔别比我好太多〕。', fact: '别人比你好时，大脑的疼痛区会亮。' },
+  { id: 'wrath', tags: ['火冒三丈', '怒发冲冠', '暴跳如雷', '一点就着'], name: '愤怒', col: '#FF2A2A', icon: 'bolt', first: '〔愤怒〕说：我一点都没生气。', twist: '〔你再说一遍？〕', fact: '怒气走近路，比理智快一步。' },
+  { id: 'sloth', tags: ['得过且过', '明日再说', '能躺不坐', '养精蓄锐'], name: '懒惰', col: '#2BC8E0', icon: 'moon', first: '〔懒惰〕说：明天我一定开始。', twist: '这句话我〔说了三年〕。', fact: '大脑天生爱省电，能躺就不想动。' },
+  { id: 'greed', tags: ['得寸进尺', '欲壑难填', '多多益善', '贪得无厌'], name: '贪婪', col: '#FFC23D', icon: 'coin', first: '〔贪婪〕说：我一点也不贪心。', twist: '我只是〔全都想要〕。', fact: '多巴胺爱的，是‘快得到’。' },
+  { id: 'gluttony', tags: ['胡吃海塞', '来者不拒', '欲罢不能', '再来一碗'], name: '暴食', col: '#FF7A1F', icon: 'bowl', first: '〔暴食〕说：我就尝一口。', twist: '这是今晚的〔第七口〕。', fact: '吃饱的信号，要晚到约20分钟。' },
+  { id: 'lust', tags: ['见异思迁', '心猿意马', '一见钟情', '情不自禁'], name: '色欲', col: '#FF3D8B', icon: 'heart', first: '〔色欲〕说：我很专一的。', twist: '〔每一次〕都是。', fact: '心动时，大脑的奖励回路全亮。' },
 ];
 export const C3 = h => new THREE.Color(h);
 export const hexs = c => '#' + c.getHexString();

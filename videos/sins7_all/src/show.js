@@ -140,7 +140,7 @@ const FRAME = { pride: [0.25, 3.7], envy: [-0.3, 3.9] };
 const fr = i => FRAME[SINS[i].id] ?? [0.1, 3.6];
 const close = (i, k = 1) => { const [ty, d] = fr(i); return { pos: [slotX(i), ty + 0.1, d * k], target: [slotX(i), ty, 0], fov: 35 }; };
 const face = i => SINS[i].id === 'envy' ? { pos: [slotX(i), -0.05, 2.9], target: [slotX(i), -0.1, 0], fov: 35 } : { pos: [slotX(i), 0.37, 3.5], target: [slotX(i), 0.35, 0], fov: 35 };
-const card = (i, k = 1) => ({ pos: [slotX(i) - 1.75, 0.1, 4.6 * k], target: [slotX(i) - 1.75, -0.05, 0], fov: 35 });
+const card = (i, k = 1) => ({ pos: [slotX(i) - 1.1, 0.1, 5.0 * k], target: [slotX(i) - 1.1, -0.05, 0], fov: 35 });
 const camLerp = (a, b, k) => ({ pos: lerp3(a.pos, b.pos, k), target: lerp3(a.target, b.target, k), fov: lerp(a.fov, b.fov, k) });
 const orbit = (c, ang, cx) => { const dx = c.pos[0] - cx, dz = c.pos[2]; return { ...c, pos: [cx + dx * Math.cos(ang) + dz * Math.sin(ang), c.pos[1], -dx * Math.sin(ang) + dz * Math.cos(ang)] }; };
 
@@ -170,10 +170,10 @@ export function frame(t) {
     F.subs.push({ text: '七宗罪，其实是大脑的〔亮〕七种出厂设置〔/亮〕。', t0: 0.2, t1: 2.45, size: 52 });
     F.subs.push({ text: '刷到这条，看看你是哪一宗——', t0: B[lastIdx(B, 2.45)] > 2.3 ? B[lastIdx(B, 2.45)] : 2.5, t1: R0 - 0.12, size: 52 });
   } else if (t < R[28]) {
-    let i = 0; while (i < 6 && t >= D(i + 1) - 0.5) i++;
+    let i = 0; while (i < 6 && t >= D(i + 1)) i++;
     const d = D(i), C = S.chars[i], sin = SINS[i]; focus = i;
     const b2 = bar(i, 1), b3 = bar(i, 2), b4 = bar(i, 3), next = i < 6 ? D(i + 1) : R[28];
-    const tIn = t - d, push = outExpo(clamp(tIn / 0.4)), leave = clamp((t - (next - 0.5)) / 0.5);
+    const tIn = t - d, push = outExpo(clamp(tIn / 0.4)), leave = clamp((t - (next - 0.32)) / 0.32);
     const transformed = t >= b2, inhale = Math.pow(clamp((t - (b2 - 0.3)) / 0.3), 3) * (t < b2 ? 1 : 0);
     const dt2 = t - b2, dt3 = t - b3, dt4 = t - b4;
     const scatterOthers = 2.2 * push * (1 - leave);
@@ -264,11 +264,11 @@ function setState(C, s) {
   const base = s.gray ? (s.lite ? 1.4 : 2.6) : 1.35 * clamp(0.42 / luma, 0.62, 1.25);       // 按颜色的亮度补偿：绿色不过曝、紫色不发暗
   const live = s.gray ? 0 : 1;
   for (const m of C.mats) {
-    m.uniforms.uDim.value = base * (1 - 0.15 * (s.inhale ?? 0)) * (1 + 0.25 * live * Math.max(0, kick));
+    m.uniforms.uDim.value = base * (1 - 0.15 * (s.inhale ?? 0)) * (1 + (0.12 + 0.13 * live) * Math.max(0, kick));
     m.uniforms.uScatter.value = sc + live * 0.035 * mid; m.uniforms.uScatterDist.value = sc > 0.1 ? 1.4 : 0.35; m.uniforms.uScatFade.value = 1;
     m.uniforms.uDrift.value = 0.0015 + live * 0.02 * mid;                                           // 中音：脸上的粒子轻微地向外流动
   }
-  C.rig.scale.setScalar(1 + live * 0.04 * kick);                                                     // 低音：整体放大 4% 再回弹
+  C.rig.scale.setScalar(1 + (s.lite ? 0 : 0.015 + 0.025 * live) * kick);                // 灰色脸也跟着鼓点轻轻弹动                                                     // 低音：整体放大 4% 再回弹
   const eo = s.eyes;
   C.eyes.forEach(m => { m.visible = eo > 0.01 && sc < 1; m.material.uniforms.uInt.value = 0.95 * eo * (1 + 0.3 * Math.max(0, kick)); m.material.uniforms.uOpen.value = 0.45 + 0.55 * eo; m.material.uniforms.uRays.value = 0.8 * eo; });
   C.eyeHalo.forEach(m => { m.visible = eo > 0.01 && sc < 1; m.material.uniforms.uInt.value = 0.28 * eo; });
@@ -359,6 +359,59 @@ function drawCard(t, ctx, c) {
   ctx.save(); const g2 = ctx.createLinearGradient(0, 800, 0, 1080); g2.addColorStop(0, 'rgba(0,0,0,0)'); g2.addColorStop(1, `rgba(0,0,0,${0.65 * a})`); ctx.fillStyle = g2; ctx.fillRect(0, 800, 1920, 280); ctx.restore();
   marked(ctx, sin.twist, 960, 922, 44, a, tone(sin.col, 0.55));
   glowText(sin.fact, 960, 995, fs(700, 48), tone(sin.col, 0.6), { alpha: a, glow: 18, glowColor: sin.col });
+  drawTags(t, ctx, c);
+}
+
+// 结尾卡的四个四字词：沿光环的弧度摆在左上、右上、左下、右下；发光小圆点 + 细线连到光环上，像标注
+// 结尾卡出现后每一拍弹出一个（80%→100% 并淡入，0.15 秒）；之后跟着低音轻闪、上下漂浮 6px；结尾卡散开时一起化成粒子散开
+const TAG_ANG = [128, 50, 210, 330].map(d => d * Math.PI / 180);
+const tagCache = new Map();
+function tagSprite(word, col) {
+  const key = word + col; if (tagCache.has(key)) return tagCache.get(key);
+  const c = document.createElement('canvas'), pad = 18; const x = c.getContext('2d'); x.font = fs(700, 34);
+  const w = Math.ceil(x.measureText(word).width) + pad * 2, h = 34 + pad * 2; c.width = w; c.height = h;
+  x.font = fs(700, 34); x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.shadowColor = col; x.shadowBlur = 12; x.fillStyle = col; x.fillText(word, w / 2, h / 2 + 1);
+  x.shadowBlur = 4; x.fillText(word, w / 2, h / 2 + 1);
+  const o = { c, w, h }; tagCache.set(key, o); return o;
+}
+function drawTags(t, ctx, c) {
+  const sin = SINS[c.i], C = S.chars[c.i]; if (!sin.tags || !C) return;
+  const hi = tone(sin.col, 0.6), j0 = lastIdx(A.B, c.t0 + 0.02), kick = Math.max(0, kickSpring(t)), fade = c.fade ?? 0;
+  const cen = new THREE.Vector3(), q = new THREE.Vector3();
+  C.halo.updateMatrixWorld(); C.halo.getWorldPosition(cen);
+  const pc = project(cen.toArray());
+  sin.tags.forEach((word, k) => {
+    const tk = A.B[j0 + k] ?? c.t0 + k * 0.5, d = t - tk; if (d < 0) return;
+    const pin = clamp(d / 0.15), pop = 0.8 + 0.2 * outBack(pin), a = pin * (1 - fade) * (0.88 + 0.12 * kick);
+    if (a <= 0.003 && fade < 0.01) return;
+    const ang = TAG_ANG[k], right = Math.cos(ang) > 0;
+    q.set(1.22 * Math.cos(ang), 1.22 * Math.sin(ang), 0); C.halo.localToWorld(q);
+    const pr = project(q.toArray());                                         // 光环上的连接点
+    const ux = pr[0] - pc[0], uy = pr[1] - pc[1], ul = Math.hypot(ux, uy) || 1;
+    const fl = 6 * Math.sin(TAU * t / 2.6 + k * 1.7);                        // 上下漂浮 6px
+    const elbow = [pr[0] + ux / ul * 40, pr[1] + uy / ul * 40 + fl], dot = [elbow[0] + (right ? 34 : -34), elbow[1]];
+    const sp = tagSprite(word, hi), tx = dot[0] + (right ? 16 + sp.w / 2 - 18 : -16 - sp.w / 2 + 18), ty = dot[1];
+    if (fade < 0.01) {
+      ctx.save(); ctx.globalAlpha = a * 0.55; ctx.strokeStyle = hi; ctx.lineWidth = 1; ctx.shadowColor = sin.col; ctx.shadowBlur = 4;
+      ctx.beginPath(); ctx.moveTo(pr[0], pr[1]); ctx.lineTo(elbow[0], elbow[1]); ctx.lineTo(dot[0], dot[1]); ctx.stroke();
+      ctx.globalAlpha = a; ctx.fillStyle = '#FFFFFF'; ctx.shadowBlur = 10 + 8 * kick; ctx.beginPath(); ctx.arc(dot[0], dot[1], 3.2, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(pr[0], pr[1], 1.8, 0, TAU); ctx.fill();
+      ctx.translate(tx, ty); ctx.scale(pop, pop); ctx.globalAlpha = a; ctx.shadowBlur = 0;
+      ctx.drawImage(sp.c, -sp.w / 2, -sp.h / 2);
+      ctx.restore();
+    } else {
+      // 化成粒子散开：把字切成小方块，各自向外飘散、淡出
+      const cell = 4, al = 1 - fade, f = fade;
+      ctx.save(); ctx.globalAlpha = al;
+      for (let yy = 0; yy < sp.h; yy += cell) for (let xx = 0; xx < sp.w; xx += cell) {
+        const hsh = hash(xx * 0.131 + yy * 7.31 + k * 91.7), hs2 = hash(xx * 3.7 + yy * 0.73 + k * 13.1);
+        const dx = (ux / ul * 0.6 + (hsh - 0.5)) * 220 * f * (0.4 + hs2), dy = (uy / ul * 0.6 + (hs2 - 0.5)) * 220 * f * (0.4 + hsh) - 40 * f;
+        ctx.drawImage(sp.c, xx, yy, cell, cell, tx - sp.w / 2 + xx + dx, ty - sp.h / 2 + yy + dy, cell, cell);
+      }
+      ctx.restore();
+    }
+  });
 }
 
 // 〔…〕里的关键词用这一宗的颜色（或高光色），〔亮〕…〔/亮〕用白色高亮加光晕
