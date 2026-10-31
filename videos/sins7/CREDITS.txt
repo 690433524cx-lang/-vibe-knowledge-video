@@ -1,3 +1,4 @@
+神像的头：Igea 大理石头像扫描（assets/models/igea.obj，Cyberware），取自 alecjacobson/common-3d-test-models（仓库未注明授权，研究界长期公开使用）；只在表面采样粒子，不渲染表面
 雕像模型候选（assets/models/），来源与授权：
 1. lee_perry_smith_hi.glb / lee_perry_smith.glb
    Head scan: Lee Perry-Smith, Infinite-Realities, CC BY 3.0（based on a work at www.triplegangers.com）
