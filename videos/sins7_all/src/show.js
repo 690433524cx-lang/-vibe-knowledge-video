@@ -18,14 +18,14 @@ export function build(scene, beats, heads, audioEnv) {
   setAudio(audioEnv, beats);
   S.chars = SINS.map((sin, i) => makeChar(sin, i, heads));
   S.spot = makeSpot();
-  S.stars = [makeStars(4000, -22, 1.0, 11), makeStars(1500, -9, 1.6, 12)];   // 前后两层星点，速度不同
+  S.stars = [makeStars(14000, -22, 1.1, 11), makeStars(5000, -9, 1.7, 12)];   // 前后两层星点，速度不同
 }
 function pts(geo, mat, parent, order = 0) { const p = new THREE.Points(geo, mat); p.frustumCulled = false; p.renderOrder = order; parent.add(p); K.mats.push(mat); return p; }
 function makeStars(n, z, size, seed) {
   const g = new THREE.BufferGeometry(), P = new Float32Array(n * 3), Sd = new Float32Array(n);
   for (let i = 0; i < n; i++) { const k = (12.5 - z) / 12.5; P[i * 3] = (hash(i * 1.7 + seed) - 0.5) * 22 * k; P[i * 3 + 1] = (hash(i * 2.9 + seed) - 0.5) * 12 * k; P[i * 3 + 2] = z; Sd[i] = hash(i * 4.1 + seed); }
   g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('aSeed', new THREE.BufferAttribute(Sd, 1));
-  const m = new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uSize: { value: size }, uScale: { value: 1 }, uSpeed: { value: z < -15 ? 0.04 : 0.11 } }, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
+  const m = new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uSize: { value: size }, uScale: { value: 1 }, uSpeed: { value: z < -15 ? 0.12 : 0.32 } }, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
     vertexShader: `attribute float aSeed; uniform float uTime, uSize, uScale, uSpeed; varying float vB;
       void main(){ vec3 p = position; p.x += uTime*uSpeed*(0.6 + 0.8*aSeed); p.x = mod(p.x + 30.0, 60.0) - 30.0; p.y += 0.15*sin(uTime*0.1 + aSeed*20.0);
         gl_Position = projectionMatrix*modelViewMatrix*vec4(p, 1.0); gl_PointSize = uSize*(0.6 + 1.4*aSeed*aSeed)*uScale; vB = (0.25 + 0.75*aSeed)*(0.7 + 0.3*sin(uTime*2.0 + aSeed*50.0)); }`,
@@ -47,7 +47,7 @@ function makeChar(sin, i, heads) {
   const g = new THREE.Group(); g.position.set(slotX(i), 0, 0); K.scene.add(g);
   const rig = new THREE.Group(); g.add(rig);                  // 整体弹动（鼓点）
   const head = new THREE.Group(); rig.add(head);
-  const mk = () => idolMaterial(sin.col, { bright: 0.85, cran: 0.3, rim: 0.15, cranEdge: 1 });
+  const mk = () => idolMaterial(sin.col, { bright: 0.85, cran: 0.3, rim: 0.15, cranEdge: 1, size: 0.0105 });
   const mGray = mk(), mCol = mk(), mGag = mk();
   mGray.uniforms.uGray.value = 1; [mGray, mCol, mGag].forEach(m => { m.uniforms.uEyeOpen.value = 0; });
   mCol.uniforms.uRamp.value = mGag.uniforms.uRamp.value = 1;                       // 变色：保留灰色阶段的明暗，只映射颜色
@@ -140,7 +140,7 @@ export function events() {
 const LINEUP = { pos: [0, 0.25, 9.6], target: [0, -0.05, 0], fov: 35 };
 const FRAME = { pride: [0.25, 3.7], envy: [-0.3, 3.9] };
 const fr = i => FRAME[SINS[i].id] ?? [0.1, 3.6];
-const lineupCam = t => orbit({ ...LINEUP, pos: [LINEUP.pos[0], LINEUP.pos[1], LINEUP.pos[2] - 0.15 * Math.sin(t * 0.7)] }, 0.025 * Math.sin(t * 0.9), 0);
+const lineupCam = t => orbit({ ...LINEUP, pos: [LINEUP.pos[0], LINEUP.pos[1] + 0.08 * Math.sin(t * 1.7), LINEUP.pos[2] - 0.25 * Math.sin(t * 1.1)] }, 0.05 * Math.sin(t * 1.9), 0);
 const close = (i, k = 1) => { const [ty, d] = fr(i); return { pos: [slotX(i), ty + 0.1, d * k], target: [slotX(i), ty, 0], fov: 35 }; };
 const face = i => SINS[i].id === 'envy' ? { pos: [slotX(i), -0.05, 2.9], target: [slotX(i), -0.1, 0], fov: 35 } : { pos: [slotX(i), 0.37, 3.5], target: [slotX(i), 0.35, 0], fov: 35 };
 const card = (i, k = 1) => ({ pos: [slotX(i) - 1.1, 0.1, 5.0 * k], target: [slotX(i) - 1.1, -0.05, 0], fov: 35 });
@@ -155,8 +155,8 @@ export function frame(t) {
   // 每两拍（第 2、4 拍）：镜头 2% 推近冲击 + 3px 轻微震动
   const off = (bb.k === 1 || bb.k === 3) ? Math.exp(-bb.d / 0.1) : 0;
   F.shake = 0.67 * off;                                                                // 4px
-  S.chars.forEach(O => { O.g.position.set(slotX(O.i), 0, 0); });
   const AUD = { kick, low, mid, high, t };
+  S.chars.forEach(O => { O.g.position.set(slotX(O.i), 0, 0); animate(O, t, -9, -9, false, AUD); });
   S.chars.forEach(C => setState(C, { lite: true, gray: true, eyes: 0, halo: 0, props: 0, scatter: 0, aud: AUD }));
   let cam = LINEUP, spotX = slotX(3), spotInt = 0.55, focus = -1;
   const done = i => t >= bar(i, 1);
@@ -172,7 +172,7 @@ export function frame(t) {
     const lit = j >= 0 ? from : 3, lk = j >= 0 ? Math.exp(-(t - t0) / 0.22) : 0;
     setState(S.chars[lit], { ...S.chars[lit].st, pop: lk });
     if (j >= 0 && t - t0 < 0.12) F.shake = Math.max(F.shake, 0.7 * (1 - (t - t0) / 0.12));
-    cam = orbit({ ...LINEUP, pos: [0, 0.25, 9.6 - 0.1 * t] }, 0.03 * Math.sin(t * 1.3), 0);
+    cam = orbit({ ...LINEUP, pos: [0, 0.25 + 0.08 * Math.sin(t * 1.7), 9.6 - 0.18 * t] }, 0.05 * Math.sin(t * 1.9), 0);
     F.subs.push({ text: '七宗罪，其实是大脑的〔亮〕七种出厂设置〔/亮〕。', t0: 0.2, t1: 2.45, size: 56, pop: 0.2 });
     const t2 = B[lastIdx(B, 2.45)] > 2.3 ? B[lastIdx(B, 2.45)] : 2.5;
     F.subs.push({ text: '刷到这条，看看你是哪一宗——', t0: t2, t1: R0 - 0.12, size: 56, pop: t2 });
@@ -198,7 +198,7 @@ export function frame(t) {
     if (litK > 0 && tL < 0.12) F.shake = Math.max(F.shake, 0.8 * (1 - tL / 0.12));
     // 镜头：第 1 小节推近（之后一直缓慢推近并绕人物转动）｜第 2 小节重拍猛地后拉再推近，±4 度｜第 3 小节快速推到脸部特写、停一拍、弹回｜第 4 小节缓慢后拉
     let cm;
-    const sway = 0.07 * Math.sin((t - d) * 1.1);
+    const sway = 0.07 * Math.sin((t - d) * 2.3);                                    // ±4 度，持续绕人物转动
     if (t < b2) { const near = close(i, 1 - 0.07 * clamp(tL / 1.5)); cm = orbit(camLerp(lineupCam(t), near, push), sway * push, slotX(i)); }
     else if (t < b3) { const jolt = Math.exp(-dt2 * 5) * (1 - Math.exp(-dt2 * 40)); cm = close(i, 1.12 * (1 + 0.25 * jolt) - 0.12 * clamp(dt2 / 2)); cm = orbit(cm, sway, slotX(i)); }
     else if (t < b4) { const go = outExpo(clamp(dt3 / 0.18)), back = inOut(clamp((dt3 - 0.18 - (B[1] - B[0])) / 0.4)); cm = orbit(camLerp(close(i, 1.0), face(i), go * (1 - back)), sway * 0.5, slotX(i)); }
@@ -206,7 +206,7 @@ export function frame(t) {
     if (inhale > 0) cm = { ...cm, pos: [cm.pos[0], cm.pos[1], cm.pos[2] * (1 - 0.03 * inhale)] };
     // 吸气：人物缩小并移向画面中心（镜头看的那一点）
     if (suck > 0) { const tg = cm.target; C.g.position.set(lerp(slotX(i), tg[0], suck), lerp(0, tg[1] - HEAD_C[1] * 0.12, suck), lerp(0, 0.4, suck)); }
-    cam = { ...cm, pos: [cm.pos[0], cm.pos[1], cm.pos[2] * (1 - 0.03 * off)] };          // 每两拍镜头推一下 3%
+    cam = { ...cm, pos: [cm.pos[0], cm.pos[1] + 0.05 * Math.sin(t * 1.9), cm.pos[2] * (1 - 0.03 * off)] };          // 每两拍镜头推一下 3%；上下轻轻浮动
     // 聚光灯：从上一张脸移到这张脸（D → D+0.5），落定后照着这张灰色的脸
     const sp = i > 0 ? sine(clamp(tIn / 0.45)) : 1;
     spotX = lerp(slotX(Math.max(0, i - 1)), slotX(i), sp);
@@ -277,25 +277,25 @@ function setState(C, s) {
   const sc = s.scatter ?? 0;
   // 灰色闭眼的脸：亮度提高到 2.5 倍，聚光灯从上方照着；变身后人物是画面里最亮的东西
   const c = C3(C.sin.col), luma = 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
-  const base = s.gray ? (s.lite ? 3.2 : 2.6) : (s.lite ? 2.4 : 1.85) * clamp(0.42 / luma, 0.7, 1.15);       // 按颜色的亮度补偿：绿色不过曝、紫色不发暗
+  const base = s.gray ? (s.lite ? 3.2 : 3.1) : (s.lite ? 2.4 : 1.85) * clamp(0.42 / luma, 0.7, 1.15);       // 按颜色的亮度补偿：绿色不过曝、紫色不发暗
   const live = s.gray ? 0 : 1;
   for (const m of C.mats) {
     m.uniforms.uDim.value = base * (1 - 0.15 * (s.inhale ?? 0)) * (1 + 0.2 * Math.max(0, kick)) * (1 + 0.9 * (s.pop ?? 0));
     m.uniforms.uScatter.value = sc + live * 0.008 * mid; m.uniforms.uScatterDist.value = sc > 0.1 ? 1.4 : 0.35; m.uniforms.uScatFade.value = 1;
-    m.uniforms.uDrift.value = 0.004 + live * 0.006 * mid;                                           // 粒子持续流动（中音时多一点），但不糊掉五官
+    m.uniforms.uDrift.value = 0.005 + live * 0.006 * mid;                                           // 粒子持续流动（中音时多一点），但不糊掉五官
   }
   C.rig.scale.setScalar((1 + (s.lite ? 0.03 : 0.06) * kick) * (1 + 0.1 * (s.pop ?? 0)));   // 每一拍放大 6% 再回弹；被聚光灯照到时猛地放大 10%                // 灰色脸也跟着鼓点轻轻弹动                                                     // 低音：整体放大 4% 再回弹
   const eo = s.eyes;
   C.eyes.forEach(m => { m.visible = eo > 0.01 && sc < 1; m.material.uniforms.uInt.value = 0.95 * eo * (1 + 0.3 * Math.max(0, kick)); m.material.uniforms.uOpen.value = 0.45 + 0.55 * eo; m.material.uniforms.uRays.value = 0.8 * eo; });
   C.eyeHalo.forEach(m => { m.visible = eo > 0.01 && sc < 1; m.material.uniforms.uInt.value = 0.28 * eo; });
-  C.halo.visible = s.halo > 0.01 && sc < 1.2;
+  C.halo.visible = s.halo > 0.01 && sc < 1.2; C.halo.rotation.z = 0.35 * (a ? a.t : 0) + C.i;   // 光环一直慢慢转
   C.halo.scale.setScalar(lerp(0.2, 1, s.halo) * (1 - 0.3 * clamp(sc)) * (1 + 0.1 * Math.max(0, kick)));
   C.haloMats.forEach((m, j) => { m.uniforms.uBright.value = (j ? 0.3 : 0.95) * s.halo * (1 + 0.8 * Math.max(0, kick)) * (1 - clamp(sc)); });
   C.aura.visible = C.rays.visible = !s.gray && sc < 1.5;
   C.aura.material.uniforms.uInt.value = (s.lite ? 0.03 : 0.07) * (1 + 0.6 * Math.max(0, kick)) * (1 - clamp(sc / 1.5));
   C.aura.scale.setScalar(1 + 0.12 * Math.max(0, kick));
   C.rays.material.uniforms.uInt.value = (s.lite ? 0.03 : 0.12) * (1 + 0.5 * Math.max(0, kick)) * (1 - clamp(sc / 1.5));
-  C.rays.material.uniforms.uRot.value = 0.05 * (a ? a.t : 0); C.rays.material.uniforms.uBurst.value = 1 + 0.45 * Math.max(0, kick);   // 放射光线随鼓点伸长
+  C.rays.material.uniforms.uRot.value = 0.22 * (a ? a.t : 0); C.rays.material.uniforms.uBurst.value = 1 + 0.45 * Math.max(0, kick);   // 放射光线随鼓点伸长
   C.g.scale.setScalar(s.shrink != null ? s.shrink : 1);
   C.props.visible = s.props > 0.01; C.propMats.forEach(m => { m.uniforms.uAsm.value = s.props; m.uniforms.uScatter.value = sc; m.uniforms.uScatterDist.value = 1.4; });
   for (const o of C.bodyProps) o.visible = s.props > 0.01;
@@ -304,7 +304,7 @@ function setState(C, s) {
 // 角色动起来：头微微转动、呼吸；道具跟着节奏；反转那一拍的笑点
 function animate(C, t, dt2, dt3, on, a) {
   const id = C.sin.id, bb = beatInBar(t), beatK = Math.exp(-bb.d / 0.12);
-  C.head.rotation.set(0, on ? 0.09 * Math.sin(t * 0.9) : 0, on ? 0.035 * Math.sin(t * 0.7) : 0);
+  C.head.rotation.set(0, (on ? 0.12 : 0.07) * Math.sin(t * 1.6 + C.i), (on ? 0.04 : 0.025) * Math.sin(t * 1.3 + C.i));   // 头一直在轻轻转动（灰色的脸也是）
   C.head.scale.setScalar(1 + 0.01 * Math.sin(TAU * t / 3.2));
   const gag = dt3 >= 0 ? Math.exp(-Math.pow((dt3 - 0.3) / 0.28, 2)) : 0, hold = dt3 >= 0 ? clamp(dt3 / 0.15) : 0;
   const u = (m, k, v) => { m.uniforms[k].value = v; };

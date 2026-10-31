@@ -98,6 +98,6 @@ export function render(t) {
   setCtx(outCtx, t);
   SHOW.draw2D(t, outCtx, F);
   outCtx.setTransform(1, 0, 0, 1, 0, 0);
-  outCtx.save(); outCtx.globalAlpha = 0.035; outCtx.drawImage(grain[Math.floor(t * 30 + 0.5) % 4], 0, 0, K.W, K.H); outCtx.restore();
+  if (!window.NO_GRAIN) { outCtx.save(); outCtx.globalAlpha = 0.035; outCtx.drawImage(grain[Math.floor(t * 30 + 0.5) % 4], 0, 0, K.W, K.H); outCtx.restore(); }
   window.LAST_BOXES = BOXES.slice();
 }

@@ -147,7 +147,7 @@ export function idolMaterial(sinHex, o = {}) {
       if (wq.y < uCut) vis = 0.0; else vis *= smoothstep(uCut, uCut + 0.35, wq.y); }`
       : '{ vec4 wq = modelMatrix*vec4(p, 1.0); if (wq.y < uCut) vis = 0.0; else vis *= smoothstep(uCut, uCut + 0.35, wq.y); }',
     colHook: /* glsl */`
-      b *= mix(1.0, tw, 0.25)/tw;                // 雕像表面不闪烁
+      b *= (0.88 + 0.12*sin(uTime*(4.0 + 6.0*fract(aSeed*7.31)) + aSeed*60.0))/tw;   // 粒子持续轻微闪动（脸是活的），明暗结构不变
       float rampL = 0.6, rimK2 = 0.0;
       if (hasN > 0.5) {
         // 顶侧主光：眉骨、鼻梁、颧骨、下颌有清楚的明暗
