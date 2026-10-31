@@ -280,7 +280,7 @@ function setState(C, s) {
   const base = s.gray ? (s.lite ? 3.2 : 3.1) : (s.lite ? 2.4 : 1.85) * clamp(0.42 / luma, 0.7, 1.15);       // 按颜色的亮度补偿：绿色不过曝、紫色不发暗
   const live = s.gray ? 0 : 1;
   for (const m of C.mats) {
-    m.uniforms.uDim.value = base * (1 - 0.15 * (s.inhale ?? 0)) * (1 + 0.2 * Math.max(0, kick)) * (1 + 0.9 * (s.pop ?? 0));
+    m.uniforms.uDim.value = base * (1 - 0.15 * (s.inhale ?? 0)) * (1 + 0.2 * Math.max(0, kick)) * (1 + 0.9 * (s.pop ?? 0)) * Math.pow(s.shrink ?? 1, 2);   // 缩小时粒子挤在一起，按面积压暗，不过曝
     m.uniforms.uScatter.value = sc + live * 0.008 * mid; m.uniforms.uScatterDist.value = sc > 0.1 ? 1.4 : 0.35; m.uniforms.uScatFade.value = 1;
     m.uniforms.uDrift.value = 0.005 + live * 0.006 * mid;                                           // 粒子持续流动（中音时多一点），但不糊掉五官
   }
