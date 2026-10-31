@@ -5,7 +5,7 @@ import { K, FW, FH, initCore, buildFaces, updateSparks, tickMaterials, setCamera
 import { setLoop, clamp, lerp, lerp3, prog, sine, outExpo, out3, inOut, hash, loopSin } from './util.js';
 import { SHARED } from './mat.js';
 import { setCtx, glowText, fs, C, BOXES } from './text.js';
-import { SINS, BG, GROUND_Y, HALO_C, buildShared, createIdol } from './idol.js';
+import { SINS, BG, GROUND_Y, HALO_C, buildShared, createIdol, sculptFace } from './idol.js';
 import * as H from './halo.js';
 import * as CARD from './cards.js';
 
@@ -28,9 +28,9 @@ export async function init() {
   K.bloom.radius = 0.6; K.bloom.threshold = 0.15;
   const objText = await (await fetch('assets/canonical_face_model.obj')).text();
   const k = PREVIEW ? 0.5 : 1;
-  buildFaces(objText, { face: 2000, back: 200, neck: 0 });          // 只用来解析 MediaPipe 网格（眼睑等旧资产）
-  const pts = { bin: await (await fetch('assets/idol_points.bin')).arrayBuffer(), meta: await (await fetch('assets/idol_points.json')).json() };
-  buildShared(K.obj, k, pts);
+  buildFaces(objText, { face: Math.round(170000 * k), back: Math.round(140000 * k), neck: 0, deform: sculptFace });
+  const bodyBuf = await (await fetch('assets/body_points.bin')).arrayBuffer();
+  buildShared(K.obj, k, bodyBuf);
   // ---- 远景：巨大的暗色光晕、三层雾、体积光束、放射光芒
   S.bgGlow = new THREE.Mesh(new THREE.PlaneGeometry(44, 30), H.glowPlane()); S.bgGlow.position.set(0, 0.5, -16); S.bgGlow.renderOrder = -40; K.scene.add(S.bgGlow);
   S.fog = [[-3.6, 24, 12, 1.3], [-7, 34, 17, 4.1], [-11, 46, 24, 7.7]].map(([z, w, h, seed]) => {
@@ -41,9 +41,10 @@ export async function init() {
   S.rays = new THREE.Mesh(new THREE.PlaneGeometry(11, 11), H.raysPlane()); S.rays.position.set(HALO_C[0], HALO_C[1], HALO_C[2] - 0.1); S.rays.renderOrder = -10; K.scene.add(S.rays);
   // ---- 地面与小人影
   S.ground = new THREE.Points(H.buildGround(k).geometry(THREE), H.groundMaterial()); S.ground.frustumCulled = false; K.scene.add(S.ground); K.mats.push(S.ground.material);
-  S.people = H.buildPeopleSil(); K.scene.add(S.people);
+  S.people = new THREE.Points(H.buildPeople(PREVIEW ? 0.6 : 1).geometry(THREE), (() => { const m = H.ringMaterial('#FFFFFF', 0.9); m.uniforms.uSize.value = 0.006; return m; })());
+  S.people.frustumCulled = false; K.scene.add(S.people); K.mats.push(S.people.material);
   // ---- 每宗一尊神像 + 一套光环（卡片里同一时间只显示一尊）
-  S.idols = SINS.map(sin => createIdol(sin));
+  S.idols = SINS.map(sin => createIdol(sin, { brain: true }));
   S.halos = SINS.map((sin, i) => CARD.buildHalo(sin, i, k));
   S.idols.forEach((I, i) => CARD.buildFeatures(I, i, k));
   // ---- 扫描线与光柱
@@ -98,8 +99,7 @@ export function render(t) {
   K.bloom.strength = F.bloom;
   updateSparks(t, F.bursts || []);
   if (window.DBG) window.DBG(K, t);
-  fu.uCA.value = F.ca ? 0.002 : 0.0006;                 // 重拍那一帧 RGB 分离约 4px
-  fu.uVig.value = F.vig ?? 0.9;
+  fu.uCA.value = 0.0012 + 0.004 * (F.shake ?? 0);
   fu.uGlitch.value = 0; fu.uTime.value = t;
   K.composer.render();
   // 2D

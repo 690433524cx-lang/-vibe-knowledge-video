@@ -5,19 +5,20 @@ import { K, points } from './core.js';
 import { cloudMaterial } from './mat.js';
 import { PB, V3, FACE } from './geo.js';
 import { sampleSDF } from './assets.js';
+import { buildBrainSide } from './long_assets.js';
 import { rng, TAU, clamp, lerp } from './util.js';
 
 const { addv, sub, mul, norm, len } = V3;
 export const BG = '#050508';
 // 七宗罪的顺序、颜色与卡片内容（只用规格里给出的说法）
 export const SINS = [
-  { id: 'pride', name: '傲慢', col: '#A24BFF', quote: '“这点事，还用问别人？”', fact: '多数人觉得，\n自己比平均强' },
-  { id: 'envy', name: '嫉妒', col: '#2BE36B', quote: '“凭什么是他，不是我？”', fact: '别人比你好，\n大脑的疼痛区会亮' },
-  { id: 'wrath', name: '愤怒', col: '#FF2A2A', quote: '“你再说一遍？”', fact: '怒气走近路，\n比理智快一步' },
-  { id: 'sloth', name: '懒惰', col: '#2BC8E0', quote: '“再躺五分钟，就五分钟。”', fact: '大脑天生爱省电', sub: '它占体重2%，却耗掉约两成能量' },
-  { id: 'greed', name: '贪婪', col: '#FFC23D', quote: '“再多一点，我就收手。”', fact: '多巴胺爱的，\n是‘快得到’' },
-  { id: 'gluttony', name: '暴食', col: '#FF7A1F', quote: '“不饿，就是想吃点什么。”', fact: '吃饱的信号，\n晚到约20分钟' },
-  { id: 'lust', name: '色欲', col: '#FF3D8B', quote: '“明知不该，还是想靠近。”', fact: '心动时，\n奖励回路全亮' },
+  { id: 'pride', name: '傲慢', col: '#A24BFF', quote: '“这点事，还用问别人？”', fact: '大多数人都觉得，\n自己比平均强', src: '优于平均效应 · 1981年驾驶技术调查' },
+  { id: 'envy', name: '嫉妒', col: '#2BE36B', quote: '“凭什么是他，不是我？”', fact: '别人比你好，\n大脑的疼痛区会亮', src: '2009年 日本脑成像研究' },
+  { id: 'wrath', name: '愤怒', col: '#FF2A2A', quote: '“你再说一遍？”', fact: '怒气走近路，\n比理智先到一步', src: '杏仁核的快速通路' },
+  { id: 'sloth', name: '懒惰', col: '#2BC8E0', quote: '“再躺五分钟，就五分钟。”', fact: '大脑占体重2%，\n却耗掉约两成能量', src: '所以它天生想省力' },
+  { id: 'greed', name: '贪婪', col: '#FFC23D', quote: '“再多一点，我就收手。”', fact: '多巴胺在‘快得到’时\n最兴奋', src: '奖励预测研究' },
+  { id: 'gluttony', name: '暴食', col: '#FF7A1F', quote: '“不饿，就是想吃点什么。”', fact: '吃饱的信号，\n约20分钟才到大脑', src: '饱腹信号的延迟' },
+  { id: 'lust', name: '色欲', col: '#FF3D8B', quote: '“明知不该，还是想靠近。”', fact: '心动时，\n大脑的奖励回路全亮', src: '2005年 恋爱脑成像研究' },
 ];
 export const GROUND_Y = -1.85;            // 小人影所在的地面（右肩外侧）
 export const BODY_CUT = -2.05;           // 神像胸口在这里没入地面的雾里            // 前景平台的地面高度（小人影站在上面；神像的胸口一直延伸到画面下缘以外）
@@ -40,14 +41,14 @@ function bodySDF(p) {
   return d;
 }
 export function buildBody(seed = 811, k = 1) {
-  const pb = sampleSDF(bodySDF, Math.round(420000 * k), [[-1.6, -3.4, -0.7], [1.6, -0.45, 0.6]], seed, [0.85, 4]);
-  // 头部前方的脖子点去掉（被下巴挡住），再按光照决定疏密
-  const cand = [];
-  for (let i = 0; i < pb.count; i++) { const [x, y, z] = pb.pos(i); if (y > -0.66 && z > -0.02) continue; cand.push(i); }
-  const R0 = rng(seed + 9);
-  const kept = lightKeep(cand.map(i => pb.pos(i)), cand.map(i => pb.nor(i)), 110000 * k, R0);
+  const pb = sampleSDF(bodySDF, Math.round(90000 * k), [[-1.6, -3.4, -0.7], [1.6, -0.45, 0.6]], seed, [0.85, 4]);
+  // 头部前方的脖子点去掉（被下巴挡住）
   const keep = new PB();
-  for (const j of kept) { const i = cand[j]; keep.add(pb.pos(i), pb.nor(i), pb.s[i], [0, 0, 0], [0, 0, 0, 1], [0.85, 4]); }
+  for (let i = 0; i < pb.count; i++) {
+    const [x, y, z] = pb.pos(i);
+    if (y > -0.66 && z > -0.02) continue;
+    keep.add(pb.pos(i), pb.nor(i), pb.s[i], [0, 0, 0], [0, 0, 0, 1], [0.85, 4]);
+  }
   // 锁骨与胸骨上窝：两条亮的雕刻线
   const R = rng(seed + 3);
   const surfLine = (a, b, n, br) => {
@@ -66,6 +67,24 @@ export function buildBody(seed = 811, k = 1) {
   return keep;
 }
 
+// ------------------------------------------------------------ 表情：嘴角上移约脸高的 1.5%（平直、略带平静的微笑）；上眼皮往下移，眼睛半闭往下看
+const LIDS = {
+  R: { up: [246, 161, 160, 159, 158, 157, 173], lo: [7, 163, 144, 145, 153, 154, 155], r1: [247, 30, 29, 27, 28, 56, 190], r2: [113, 225, 224, 223, 222, 221, 189] },
+  L: { up: [466, 388, 387, 386, 385, 384, 398], lo: [249, 390, 373, 374, 380, 381, 382], r1: [467, 260, 259, 257, 258, 286, 414], r2: [342, 445, 444, 443, 442, 441, 413] },
+};
+export function sculptFace(obj) {
+  const V = obj.V, top = V.reduce((m, v) => Math.max(m, v[1]), -9), faceH = top - V[152][1];
+  for (const e of [LIDS.R, LIDS.L]) e.up.forEach((u, k) => {
+    const d = sub(V[e.lo[k]], V[u]);                 // 上眼皮 → 下眼皮的方向
+    V[u] = addv(V[u], mul(d, 0.55)); V[e.r1[k]] = addv(V[e.r1[k]], mul(d, 0.33)); V[e.r2[k]] = addv(V[e.r2[k]], mul(d, 0.14));
+  });
+  for (const [i, w] of [[61, 1], [291, 1], [76, 0.75], [306, 0.75], [62, 0.6], [292, 0.6], [146, 0.45], [375, 0.45], [185, 0.45], [409, 0.45], [91, 0.25], [321, 0.25], [40, 0.25], [270, 0.25]]) V[i] = addv(V[i], [0, faceH * 0.015 * w, 0]);
+  // 重新算顶点法线
+  const vn = V.map(() => [0, 0, 0]);
+  obj.F.forEach(f => { const n = V3.cross(sub(V[f[1]], V[f[0]]), sub(V[f[2]], V[f[0]])); f.forEach(i => { vn[i] = addv(vn[i], n); }); });
+  obj.VN = vn.map(n => norm(n));
+}
+
 // ------------------------------------------------------------ 半垂的眼睛：下眼睑 + 眼睑线下面露出的半个虹膜（往下看）
 // gaze：[x, y] 虹膜偏移（眼宽的比例）；open：0 闭眼（只有一条线），1 半垂
 export function buildEyes(obj, o = {}) {
@@ -75,7 +94,7 @@ export function buildEyes(obj, o = {}) {
   const UP = { R: [33, 246, 161, 160, 159, 158, 157, 173, 133], L: [263, 466, 388, 387, 386, 385, 384, 398, 362] };
   for (const side of ['R', 'L']) {
     const lo = LOW[side].map(i => V[i]), up = UP[side].map(i => V[i]);
-    const lid = lo.map((p, j) => addv(addv(mul(up[j], 0.62), mul(p, 0.38)), [0, 0, 0.003]));   // 眼睑落到一半多一点
+    const lid = lo.map((p, j) => addv(addv(mul(up[j], 0.97), mul(p, 0.03)), [0, 0, 0.003]));   // 上眼皮已在网格里压到半闭（sculptFace）
     const crease = up.map((p, j) => addv(p, [0, 0.012 * Math.sin(Math.PI * j / 8), 0.002]));
     const cen = mul(addv(lid[4], lo[4]), 0.5);
     const w = len(sub(lo[8], lo[0])), h = len(sub(lid[4], lo[4]));
@@ -112,15 +131,21 @@ const C3 = h => new THREE.Color(h);
 const hexOf = c => '#' + c.getHexString();
 export function idolMaterial(sinHex, o = {}) {
   const c = C3(sinHex);
-  // 暗部深色（约 #2A0F4A）、亮部主色、最亮的轮廓接近白色（#F3E8FF）
-  const light = c.clone().lerp(C3('#FFFFFF'), 0.12), dark = c.clone().multiplyScalar(0.28), rim = c.clone().lerp(C3('#FFFFFF'), 0.85);
+  // 暗部深色（傲慢 #3A1A66）、亮部主色（#A24BFF）、最亮的轮廓接近白色（#F3E8FF）
+  const light = c.clone(), dark = c.clone().multiplyScalar(0.36).lerp(C3('#3A1A66'), sinHex === '#A24BFF' ? 1 : 0), rim = c.clone().lerp(C3('#FFFFFF'), 0.85);
   return cloudMaterial({
     size: o.size ?? 0.0085, bright: o.bright ?? 0.5, depthRef: 6, maxPx: o.maxPx ?? 7, facing: 0, light: o.light ?? 0.85, drift: 0.0015,
     colA: hexOf(light), colB: hexOf(dark),
     uniforms: { uRim: { value: o.rim ?? 1.3 }, uRimCol: { value: rim }, uBack: { value: 0.1 }, uCut: { value: BODY_CUT }, uSeeThru: { value: 0 }, uSeeX: { value: -99 },
       uGray: { value: 0 }, uSin: { value: c.clone() }, uDim: { value: 1 }, uCran: { value: o.cran ?? 1 } },
     uniformDecl: 'uniform float uRim, uBack, uCut, uSeeThru, uSeeX, uGray, uDim, uCran; uniform vec3 uRimCol, uSin;',
-    posHook: '{ vec4 wq = modelMatrix*vec4(p, 1.0); if (wq.y < uCut) vis = 0.0; else vis *= smoothstep(uCut, uCut + 0.35, wq.y); }',
+    posHook: o.dust ? /* glsl */`{
+      // 胸口往下逐渐消散：下半部的一部分粒子变成向上飘的光尘
+      float low = smoothstep(-1.75, -2.6, p.y);
+      if (h1(aSeed*17.3) < 0.35*low) { float f = fract(uTime*0.18 + aSeed*7.0); p.y += f*0.9; p.x += sin(aSeed*40.0 + uTime*0.6)*0.05*f; vis *= (1.0 - f)*0.8; }
+      vec4 wq = modelMatrix*vec4(p, 1.0); vis *= 1.0 - 0.85*low;
+      if (wq.y < uCut) vis = 0.0; else vis *= smoothstep(uCut, uCut + 0.35, wq.y); }`
+      : '{ vec4 wq = modelMatrix*vec4(p, 1.0); if (wq.y < uCut) vis = 0.0; else vis *= smoothstep(uCut, uCut + 0.35, wq.y); }',
     colHook: /* glsl */`
       b *= mix(1.0, tw, 0.25)/tw;                // 雕像表面不闪烁
       if (hasN > 0.5) {
@@ -147,7 +172,7 @@ export function idolMaterial(sinHex, o = {}) {
 export function eyeMaterial(sinHex) {
   const c = C3(sinHex);
   return cloudMaterial({
-    size: 0.006, bright: 0.9, depthRef: 6, maxPx: 6, drift: 0, colA: hexOf(c.clone().lerp(C3('#FFFFFF'), 0.75)), colB: hexOf(c.clone().lerp(C3('#FFFFFF'), 0.3)),
+    size: 0.006, bright: 0.75, depthRef: 6, maxPx: 6, drift: 0, colA: hexOf(c.clone().lerp(C3('#FFFFFF'), 0.85)), colB: hexOf(c.clone().lerp(C3('#FFFFFF'), 0.3)),
     uniforms: { uIris: { value: c.clone().lerp(C3('#FFFFFF'), 0.35) }, uIrisAmt: { value: 1 }, uGray: { value: 0 }, uDim: { value: 1 }, uSeeThru: { value: 0 }, uSeeX: { value: -99 } },
     uniformDecl: 'uniform vec3 uIris; uniform float uIrisAmt, uGray, uDim, uSeeThru, uSeeX;',
     colHook: /* glsl */`
@@ -179,34 +204,32 @@ export function brainMaterial(sinHex) {
 
 // ------------------------------------------------------------ 共享几何（只生成一次）
 export const GEO = {};
-// 罗马大理石头像（Igea）与 SDF 身体的粒子，按光照决定疏密，由 tools/idol_points.py 预先算好
-export const IGEA = { eyes: [], top: 0.72 };
-function toPB(arr, flag) {
-  const pb = new PB(), n = arr.length / 6;
-  for (let i = 0; i < n; i++) pb.add([arr[i * 6], arr[i * 6 + 1], arr[i * 6 + 2]], [arr[i * 6 + 3], arr[i * 6 + 4], arr[i * 6 + 5]], (i * 0.6180339) % 1, [0, 0, 0], [0, 0, 0, 1], [flag ? 0.85 : 1, 4]);
-  return pb;
-}
-export function buildShared(obj, k = 1, pts = null) {
-  const f = new Float32Array(pts.bin), nh = f[0], nb = f[1], step = k < 1 ? 2 : 1;
-  const head = f.subarray(2, 2 + nh * 6), body = f.subarray(2 + nh * 6, 2 + (nh + nb) * 6);
-  const thin = (a) => { if (step === 1) return a; const n = a.length / 6, o = new Float32Array(Math.floor(n / step) * 6); for (let i = 0; i < o.length / 6; i++) o.set(a.subarray(i * step * 6, i * step * 6 + 6), i * 6); return o; };
-  GEO.head = toPB(thin(head), 0).geometry(THREE);
-  GEO.body = toPB(thin(body), 1).geometry(THREE);
+export function buildShared(obj, k = 1, bodyBuf = null) {
+  GEO.head = K.headPB.geometry(THREE);
+  if (bodyBuf) {
+    const f = new Float32Array(bodyBuf), n = f.length / 6, pb = new PB(), step = k < 1 ? 2 : 1;
+    for (let i = 0; i < n; i += step) pb.add([f[i * 6], f[i * 6 + 1], f[i * 6 + 2]], [f[i * 6 + 3], f[i * 6 + 4], f[i * 6 + 5]], (i * 0.6180339) % 1, [0, 0, 0], [0, 0, 0, 1], [0.85, 4]);
+    GEO.body = pb.geometry(THREE);
+  } else GEO.body = buildBody(811, k).geometry(THREE);
   GEO.eyesDown = buildEyes(obj, { gaze: [0, -0.2] }).geometry(THREE);
-  IGEA.eyes = pts.meta.eyes; IGEA.top = pts.meta.headTop;
+  GEO.brain = buildBrainSide(511, 1.2 * k).geometry(THREE);
 }
 
 // 一尊神像：head 组（人头、眼睛、大脑、各宗的头部特征）挂在 root 上；body（脖子、肩、胸）不随头部俯仰
-export function createIdol(sin, o = {}) {  // o.brain 已不用
+export function createIdol(sin, o = {}) {
   const root = new THREE.Group(); K.scene.add(root);
   const head = new THREE.Group(); root.add(head);
   const mk = (geo, mat, parent) => { const p = new THREE.Points(geo, mat); p.frustumCulled = false; parent.add(p); K.mats.push(mat); return p; };
-  const headMat = idolMaterial(sin.col, { ...o, bright: 1.75, cran: 1.0, rim: 0.35 }), bodyMat = idolMaterial(sin.col, { ...o, bright: (o.bright ?? 0.5) * 1.5, rim: 2.2, size: 0.011 });
+  const headMat = idolMaterial(sin.col, { ...o, bright: 1.4, cran: 1.15, rim: 0.9 }), bodyMat = idolMaterial(sin.col, { ...o, bright: 0.85, rim: 1.4, size: 0.0085, dust: true });
   const headP = mk(GEO.head, headMat, head);
   const bodyP = mk(GEO.body, bodyMat, root);
   const eyesP = mk(o.eyes ?? GEO.eyesDown, eyeMaterial(sin.col), head);
-  const brain = null;
-  eyesP.visible = false;                     // 原来的 MediaPipe 眼睑不用；睁眼用发光眼缝（cards.js）
+  let brain = null;
+  if (o.brain) {
+    brain = mk(GEO.brain, brainMaterial(sin.col), head);
+    brain.scale.setScalar(0.37); brain.position.set(0, 0.43, -0.14); brain.rotation.set(0, Math.PI / 2 - 0.7, 0);   // 侧面模型转成 3/4 视角，前额朝向画面
+    brain.visible = false;
+  }
   headMat.uniforms.uEyeOpen.value = 0;       // 原睁眼轮廓压暗到 0.3，只作眼窝的结构
   return { root, head, headP, bodyP, eyesP, brain, mats: [headMat, bodyMat, eyesP.material], sin };
 }

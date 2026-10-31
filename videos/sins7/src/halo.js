@@ -65,20 +65,6 @@ export function ringPB(type, r, seed, k = 1) {
   } else if (type === 'bigticks') {
     addCircle(pb, R, r, N(9000), 0.9, 0.006); addCircle(pb, R, r * 0.97, N(5000), 0.45, 0.004);
     for (let i = 0; i < 180; i++) { const a = i / 180 * TAU, L = i % 6 === 0 ? 0.07 : 0.03; addLine(pb, R, polar(r, a), polar(r * (1 - L), a), N(i % 6 === 0 ? 70 : 30), i % 6 === 0 ? 1.3 : 0.8, 0.003); }
-  } else if (type === 'main') {
-    // 主环：干净明亮的细环（约 3–4px）
-    addCircle(pb, R, r, N(26000), 1.6, 0.012);
-  } else if (type === 'rays') {
-    // 放射光芒：粗细、长短有规律地交替（长短长短），越往外越淡
-    const n = 96;
-    for (let i = 0; i < n; i++) {
-      const a = i / n * TAU, long = i % 2 === 0, L = r * (long ? (i % 4 === 0 ? 1.15 : 0.85) : 0.42), w = long ? 0.012 : 0.006;
-      const cnt = N(long ? 900 : 350);
-      for (let j = 0; j < cnt; j++) {
-        const f = Math.pow(R(), 1.35), rr = r * 1.04 + f * L, ww = (R() - 0.5) * w * (1 - 0.6 * f);
-        pb.add([Math.cos(a) * rr - Math.sin(a) * ww, Math.sin(a) * rr + Math.cos(a) * ww, -0.02], [0, 0, 0], R(), [0, 0, 0], [0, 0, 0, 1], [(long ? 1.0 : 0.7) * Math.pow(1 - f, 1.6), 30]);
-      }
-    }
   }
   return pb;
 }
@@ -193,22 +179,4 @@ export function buildPeople(k = 1) {
     }
   });
   return pb;
-}
-
-// 实心剪影小人（3–4 个，抬头仰望）+ 脚下的一点地面反光；高度约为神像头部高度的 1/10
-export function buildPeopleSil() {
-  const g = new THREE.Group(), blk = new THREE.MeshBasicMaterial({ color: 0x07030c, transparent: true, depthTest: false, depthWrite: false });
-  const h0 = 0.135;
-  [[0, 1.0], [0.11, 0.93], [0.21, 1.05], [0.34, 0.96]].forEach(([x, s], j) => {
-    const h = h0 * s, w = h * 0.14, sh = new THREE.Shape(), lean = 0.012 * (j % 2 ? 1 : -1);
-    sh.moveTo(-w * 0.5, 0); sh.lineTo(-w * 0.42, h * 0.46); sh.lineTo(-w, h * 0.5); sh.lineTo(-w * 0.92, h * 0.78);
-    sh.quadraticCurveTo(-w * 0.55, h * 0.85, -w * 0.22, h * 0.83); sh.lineTo(w * 0.22, h * 0.83); sh.quadraticCurveTo(w * 0.55, h * 0.85, w * 0.92, h * 0.78);
-    sh.lineTo(w, h * 0.5); sh.lineTo(w * 0.42, h * 0.46); sh.lineTo(w * 0.5, 0); sh.lineTo(w * 0.08, 0); sh.lineTo(0, h * 0.4); sh.lineTo(-w * 0.08, 0); sh.lineTo(-w * 0.5, 0);
-    const head = new THREE.Shape(); head.absarc(lean, h * 0.92, h * 0.085, 0, Math.PI * 2);
-    for (const gm of [new THREE.ShapeGeometry(sh), new THREE.ShapeGeometry(head)]) { const m = new THREE.Mesh(gm, blk); m.position.set(x, 0, 0); m.renderOrder = 41; m.frustumCulled = false; g.add(m); }
-  });
-  const glowM = glowPlane(); glowM.uniforms.uCol.value.set('#C9A6FF');
-  const glow = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.12), glowM); glow.position.set(0.17, 0.005, -0.01); glow.renderOrder = 40; g.add(glow);
-  g.userData.glow = glow;
-  return g;
 }

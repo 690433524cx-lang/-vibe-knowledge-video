@@ -111,8 +111,8 @@ export function cloudMaterial(opts = {}) {
         b *= 1.0 + ct*0.7 + uGlow;
         col = mix(col, vec3(1.0), uWhite);
         ${opts.colHook || ''}
-        float px = uSize*uPx/dist*(0.45 + 1.1*h1(aSeed*7.31));
-        if (px < 0.8) { b *= px/0.8; px = 0.8; }
+        float px = uSize*uPx/dist;
+        if (px < 1.6) { b *= px/1.6; px = 1.6; }
         if (px > uMaxPx) { b *= uMaxPx/px; px = uMaxPx; }
         vSoft = smoothstep(4.0, 30.0, px);
         gl_PointSize = px;

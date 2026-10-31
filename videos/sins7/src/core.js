@@ -144,6 +144,7 @@ export function updateSparks(t, bursts) {
 // ------------------------------------------------------------ 人脸点云（MediaPipe 标准人脸模型），只生成一次
 export function buildFaces(objText, opts = {}) {
   const obj = parseOBJ(objText);
+  if (opts.deform) opts.deform(obj);          // 表情：在生成点云之前改网格顶点
   const { pb: headPB, faceCount } = buildHead(obj, { seed: 7, face: opts.face ?? 85000, back: opts.back ?? 15000, neck: opts.neck ?? 4000 });
   K.obj = obj; K.headPB = headPB; K.faceCount = faceCount;
   // 片头七张脸用的轻量人头
