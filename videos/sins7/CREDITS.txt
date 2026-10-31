@@ -1,3 +1,4 @@
-Head scan: Lee Perry-Smith, Infinite-Realities, CC BY 3.0
-  (assets/LeePerrySmith.glb, from the three.js r160 examples; the side silhouette is extracted from it by tools/profile.py)
-Face model: MediaPipe canonical face model, Apache 2.0
+Noto Serif CJK SC（即 Source Han Serif / 思源宋体，Black 字重 = Heavy，Bold 字重）：Adobe & Google，SIL Open Font License 1.1
+  系统里已经安装（/usr/share/fonts/opentype/noto），罪名大字用 900（Heavy），画面文字用 700（Bold）
+Face model: MediaPipe canonical face model (assets/canonical_face_model.obj), Google, Apache License 2.0
+Three.js r160 (vendor/three), MIT License
