@@ -1,0 +1,36 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>html,body{margin:0;background:#111}</style>
+<script type="importmap">{"imports":{"three":"../vendor/three/build/three.module.js","three/addons/":"../vendor/three/jsm/"}}</script></head>
+<body><canvas id="c" width="800" height="1000"></canvas>
+<script type="module">
+// 候选雕像的正面灰模预览：window.shot(文件, 绕 y 轴转角, 绕 x 轴转角) → PNG
+import * as THREE from 'three';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(800, 1000, false);
+async function load(file) {
+  if (file.endsWith('.obj')) { const t = await (await fetch(file)).text(); return new OBJLoader().parse(t); }
+  const g = await new GLTFLoader().loadAsync(file); return g.scene;
+}
+window.shot = async (file, ry = 0, rx = 0) => {
+  const obj = await load(file);
+  const geos = []; obj.updateMatrixWorld(true);
+  obj.traverse(o => { if (o.isMesh) { const g = o.geometry.clone(); g.applyMatrix4(o.matrixWorld); g.deleteAttribute('uv'); g.deleteAttribute('normal'); geos.push(g); } });
+  let g = geos[0]; g = mergeVertices(g, 1e-5); g.computeVertexNormals();
+  g.computeBoundingBox(); const bb = g.boundingBox, c = bb.getCenter(new THREE.Vector3()), s = bb.getSize(new THREE.Vector3());
+  g.translate(-c.x, -c.y, -c.z); const k = 2 / Math.max(s.x, s.y, s.z); g.scale(k, k, k);
+  const scene = new THREE.Scene(); scene.background = new THREE.Color(0x111111);
+  const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0x9a9a9a, roughness: 0.6 }));
+  m.rotation.set(rx, ry, 0); scene.add(m);
+  const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(0.4, 2, 2); scene.add(key);
+  const rim = new THREE.DirectionalLight(0xffffff, 1.2); rim.position.set(-2, 1, -2); scene.add(rim);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+  const cam = new THREE.PerspectiveCamera(30, 0.8, 0.1, 50); cam.position.set(0, 0, 4.6); cam.lookAt(0, 0, 0);
+  renderer.render(scene, cam);
+  return { png: canvas.toDataURL('image/png'), tris: g.index ? g.index.count / 3 : g.attributes.position.count / 3, size: [s.x, s.y, s.z].map(v => +v.toFixed(3)) };
+};
+window.READY = true;
+</script></body></html>
