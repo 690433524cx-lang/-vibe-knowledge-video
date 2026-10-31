@@ -19,6 +19,7 @@ export function build(scene, beats, heads, audioEnv) {
   S.chars = SINS.map((sin, i) => makeChar(sin, i, heads));
   S.spot = makeSpot();
   S.stars = [makeStars(14000, -22, 1.1, 11), makeStars(5000, -9, 1.7, 12)];   // 前后两层星点，速度不同
+  S.gather = makeGather();
 }
 function pts(geo, mat, parent, order = 0) { const p = new THREE.Points(geo, mat); p.frustumCulled = false; p.renderOrder = order; parent.add(p); K.mats.push(mat); return p; }
 function makeStars(n, z, size, seed) {
@@ -31,6 +32,23 @@ function makeStars(n, z, size, seed) {
         gl_Position = projectionMatrix*modelViewMatrix*vec4(p, 1.0); gl_PointSize = uSize*(0.6 + 1.4*aSeed*aSeed)*uScale; vB = (0.25 + 0.75*aSeed)*(0.7 + 0.3*sin(uTime*6.28318530718/65.0*21.0 + aSeed*50.0)); }`,
     fragmentShader: `varying float vB; void main(){ vec2 c = gl_PointCoord - 0.5; if (length(c) > 0.5) discard; gl_FragColor = vec4(vec3(0.85, 0.85, 0.95)*vB*0.5, 1.0); }` });
   const p = new THREE.Points(g, m); p.frustumCulled = false; p.renderOrder = -60; K.scene.add(p); K.mats.push(m); return p;
+}
+// 蓄力：灰色阶段脸周围的粒子慢慢向内聚集（uK 0→1），在变身的重拍上一起爆开（uB 0→1）
+function makeGather(n = 6000) {
+  const g = new THREE.BufferGeometry(), D = new Float32Array(n * 3), Sd = new Float32Array(n);
+  for (let i = 0; i < n; i++) { let x, y, z, l; do { x = hash(i * 1.31) * 2 - 1; y = hash(i * 2.17 + 0.3) * 2 - 1; z = hash(i * 3.71 + 0.7) * 2 - 1; l = Math.hypot(x, y, z); i += 0; } while (false); l = l || 1; D[i * 3] = x / l; D[i * 3 + 1] = y / l; D[i * 3 + 2] = z / l * 0.5; Sd[i] = hash(i * 4.93 + 1.1); }
+  g.setAttribute('position', new THREE.BufferAttribute(D, 3)); g.setAttribute('aSeed', new THREE.BufferAttribute(Sd, 1));
+  const m = new THREE.ShaderMaterial({ uniforms: { uK: { value: 0 }, uB: { value: 0 }, uC: { value: new THREE.Vector3() }, uCol: { value: C3('#FFFFFF') }, uInt: { value: 1 }, uScale: { value: 1 }, uTime: { value: 0 } },
+    transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
+    vertexShader: `attribute float aSeed; uniform float uK, uB, uInt, uScale, uTime; uniform vec3 uC; varying float vB;
+      void main(){ float r0 = 1.1 + 1.6*aSeed, r1 = 0.55 + 0.12*aSeed; float k = uK*uK*(3.0 - 2.0*uK);
+        float r = mix(r0, r1, k) + uB*(1.5 + 3.0*aSeed); float sw = (1.0 - k)*1.2 + k*0.3 + aSeed*6.28;
+        vec3 d = position; float ang = sw + uTime*0.4*(0.5 + aSeed); d.xy = mat2(cos(ang), -sin(ang), sin(ang), cos(ang))*d.xy;
+        vec3 p = uC + d*r*vec3(1.0, 0.9, 1.0);
+        gl_Position = projectionMatrix*modelViewMatrix*vec4(p, 1.0); gl_PointSize = (3.0 + 4.0*aSeed*aSeed)*uScale*(1.0 + 1.2*uB);
+        vB = uInt*(0.25 + 0.75*k)*(1.0 - uB)*(0.5 + 0.5*aSeed); }`,
+    fragmentShader: `uniform vec3 uCol; varying float vB; void main(){ vec2 c = gl_PointCoord - 0.5; float d = length(c); if (d > 0.5) discard; gl_FragColor = vec4(uCol*vB*exp(-d*d*12.0), 1.0); }` });
+  const p = new THREE.Points(g, m); p.frustumCulled = false; p.renderOrder = 35; p.visible = false; K.scene.add(p); return p;
 }
 function propMat(hex, o = {}) {
   return cloudMaterial({ size: o.size ?? 0.008, bright: o.bright ?? 0.9, depthRef: 4, maxPx: 6, drift: 0.002, colA: tone(hex, 0.75), colB: hex,
@@ -75,38 +93,43 @@ function makeChar(sin, i, heads) {
       colHook: 'if (aExtra.y > 4.5) col = vec3(1.0, 0.86, 0.6); else if (aExtra.y > 0.5) { col = vec3(1.0, 0.95, 1.0); b *= 1.0 + 1.2*uC; }' });
   } else if (sin.id === 'envy') {
     const sk = PR.snake(); C.snakeHead = sk.head; const SL = sk.L.toFixed(3);
-    C.snake = P(sk.pb, { bright: 1.25, size: 0.0085, uniforms: { uH: { value: new THREE.Vector3(...sk.head) } }, uniformDecl: 'uniform vec3 uH;',
+    C.snake = P(sk.pb, { bright: 1.35, size: 0.009, uniforms: { uH: { value: new THREE.Vector3(...sk.head) } }, uniformDecl: 'uniform vec3 uH;',
       posHook: `
-        if (aExtra.y < 0.5) { float w = sin(aExtra.x*40.0 - uTime*3.0); p += vec3(0.0, 0.014*w*(0.5 + uD), 0.01*cos(aExtra.x*34.0 - uTime*2.4)); }   // 蛇身随低音起伏
+        if (aExtra.y < 0.5) { float w = sin(aExtra.x*40.0 - uTime*qw(3.0)); p += vec3(0.0, 0.016*w*(0.5 + uD), 0.01*cos(aExtra.x*34.0 - uTime*qw(2.4))); }   // 蛇身随低音起伏
         else {
           vec3 q = p - uH;
-          if (aExtra.y > 3.5) { float ja = uB*0.55; q.yz = mat2(cos(ja), sin(ja), -sin(ja), cos(ja))*q.yz; }        // 下颌张开
+          if (aExtra.y > 3.5) { float ja = 0.22 + uB*0.45; /* 嘴一直微微张着 */ q.yz = mat2(cos(ja), sin(ja), -sin(ja), cos(ja))*q.yz; }        // 下颌张开
           if (aExtra.y > 2.5 && aExtra.y < 3.5) { q.z = ${SL} + (q.z - ${SL})*uC; vis *= step(0.05, uC); }           // 信子伸出
-          float a = uA; q.xz = mat2(cos(a), -sin(a), sin(a), cos(a))*q.xz; p = uH + q;                             // 蛇头转向
+          float pt = 0.55*(1.0 - 0.6*uB); q.yz = mat2(cos(pt), -sin(pt), sin(pt), cos(pt))*q.yz; float a = uA; q.xz = mat2(cos(a), -sin(a), sin(a), cos(a))*q.xz; p = uH + q;   /* 蛇头微微低头，三角形的头顶朝向镜头 */                             // 蛇头转向
         }`, colHook: 'if (aExtra.y > 1.5 && aExtra.y < 2.5) { col = vec3(1.0, 0.95, 0.55); b *= 1.6 + 1.2*uB; } if (aExtra.y > 2.5 && aExtra.y < 3.5) col = vec3(1.0, 0.45, 0.55);' }, rig);
   } else if (sin.id === 'wrath') {
-    C.horns = P(PR.lightningHorns(), { bright: 1.0, col: tone(sin.col, 0.3), posHook: '{ float id = aExtra.y; float on = step(0.35, fract(sin(floor(uTime*14.0 + id*3.7)*43.1)*91.7)); vis *= mix(1.0, on, step(0.5, mod(id, 3.0))); p *= 1.0 + uB*0.35; }' });
+    if (heads.wrathCracks) { const m = propMat('#FF7A3A', { bright: 2.8, size: 0.008, colHook: '{ b *= 0.8 + 0.5*sin(uTime*qw(7.0) + aExtra.y*1.7); col = mix(col, vec3(1.0, 0.85, 0.6), 0.35); }' }); C.cracks = pts(heads.wrathCracks, m, C.props, 31); C.propMats.push(m); }   // 脸上发光的裂纹
+    C.horns = P(PR.lightningHorns(), { bright: 1.0, col: tone(sin.col, 0.3), posHook: '{ float id = aExtra.y; float on = step(0.35, fract(sin(floor(mod(uTime, 65.0)*14.0 + id*3.7)*43.1)*91.7)); vis *= mix(1.0, on, step(0.5, mod(id, 3.0))); p *= 1.0 + uB*0.35; }' });
   } else if (sin.id === 'sloth') {
     C.hat = P(PR.beanie(), { bright: 1.3, posHook: '{ p.y -= uB*0.32; p.z += uB*0.06; }' });
     C.scarf = P(PR.scarf(), { bright: 1.2 }, rig);
-    C.zz = P(PR.zees(), { bright: 1.3, posHook: '{ float f = fract(uTime*0.35 + aExtra.y*0.33); p += vec3(0.08*sin(f*6.0 + aExtra.y), f*0.5, 0.0); vis *= uB*sin(3.14159*f); }' });
+    C.zz = P(PR.zees(), { bright: 1.3, posHook: '{ float f = fract(uTime*floor(0.35*uLoop + 0.5)/uLoop + aExtra.y*0.33); p += vec3(0.08*sin(f*6.0 + aExtra.y), f*0.5, 0.0); vis *= uB*sin(3.14159*f); }' });
   } else if (sin.id === 'greed') {
-    C.coins = P(PR.coins(40), { bright: 1.8, size: 0.0095, posHook: `{
-        float c = aExtra.y, n = 40.0, a = c/n*6.28318*3.0 + uTime*0.8*(0.8 + 0.4*h1(c)), rr = 0.85 + 0.25*h1(c*3.1), yy = 0.05 + 0.25*(h1(c*7.3) - 0.5);
-        float spin = 0.6*sin(uTime*1.7 + c*1.3); vec3 q = vec3(p.x*cos(spin) + p.z*sin(spin), p.y, -p.x*sin(spin) + p.z*cos(spin));   // 轻轻摆动，大多数时候正面朝镜头
-        vec3 orbit = vec3(cos(a)*rr, yy + 0.15*sin(a)*0.3, sin(a)*rr*0.45 - 0.1); vec3 far = normalize(h3(c*1.7) - 0.5)*4.0;
-        p = mix(far, orbit, clamp(uB*1.4 - h1(c*2.3)*0.4, 0.0, 1.0)) + q; vis *= step(c, uC); }` });
+    // 贪婪：金币像星环一样绕着头转（环面略倾斜），每枚金币正面朝镜头轻轻摆动，表面有一道扫过的金属反光
+    C.coins = P(PR.coins(64), { bright: 2.2, size: 0.0095, posHook: `{
+        float c = aExtra.y, n = 64.0, a = c/n*6.28318*2.0 + uTime*qw(0.55), rr = 0.98 + 0.22*h1(c*3.1) + 0.05*sin(c*2.7);
+        float spin = 0.55*sin(uTime*qw(1.7) + c*1.3); vec3 q = vec3(p.x*cos(spin) + p.z*sin(spin), p.y, -p.x*sin(spin) + p.z*cos(spin));
+        vec3 orbit = vec3(cos(a)*rr, 0.08 + 0.03*h1(c*7.3) - sin(a)*rr*0.22, sin(a)*rr*0.5 - 0.1); vec3 far = normalize(h3(c*1.7) - 0.5)*4.0;
+        p = mix(far, orbit, clamp(uB*1.4 - h1(c*2.3)*0.4, 0.0, 1.0)) + q; vis *= step(c, uC); }`,
+      colHook: '{ float gl = exp(-pow(aExtra.x - 1.3*sin(uTime*qw(2.2) + aExtra.y*0.7), 2.0)*10.0); col = mix(col, vec3(1.0, 0.97, 0.85), gl*0.8); b *= 0.75 + 1.4*gl; }' });
+    C.eyeShapes = [FACE.eyeR, FACE.eyeL].map(e => { const m = propMat('#FFD25A', { bright: 0.85, size: 0.007 }); const o = pts(PR.coinEye().geometry(THREE), m, head, 47); o.position.set(e[0], e[1], e[2] + 0.03); return o; });
   } else if (sin.id === 'gluttony') {
-    // 暴食：三种实心的食物绕着头漂浮，反转时一份份飞进嘴里
-    C.food = P(PR.food(), { bright: 1.6, size: 0.0095, col: tone(sin.col, 0.2), posHook: `{
-        float c = aExtra.y, a = c/6.0*6.28318 + uTime*0.35; vec3 home = vec3(cos(a)*1.05, 0.15 + 0.35*sin(a*1.7 + c), sin(a)*0.35 + 0.2);
-        vec3 mouth = vec3(0.0, -0.3, 0.45); float k = clamp(uB*1.6 - c*0.12, 0.0, 1.0);
-        p = mix(home, mouth, k*k) + p*(1.0 - 0.8*k); vis *= 1.0 - smoothstep(0.85, 1.0, k); }` }, rig);
+    // 暴食：一圈飘浮的食物（鸡腿、包子、碗、汉堡），反转时一个个被吸进嘴里
+    C.food = P(PR.food(2), { bright: 2.3, size: 0.0095, col: tone(sin.col, 0.35), posHook: `{
+        float c = aExtra.y, a = c/8.0*6.28318 + uTime*qw(0.3); vec3 home = vec3(cos(a)*1.25, 0.12 + sin(a)*0.82, 0.3);   /* 一圈绕在头四周、彼此分开，不挡脸 */
+        vec3 mouth = vec3(0.0, -0.3, 0.45); float k = clamp(uB*2.4 - c*0.2, 0.0, 1.0);   // 一个接一个被吸进嘴里
+        p = mix(home, mouth, k*k) + p*1.55*(1.0 - 0.8*k); vis *= 1.0 - smoothstep(0.85, 1.0, k); }` }, rig);
   } else if (sin.id === 'lust') {
-    C.hearts = P(PR.hearts(14), { bright: 1.8, size: 0.0095, posHook: `{
-        float c = aExtra.y, a = c/14.0*6.28318 + uTime*0.4, rr = 0.82 + 0.1*sin(uTime + c);
-        vec3 home = vec3(cos(a)*rr, 0.05 + 0.55*sin(a)*0.8, 0.25 + 0.1*cos(a));
+    C.hearts = P(PR.hearts(24), { bright: 2.0, size: 0.0095, posHook: `{
+        float c = aExtra.y, a = c/24.0*6.28318 + uTime*qw(0.4), rr = 0.84 + 0.18*h1(c*5.1) + 0.08*sin(uTime*qw(1.0) + c);
+        vec3 home = vec3(cos(a)*rr, 0.05 + 0.6*sin(a)*0.85, 0.25 + 0.1*cos(a));
         vec3 o = home + normalize(home - vec3(0.0, 0.05, 0.0))*uB*(1.5 + h1(c)*2.0); p = o + p*(1.0 + 0.25*uA + uB*0.8); }` });
+    C.eyeShapes = [FACE.eyeR, FACE.eyeL].map(e => { const m = propMat('#FF7FB5', { bright: 1.8, size: 0.008 }); const o = pts(PR.heartEye().geometry(THREE), m, head, 47); o.position.set(e[0], e[1], e[2] + 0.03); return o; });
   }
   return C;
 }
@@ -140,7 +163,13 @@ export function events() {
 const LINEUP = { pos: [0, 0.25, 9.6], target: [0, -0.05, 0], fov: 35 };
 const FRAME = { pride: [0.25, 3.7], envy: [-0.3, 3.9] };
 const fr = i => FRAME[SINS[i].id] ?? [0.1, 3.6];
-const lineupCam = t => orbit({ ...LINEUP, pos: [LINEUP.pos[0], LINEUP.pos[1] + 0.08 * Math.sin(t * 1.7), LINEUP.pos[2] - 0.25 * Math.sin(t * 1.1)] }, 0.05 * Math.sin(t * 1.9), 0);
+const lineupCam = t => orbit({ ...LINEUP, pos: [LINEUP.pos[0], LINEUP.pos[1] + 0.08 * Math.sin(t * qw(1.7)), LINEUP.pos[2] - 0.25 * Math.sin(t * qw(1.1))] }, 0.05 * Math.sin(t * qw(1.9)), 0);
+// 七个彩色角色排成一排：眼睛发光、戴着各自的道具、下面有罪名（开头第 0 帧和结尾共用，保证首尾一样）
+function heroLineup(t, F, AUD) {
+  S.chars.forEach(O => { setState(O, { lite: true, gray: false, eyes: 1, halo: 0.85, props: 1, scatter: 0, aud: AUD }); animate(O, t, 9, -9, true, AUD); });
+  F.names = 1; F.auraCol = '#B49CE0'; F.auraK = 0.6;
+  return lineupCam(t);
+}
 const close = (i, k = 1) => { const [ty, d] = fr(i); return { pos: [slotX(i), ty + 0.1, d * k], target: [slotX(i), ty, 0], fov: 35 }; };
 const face = i => SINS[i].id === 'envy' ? { pos: [slotX(i), -0.05, 2.9], target: [slotX(i), -0.1, 0], fov: 35 } : { pos: [slotX(i), 0.37, 3.5], target: [slotX(i), 0.35, 0], fov: 35 };
 const card = (i, k = 1) => ({ pos: [slotX(i) - 1.1, 0.1, 5.0 * k], target: [slotX(i) - 1.1, -0.05, 0], fov: 35 });
@@ -150,30 +179,44 @@ const orbit = (c, ang, cx) => { const dx = c.pos[0] - cx, dz = c.pos[2]; return 
 // ------------------------------------------------------------ 每帧
 export function frame(t) {
   const F = { flash: 0, flashCol: '#FFFFFF', shake: 0, shock: null, bloom: 1.0, auraCol: GRAY, auraK: 0.35, subs: [], card: null, icons: [], names: null, header: null, ripples: [], bursts: [], blur: 0, ca: 0 };
-  const kick = kickSpring(t), low = env(t, 'low'), mid = env(t, 'mid'), high = env(t, 'high');
+  const endK = 1 - clamp((t - (TL - 0.9)) / 0.6);                                     // 最后半秒没有鼓点：最后一帧和第 0 帧完全一样
+  const kick = kickSpring(t) * endK, low = env(t, 'low'), mid = env(t, 'mid'), high = env(t, 'high');
   const bb = beatInBar(t);
   // 每两拍（第 2、4 拍）：镜头 2% 推近冲击 + 3px 轻微震动
   const off = (bb.k === 1 || bb.k === 3) ? Math.exp(-bb.d / 0.1) : 0;
-  F.shake = 0.67 * off;                                                                // 4px
-  const AUD = { kick, low, mid, high, t };
+  F.shake = 0.67 * off * endK;                                                         // 4px
+  const AUD = { kick, low, mid, high, t, endK };
   S.chars.forEach(O => { O.g.position.set(slotX(O.i), 0, 0); animate(O, t, -9, -9, false, AUD); });
   S.chars.forEach(C => setState(C, { lite: true, gray: true, eyes: 0, halo: 0, props: 0, scatter: 0, aud: AUD }));
   let cam = LINEUP, spotX = slotX(3), spotInt = 0.55, focus = -1;
   const done = i => t >= bar(i, 1);
   const R0 = R[0];
-  if (t < R0) {
-    // 开头：聚光灯在七张脸之间来回扫，每次停顿都在拍点上，被照到的脸亮一下
-    const stops = B.filter(x => x < R0 - 0.05), order = [3, 1, 5, 0, 6, 2, 4, 3, 1, 5];
-    let j = lastIdx(stops, t);
-    const from = j >= 0 ? order[j % order.length] : 3, to = j + 1 < stops.length ? order[(j + 1) % order.length] : 0;
-    const t0 = j >= 0 ? stops[j] : 0, t1 = j + 1 < stops.length ? stops[j + 1] : R0;
+  const T1 = A.down.find(x => x > 0.5) ?? 2.0;                                          // 第 1 个重拍
+  S.gather.visible = false; S.gather.material.uniforms.uTime.value = t; S.gather.material.uniforms.uScale.value = K.scale;
+  if (t < T1) {
+    // 开头第 0 帧：七个彩色角色排成一排（和结尾最后一帧完全一样）；标题在 0.1 秒弹出
+    cam = heroLineup(t, F, AUD); spotInt = 0;
+    F.subs.push({ text: '七宗罪，其实是大脑的〔亮〕七种出厂设置〔/亮〕。', t0: 0.1, t1: 2.45, size: 56, pop: 0.1 });
+  } else if (t < R0) {
+    // 第 1 个重拍：七个角色同时闭眼、褪成灰色（一次冲击波）；然后聚光灯开始抽签，被照到的脸猛地亮起、放大 10%、震一下
+    const dT = t - T1, shut = clamp(dT / 0.15);
+    S.chars.forEach(O => setState(O, { lite: true, gray: dT >= 0.06, eyes: 1 - shut, halo: 0.85 * (1 - clamp(dT / 0.25)), props: 1 - clamp(dT / 0.3), scatter: 0, aud: AUD }));
+    F.names = 1 - clamp(dT / 0.3);
+    if (dT < 0.5) F.shock = { c: [960, 500], r: 0.7 * outExpo(dT / 0.5), a: 0.8 * (1 - dT / 0.5), col: '#FFFFFF' };
+    if (dT < 0.15) F.shake = Math.max(F.shake, 1 - dT / 0.15);
+    if (dT < 1 / 30 + 1e-4) F.ca = 1;
+    const stops = B.filter(x => x > T1 + 0.1 && x < R0 - 0.05), order = [5, 1, 4, 2, 6, 3];
+    const j = lastIdx(stops, t), from = j >= 0 ? order[j % order.length] : 3, to = j + 1 < stops.length ? order[(j + 1) % order.length] : 0;
+    const t0 = j >= 0 ? stops[j] : T1, t1 = j + 1 < stops.length ? stops[j + 1] : R0;
     spotX = lerp(slotX(from), slotX(to), sine(clamp((t - t0) / Math.max(0.1, (t1 - t0) * 0.45))));
-    // 聚光灯落在哪张脸上，那张脸就猛地亮起、放大 10%，带一下震动
-    const lit = j >= 0 ? from : 3, lk = j >= 0 ? Math.exp(-(t - t0) / 0.22) : 0;
-    setState(S.chars[lit], { ...S.chars[lit].st, pop: lk });
-    if (j >= 0 && t - t0 < 0.12) F.shake = Math.max(F.shake, 0.7 * (1 - (t - t0) / 0.12));
-    cam = orbit({ ...LINEUP, pos: [0, 0.25 + 0.08 * Math.sin(t * 1.7), 9.6 - 0.18 * t] }, 0.05 * Math.sin(t * 1.9), 0);
-    F.subs.push({ text: '七宗罪，其实是大脑的〔亮〕七种出厂设置〔/亮〕。', t0: 0.2, t1: 2.45, size: 56, pop: 0.2 });
+    spotInt = 0.55 * clamp(dT / 0.2);
+    if (j >= 0) {
+      const lk = Math.exp(-(t - t0) / 0.22);
+      setState(S.chars[from], { ...S.chars[from].st, pop: lk });
+      if (t - t0 < 0.12) F.shake = Math.max(F.shake, 0.8 * (1 - (t - t0) / 0.12));
+    }
+    cam = lineupCam(t);
+    F.subs.push({ text: '七宗罪，其实是大脑的〔亮〕七种出厂设置〔/亮〕。', t0: 0.1, t1: 2.45, size: 56, pop: 0.1 });
     const t2 = B[lastIdx(B, 2.45)] > 2.3 ? B[lastIdx(B, 2.45)] : 2.5;
     F.subs.push({ text: '刷到这条，看看你是哪一宗——', t0: t2, t1: R0 - 0.12, size: 56, pop: t2 });
   } else if (t < R[28]) {
@@ -193,13 +236,18 @@ export function frame(t) {
       setState(O, done(j) ? { lite: true, gray: false, eyes: 1, halo: 0.6, props: 1, scatter: i === 0 ? 2.2 * push : 0, aud: AUD } : { lite: true, gray: true, eyes: 0, halo: 0, props: 0, scatter: i === 0 ? 2.2 * push : 0, aud: AUD });
     });
     const litK = i > 0 && tL >= 0 ? Math.exp(-tL / 0.22) : 0;
-    setState(C, { lite: false, gray: !transformed, eyes: transformed ? outExpo(clamp(dt2 / 0.12)) : 0, halo: transformed ? outExpo(clamp(dt2 / 0.3)) : 0,
-      props: transformed ? clamp(dt2 / 0.3) : 0, scatter: 0.25 * suck, aud: AUD, inhale, gag: dt3 >= 0 && dt3 < 1.2 && t < b4, spotlit: !transformed, pop: litK, shrink: 1 - 0.88 * suck });
+    // 灰色阶段的蓄力：戴着灰色的道具；眼睛的位置随着每一拍越来越亮（从完全暗到微微发光）；脸周围的粒子慢慢向内聚集，变身的重拍上一起爆开
+    const gk = tL >= 0 ? clamp(tL / Math.max(0.5, b2 - land)) : 0;
+    let charge = 0;
+    if (!transformed && tL >= 0) { const bi = lastIdx(B, t), bl = lastIdx(B, land - 0.01); charge = 0.32 * clamp((bi - bl) / 4) * (0.6 + 0.4 * Math.exp(-(t - B[bi]) / 0.15)); }
+    if (tL >= 0 && dt2 < 0.6) { const gu = S.gather.material.uniforms; S.gather.visible = true; gu.uK.value = transformed ? 1 : gk; gu.uB.value = transformed ? outExpo(clamp(dt2 / 0.6)) : 0; gu.uC.value.set(slotX(i), HEAD_C[1] + 0.05, 0.1); gu.uCol.value.set(transformed ? tone(sin.col, 0.5) : '#D8D4E8'); gu.uInt.value = transformed ? 2.2 : 1.6; }
+    setState(C, { lite: false, gray: !transformed, eyes: transformed ? outExpo(clamp(dt2 / 0.12)) : charge, halo: transformed ? outExpo(clamp(dt2 / 0.3)) : 0,
+      props: transformed ? 1 : (tL >= 0 ? clamp(tL / 0.4) : 0), scatter: 0.25 * suck, aud: AUD, inhale, gag: dt3 >= 0 && dt3 < 1.2 && t < b4, spotlit: !transformed, pop: litK, shrink: 1 - 0.88 * suck });
     if (litK > 0 && tL < 0.12) F.shake = Math.max(F.shake, 0.8 * (1 - tL / 0.12));
     // 镜头：第 1 小节推近（之后一直缓慢推近并绕人物转动）｜第 2 小节重拍猛地后拉再推近，±4 度｜第 3 小节快速推到脸部特写、停一拍、弹回｜第 4 小节缓慢后拉
     let cm;
     const sway = 0.07 * Math.sin((t - d) * 2.3);                                    // ±4 度，持续绕人物转动
-    if (t < b2) { const near = close(i, 1 - 0.07 * clamp(tL / 1.5)); cm = orbit(camLerp(lineupCam(t), near, push), sway * push, slotX(i)); }
+    if (t < b2) { const near = close(i, 1 - 0.16 * gk); cm = orbit(camLerp(lineupCam(t), near, push), sway * push, slotX(i)); }   // 灰色阶段镜头持续推近
     else if (t < b3) { const jolt = Math.exp(-dt2 * 5) * (1 - Math.exp(-dt2 * 40)); cm = close(i, 1.12 * (1 + 0.25 * jolt) - 0.12 * clamp(dt2 / 2)); cm = orbit(cm, sway, slotX(i)); }
     else if (t < b4) { const go = outExpo(clamp(dt3 / 0.18)), back = inOut(clamp((dt3 - 0.18 - (B[1] - B[0])) / 0.4)); cm = orbit(camLerp(close(i, 1.0), face(i), go * (1 - back)), sway * 0.5, slotX(i)); }
     else cm = orbit(card(i, 1 + 0.06 * clamp(dt4 / 1.6)), sway * 0.6, slotX(i));
@@ -241,22 +289,14 @@ export function frame(t) {
       if (t >= b3) F.subs.push({ text: sin.twist, t0: b3, t1: b4 - 0.06, size: 52, col: tone(sin.col, 0.55), pop: b3, flash: beatAfter(b3 + 0.01) });
     } else F.card = { i, t0: b4, fade: leave };
     F.dim = 1 - 0.15 * inhale;
+    if (sin.id === 'gluttony' && dt3 >= 0 && t < b4) { const b7 = B[lastIdx(B, b3 + 0.01) + 2] ?? b3 + 1; if (t >= b7) F.seven = t - b7; }   // 食物吃完：画面角落弹出一个大大的“7”
   } else {
-    // 结尾：七个变身后的角色排成一排；音乐淡出时从左到右依次闭眼、道具消散、变回灰色
-    const e1 = R[28], e2 = R[29], fade = BT.fade_start, end = TL;
-    S.chars.forEach((O, j) => {
-      const offT = fade + (j / 6) * (end - 0.7 - fade) * 0.92, k = clamp((t - offT) / 0.45);
-      setState(O, { lite: true, gray: k >= 0.5, eyes: 1 - k, halo: (1 - k) * outExpo(clamp((t - e1) / 0.35)), props: 1 - k, scatter: 0, aud: AUD });
-      animate(O, t, t - e1 + 3, -9, k < 0.5, AUD);
-    });
+    // 结尾：七个变身后的角色排成一排（一直保持彩色），最后一帧和第 0 帧完全一样，循环无缝
+    const e1 = R[28], e2 = R[29];
+    cam = heroLineup(t, F, AUD); spotInt = 0;
     const de = t - e1; if (de < 0.5) F.shock = { c: [960, 470], r: 0.7 * outExpo(de / 0.5), a: 0.8 * (1 - de / 0.5), col: '#FFFFFF' };
-    if (de < 0.15) F.shake = 1 - de / 0.15;
-    const g = clamp((t - fade) / (end - fade - 0.3));
-    cam = { ...LINEUP, pos: [Math.sin(t * 0.4) * 0.25 * (1 - g), LINEUP.pos[1], LINEUP.pos[2]] };   // 最后落回开头第一帧的镜头
-    spotX = slotX(3); spotInt = 0.55 * g;
-    F.names = clamp(de / 0.2) * (1 - clamp((t - fade) / 1.2));
-    if (t >= e2) F.subs.push({ text: '你身上，哪一宗最重？', t0: e2, t1: fade + 1.0, size: 60, sub: '评论区告诉我。', pop: e2 });
-    F.auraCol = hexs(C3('#B49CE0').lerp(C3(GRAY), g)); F.auraK = 0.6 * (1 - g) + 0.35 * g;   // 最后回到开头的灰色
+    if (de < 0.15) F.shake = Math.max(F.shake, 1 - de / 0.15);
+    if (t >= e2) F.subs.push({ text: '你身上，哪一宗最重？', t0: e2, t1: TL - 0.13, size: 72, sub: '评论区告诉我。', subSize: 40, pop: e2 });
   }
   S.spot.position.set(spotX, 4.6, -0.6); S.spot.material.uniforms.uInt.value = spotInt * 0.35; S.spot.material.uniforms.uW.value = 0.3;
   S.stars.forEach(s => { s.material.uniforms.uScale.value = K.scale; });
@@ -278,7 +318,8 @@ function setState(C, s) {
   const sc = s.scatter ?? 0;
   // 灰色闭眼的脸：亮度提高到 2.5 倍，聚光灯从上方照着；变身后人物是画面里最亮的东西
   const c = C3(C.sin.col), luma = 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
-  const base = s.gray ? (s.lite ? 3.2 : 3.1) : (s.lite ? 2.4 : 1.85) * clamp(0.42 / luma, 0.7, 1.15);       // 按颜色的亮度补偿：绿色不过曝、紫色不发暗
+  const base = s.gray ? (s.lite ? 5.1 : 5.0) :   // 灰色脸亮度提高 60%
+     (s.lite ? 2.4 : 1.85) * clamp(0.42 / luma, 0.7, 1.15);       // 按颜色的亮度补偿：绿色不过曝、紫色不发暗
   const live = s.gray ? 0 : 1;
   for (const m of C.mats) {
     m.uniforms.uDim.value = base * (1 - 0.15 * (s.inhale ?? 0)) * (1 + 0.2 * Math.max(0, kick)) * (1 + 0.9 * (s.pop ?? 0)) * Math.pow(s.shrink ?? 1, 2);   // 缩小时粒子挤在一起，按面积压暗，不过曝
@@ -287,24 +328,25 @@ function setState(C, s) {
   }
   C.rig.scale.setScalar((1 + (s.lite ? 0.03 : 0.06) * kick) * (1 + 0.1 * (s.pop ?? 0)));   // 每一拍放大 6% 再回弹；被聚光灯照到时猛地放大 10%                // 灰色脸也跟着鼓点轻轻弹动                                                     // 低音：整体放大 4% 再回弹
   const eo = s.eyes;
-  C.eyes.forEach(m => { m.visible = eo > 0.01 && sc < 1; m.material.uniforms.uInt.value = 0.95 * eo * (1 + 0.3 * Math.max(0, kick)); m.material.uniforms.uOpen.value = 0.45 + 0.55 * eo; m.material.uniforms.uRays.value = 0.8 * eo; });
+  if (C.eyeShapes) C.eyeShapes.forEach(o => { o.visible = eo > 0.02 && sc < 1; o.scale.setScalar(0.35 + 0.65 * Math.min(1, eo * 1.5)); o.material.uniforms.uScatter.value = 0; });   // 贪婪的金币眼、色欲的心形眼
+  C.eyes.forEach(m => { m.visible = !C.eyeShapes && eo > 0.01 && sc < 1; m.material.uniforms.uInt.value = 0.95 * eo * (1 + 0.3 * Math.max(0, kick)); m.material.uniforms.uOpen.value = 0.45 + 0.55 * eo; m.material.uniforms.uRays.value = 0.8 * eo; });
   C.eyeHalo.forEach(m => { m.visible = eo > 0.01 && sc < 1; m.material.uniforms.uInt.value = 0.28 * eo; });
-  C.halo.visible = s.halo > 0.01 && sc < 1.2; C.halo.rotation.z = 0.35 * (a ? a.t : 0) + C.i;   // 光环一直慢慢转
+  C.halo.visible = s.halo > 0.01 && sc < 1.2; C.halo.rotation.z = qw(0.35) * (a ? a.t : 0) + C.i;   // 光环一直慢慢转
   C.halo.scale.setScalar(lerp(0.2, 1, s.halo) * (1 - 0.3 * clamp(sc)) * (1 + 0.1 * Math.max(0, kick)));
   C.haloMats.forEach((m, j) => { m.uniforms.uBright.value = (j ? 0.3 : 0.95) * s.halo * (1 + 0.8 * Math.max(0, kick)) * (1 - clamp(sc)); });
   C.aura.visible = C.rays.visible = !s.gray && sc < 1.5;
   C.aura.material.uniforms.uInt.value = (s.lite ? 0.03 : 0.07) * (1 + 0.6 * Math.max(0, kick)) * (1 - clamp(sc / 1.5));
   C.aura.scale.setScalar(1 + 0.12 * Math.max(0, kick));
   C.rays.material.uniforms.uInt.value = (s.lite ? 0.03 : 0.12) * (1 + 0.5 * Math.max(0, kick)) * (1 - clamp(sc / 1.5));
-  C.rays.material.uniforms.uRot.value = 0.22 * (a ? a.t : 0); C.rays.material.uniforms.uBurst.value = 1 + 0.45 * Math.max(0, kick);   // 放射光线随鼓点伸长
+  C.rays.material.uniforms.uRot.value = qw(0.22) * (a ? a.t : 0); C.rays.material.uniforms.uBurst.value = 1 + 0.45 * Math.max(0, kick);   // 放射光线随鼓点伸长
   C.g.scale.setScalar(s.shrink != null ? s.shrink : 1);
-  C.props.visible = s.props > 0.01; C.propMats.forEach(m => { m.uniforms.uAsm.value = s.props; m.uniforms.uScatter.value = sc; m.uniforms.uScatterDist.value = 1.4; });
+  C.props.visible = s.props > 0.01; C.propMats.forEach(m => { m.uniforms.uAsm.value = s.props; m.uniforms.uScatter.value = sc; m.uniforms.uScatterDist.value = 1.4; m.uniforms.uGray.value = s.gray ? 1 : 0; });   // 灰色阶段戴着灰色版本的道具
   for (const o of C.bodyProps) o.visible = s.props > 0.01;
 }
 
 // 角色动起来：头微微转动、呼吸；道具跟着节奏；反转那一拍的笑点
 function animate(C, t, dt2, dt3, on, a) {
-  const id = C.sin.id, bb = beatInBar(t), beatK = Math.exp(-bb.d / 0.12);
+  const id = C.sin.id, bb = beatInBar(t), beatK = Math.exp(-bb.d / 0.12) * (a.endK ?? 1);
   C.head.rotation.set(0, (on ? 0.12 : 0.07) * Math.sin(t * qw(1.6) + C.i), (on ? 0.04 : 0.025) * Math.sin(t * qw(1.3) + C.i));   // 头一直在轻轻转动（灰色的脸也是）
   C.head.scale.setScalar(1 + 0.01 * Math.sin(t * qw(TAU / 3.2)));
   const gag = dt3 >= 0 ? Math.exp(-Math.pow((dt3 - 0.3) / 0.28, 2)) : 0, hold = dt3 >= 0 ? clamp(dt3 / 0.15) : 0;
@@ -320,7 +362,7 @@ function animate(C, t, dt2, dt3, on, a) {
       // 蛇头平时侧着；反转那一拍突然转向镜头、张嘴吐信；平时信子每两拍吐一次
       const turn = dt3 >= 0 ? outBack(clamp(dt3 / 0.22)) : 0;
       u(C.snake.material, 'uA', -0.75 * (1 - turn));
-      u(C.snake.material, 'uB', dt3 >= 0 ? clamp(dt3 / 0.12) * (1 - clamp((dt3 - 1.0) / 0.3)) : 0);
+      u(C.snake.material, 'uB', dt3 >= 0 ? clamp(dt3 / 0.12) * (1 - clamp((dt3 - 1.0) / 0.3)) : 0.25 * beatK);
       const flick = (bb.k === 0 || bb.k === 2) ? Math.sin(Math.PI * clamp(bb.d / 0.3)) : 0;
       u(C.snake.material, 'uC', Math.max(flick, dt3 >= 0 ? clamp(dt3 / 0.12) * (1 - clamp((dt3 - 1.0) / 0.3)) : 0));
       u(C.snake.material, 'uD', a.low);
@@ -329,13 +371,13 @@ function animate(C, t, dt2, dt3, on, a) {
     C.head.rotation.x = on ? 0.06 : 0;
     if (C.horns) u(C.horns.material, 'uB', gag);
   } else if (id === 'sloth') {
-    C.head.rotation.x = on ? 0.12 + 0.06 * Math.pow(0.5 + 0.5 * Math.sin(t * 2.2), 4) : 0;
-    C.eyes.forEach(m => { m.material.uniforms.uOpen.value *= 0.45; });
+    C.head.rotation.x = on ? 0.12 + 0.06 * Math.pow(0.5 + 0.5 * Math.sin(t * qw(2.2)), 4) : 0;
+    C.eyes.forEach(m => { m.scale.set(1, 0.4, 1); m.position.y = FACE.eyeR[1] - 0.012; });   // 眼皮半垂：眼睛的光只剩下半
     for (const o of [C.hat, C.zz]) if (o) u(o.material, 'uB', hold);
   } else if (id === 'greed') {
     if (C.coins) { u(C.coins.material, 'uB', 1); u(C.coins.material, 'uC', on ? 14 + 8 * clamp(dt2 / 2) + 18 * hold : 0); }
   } else if (id === 'gluttony') {
-    if (C.food) u(C.food.material, 'uB', hold);
+    if (C.food) u(C.food.material, 'uB', dt3 >= 0 ? clamp(dt3 / 1.0) : 0);
   } else if (id === 'lust') {
     if (C.hearts) { u(C.hearts.material, 'uA', beatK); u(C.hearts.material, 'uB', gag * 0.8 + hold * 0.2); }
   }
@@ -352,6 +394,7 @@ export function draw2D(t, ctx, F) {
   if (F.card) drawCard(t, ctx, F.card);
   for (const s of F.subs) drawSub(t, ctx, s);
   if (F.shock) { ctx.save(); ctx.globalAlpha = F.shock.a; ctx.strokeStyle = F.shock.col; ctx.lineWidth = lerp(6, 1, 1 - F.shock.a / 0.8); ctx.shadowColor = F.shock.col; ctx.shadowBlur = 18; ctx.beginPath(); ctx.arc(F.shock.c[0], F.shock.c[1], F.shock.r * 1920, 0, TAU); ctx.stroke(); ctx.restore(); }
+  if (F.seven != null) { const sc = F.seven < 0.12 ? lerp(0.3, 1.15, outExpo(F.seven / 0.12)) : F.seven < 0.22 ? lerp(1.15, 1, (F.seven - 0.12) / 0.1) : 1; ctx.save(); ctx.translate(1640, 330); ctx.rotate(-0.08); ctx.scale(sc, sc); glowText('7', 0, 0, fs(900, 320), '#FFB15A', { glow: 40, glow2: 80, glowColor: '#FF7A1F', nobox: true }); ctx.restore(); }
   if (F.flash > 0) { ctx.save(); ctx.globalAlpha = F.flash; ctx.fillStyle = F.flashCol; ctx.fillRect(0, 0, 1920, 1080); ctx.restore(); }
 }
 // 字幕在拍点上弹出：85% → 105% → 100%（0.2 秒）；反转句的关键词在下一拍再闪亮一次
@@ -360,12 +403,12 @@ function drawSub(t, ctx, s) {
   if (t < s.t0 || t > s.t1 + 0.12) return;
   const a = Math.min(clamp((t - s.t0) / 0.08), 1 - clamp((t - s.t1) / 0.12));
   ctx.save(); const g = ctx.createLinearGradient(0, 780, 0, 1080); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${0.65 * a})`); ctx.fillStyle = g; ctx.fillRect(0, 780, 1920, 300); ctx.restore();
-  const y = s.sub ? 930 : 975, sc = s.pop != null ? popScale(t - s.pop) : 1;
+  const y = s.sub ? (s.size > 60 ? 900 : 930) : 975, sc = s.pop != null ? popScale(t - s.pop) : 1;
   const keyFlash = s.flash != null && t >= s.flash ? Math.exp(-(t - s.flash) / 0.15) : 0;
   ctx.save(); ctx.translate(960, y); ctx.scale(sc, sc);
   marked(ctx, s.text, 0, 0, s.size, a, s.col, 1 + 0.12 * keyFlash, keyFlash);
   ctx.restore();
-  if (s.sub) glowText(s.sub, 960, y + 66, fs(700, 34), 'rgba(255,255,255,0.8)', { alpha: a, glow: 8 });
+  if (s.sub) glowText(s.sub, 960, y + 30 + s.size * 0.62, fs(700, s.subSize ?? 34), 'rgba(255,255,255,0.85)', { alpha: a, glow: 8 });
 }
 // 吸气：把整张结尾卡（罪名大字、字幕、四字词）画到离屏画布，再切成小方块，旋转着向画面中心收缩、淡出
 let OC = null;

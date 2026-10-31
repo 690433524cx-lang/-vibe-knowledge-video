@@ -1,7 +1,7 @@
 // 《七宗罪，其实是大脑的七种出厂设置》合集：1920×1080、30fps、约 65 秒。每帧 render(t) 只由 t 决定；所有时间来自 beats_extended.json
 import * as THREE from 'three';
 import { K, FW, FH, initCore, updateSparks, tickMaterials, setCamera } from './core.js';
-import { parseOBJ, PB } from './geo.js';
+import { parseOBJ, PB, buildCracks, linesToPB } from './geo.js';
 import { setLoop, clamp, lerp, hash } from './util.js';
 import { SHARED } from './mat.js';
 import { setCtx, BOXES } from './text.js';
@@ -36,6 +36,7 @@ export async function init() {
   for (const id of ids) {
     const { pb, faceCount } = buildExpressionHead(obj, id, k);
     heads[id] = pb.geometry(THREE); heads[id + 'Lite'] = lite(pb, faceCount).geometry(THREE);
+    if (id === 'wrath') heads.wrathCracks = linesToPB(buildCracks(pb, faceCount, 13).lines, 0.0016, 5, 0.0022).geometry(THREE);   // 愤怒脸上发光的裂纹（贴着这张脸的表面）
   }
   for (const s of SHOW.SINS.slice(UPTO + 1)) { heads[s.id] = heads.neutral; heads[s.id + 'Lite'] = heads.neutralLite; }
   // 身体（脖子、肩、上胸）：沿用第一版之后做的实心粒子身体
@@ -60,7 +61,7 @@ export async function init() {
 }
 
 export function render(t) {
-  tickMaterials(t);
+  tickMaterials(t % TL);   // 着色器里的时间按成片时长循环：t = 65 秒和 t = 0 完全一样
   const F = SHOW.frame(t);
   // 镜头 + 震动（最大 6px）
   const c = window.CAM_OVERRIDE ?? F.cam, sh = window.CAM_OVERRIDE ? 0 : (F.shake ?? 0);
@@ -70,11 +71,12 @@ export function render(t) {
   // 背景：近黑色的深空；只有人物身后有一团颜色光晕（在 show.js 里），雾只留很淡的一层
   const fc = C3(F.auraCol), kk = F.auraK * 0.35;
   const fu = K.final.uniforms;
-  const nb = { b: C3('#050508'), d: fc.clone().multiplyScalar(0.05 * kk), m: fc.clone().multiplyScalar(0.09 * kk), h: fc.clone().lerp(C3('#FFFFFF'), 0.3).multiplyScalar(0.14 * kk) };
+  const nb = { b: C3('#25202F'),   // 背景保持深色，但不要那么黑
+     d: fc.clone().multiplyScalar(0.05 * kk), m: fc.clone().multiplyScalar(0.09 * kk), h: fc.clone().lerp(C3('#FFFFFF'), 0.3).multiplyScalar(0.14 * kk) };
   ['b', 'd', 'm', 'h'].forEach(x => { fu['uN0' + x].value.copy(nb[x]); fu['uN1' + x].value.copy(nb[x]); });
   fu.uTide.value = 0; fu.uTideMix.value = 0; fu.uBright.value = 1;
   S.bgGlow.material.uniforms.uCol.value.copy(fc); S.bgGlow.material.uniforms.uInt.value = 0.03 * kk;
-  S.fog.forEach((m, j) => { m.material.uniforms.uCol.value.copy(fc).lerp(C3('#9A90B0'), 0.25); m.material.uniforms.uInt.value = [0.004, 0.007, 0.012][j] * kk; });   // 雾只留在远处和画面边缘
+  S.fog.forEach((m, j) => { m.material.uniforms.uCol.value.copy(fc).lerp(C3('#9A90B0'), 0.25); m.material.uniforms.uInt.value = [0.008, 0.014, 0.024][j] * kk; });   // 雾只留在远处和画面边缘
   K.dust.material.uniforms.uColA.value.copy(fc).lerp(C3('#FFFFFF'), 0.4); K.dust.material.uniforms.uColB.value.set('#FFFFFF');
   K.dust.material.uniforms.uCam.value.copy(K.camera.position); K.dust.material.uniforms.uAlpha.value = 0.4 + 0.6 * kk;
   const dir = new THREE.Vector3(); K.camera.getWorldDirection(dir);
@@ -88,7 +90,7 @@ export function render(t) {
   K.bloom.strength = F.bloom;
   if (F.sparkCol) { K.sparks.material.uniforms.uColA.value.set(F.sparkCol); K.sparks.material.uniforms.uColB.value.set('#FFFFFF'); }
   updateSparks(t, F.bursts ?? []);
-  fu.uCA.value = F.ca ? 0.002 : 0.0006; fu.uVig.value = 1.35; fu.uGlitch.value = 0; fu.uTime.value = t;
+  fu.uCA.value = F.ca ? 0.002 : 0.0006; fu.uVig.value = 1.1; fu.uGlitch.value = 0; fu.uTime.value = t % TL;
   K.composer.render();
   BOXES.length = 0;
   outCtx.setTransform(1, 0, 0, 1, 0, 0); outCtx.globalAlpha = 1; outCtx.drawImage(glCanvas, 0, 0);
