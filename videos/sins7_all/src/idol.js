@@ -142,12 +142,12 @@ export function idolMaterial(sinHex, o = {}) {
     posHook: o.dust ? /* glsl */`{
       // 胸口往下逐渐消散：下半部的一部分粒子变成向上飘的光尘
       float low = smoothstep(-1.75, -2.6, p.y);
-      if (h1(aSeed*17.3) < 0.35*low) { float f = fract(uTime*0.18 + aSeed*7.0); p.y += f*0.9; p.x += sin(aSeed*40.0 + uTime*0.6)*0.05*f; vis *= (1.0 - f)*0.8; }
+      if (h1(aSeed*17.3) < 0.35*low) { float f = fract(uTime*floor(0.18*uLoop + 0.5)/uLoop + aSeed*7.0); p.y += f*0.9; p.x += sin(aSeed*40.0 + uTime*qw(0.6))*0.05*f; vis *= (1.0 - f)*0.8; }
       vec4 wq = modelMatrix*vec4(p, 1.0); vis *= 1.0 - 0.85*low;
       if (wq.y < uCut) vis = 0.0; else vis *= smoothstep(uCut, uCut + 0.35, wq.y); }`
       : '{ vec4 wq = modelMatrix*vec4(p, 1.0); if (wq.y < uCut) vis = 0.0; else vis *= smoothstep(uCut, uCut + 0.35, wq.y); }',
     colHook: /* glsl */`
-      b *= (0.88 + 0.12*sin(uTime*(4.0 + 6.0*fract(aSeed*7.31)) + aSeed*60.0))/tw;   // 粒子持续轻微闪动（脸是活的），明暗结构不变
+      b *= (0.88 + 0.12*sin(uTime*qw(4.0 + 6.0*fract(aSeed*7.31)) + aSeed*60.0))/tw;   // 粒子持续轻微闪动（脸是活的），明暗结构不变
       float rampL = 0.6, rimK2 = 0.0;
       if (hasN > 0.5) {
         // 顶侧主光：眉骨、鼻梁、颧骨、下颌有清楚的明暗

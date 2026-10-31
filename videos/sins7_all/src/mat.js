@@ -12,6 +12,7 @@ float h1(float n){ return fract(sin(n*127.1+311.7)*43758.5453); }
 vec3 h3(float n){ return vec3(h1(n), h1(n+17.31), h1(n+41.97)); }
 // 「每 128 秒 k 圈」→ 当前周期上最接近的整数圈数（角频率）
 float qf(float k){ return max(1.0, floor(k*uLoop/128.0 + 0.5))*6.28318530718/uLoop; }
+float qw(float w){ return max(1.0, floor(w*uLoop/6.28318530718 + 0.5))*6.28318530718/uLoop; }   // 角频率按成片时长量化：最后一帧接回第一帧
 `;
 const col = h => new THREE.Color(h);
 

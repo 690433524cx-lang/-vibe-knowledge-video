@@ -119,13 +119,29 @@ export function snake(k = 1) {
   return { pb, head: H, L };
 }
 
-// ------------------------------------------------------------ 03 愤怒：两根闪电角（折线，噼啪闪烁）
+// ------------------------------------------------------------ 03 愤怒：头顶两侧两道粗的折线闪电角（实心、由粗到细、带小分叉），id = 第几道（噼啪闪烁用）
 export function lightningHorns(k = 1) {
   const R = rng(31), pb = new PB();
-  for (const sx of [-1, 1]) for (let b = 0; b < 3; b++) {
-    let p = [sx * 0.3, 0.62, 0.0]; const pts = [p];
-    for (let j = 0; j < 9; j++) { p = addv(p, [sx * (0.04 + 0.03 * R()) + (R() - 0.5) * 0.06, 0.07 + 0.03 * R(), (R() - 0.5) * 0.04]); pts.push(p); }
-    poly(pb, R, pts, Math.round((b ? 1500 : 3000) * k), b ? 1.0 : 1.8, 0.008, (sx > 0 ? 3 : 0) + b);
+  const bolt = (start, dir0, turn, segs, len, w0, id, br) => {
+    let p = start, ang = dir0; const pts = [p];
+    for (let j = 0; j < segs; j++) {
+      ang += turn; const zig = (j % 2 ? 1 : -1) * 0.55;
+      const d = [Math.cos(ang + zig), Math.sin(ang + zig)];
+      p = [p[0] + d[0] * len, p[1] + d[1] * len, p[2] - 0.01]; pts.push(p);
+    }
+    for (let j = 0; j < segs; j++) {
+      const a0 = pts[j], a1 = pts[j + 1], dx = a1[0] - a0[0], dy = a1[1] - a0[1], l = Math.hypot(dx, dy), nx = -dy / l, ny = dx / l;
+      for (let i = 0; i < Math.round(1500 * k); i++) {
+        const f = R(), u = (j + f) / segs, w = w0 * (1 - 0.8 * u), o = (R() * 2 - 1) * w, edge = Math.abs(o) > w * 0.75;
+        P(pb, R, [a0[0] + dx * f + nx * o, a0[1] + dy * f + ny * o, a0[2] + (R() - 0.5) * w * 0.8], edge ? 1.2 : 0.75 + 0.5 * (1 - u), u, id);
+      }
+    }
+    return pts;
+  };
+  for (const sx of [-1, 1]) {
+    const pts = bolt([sx * 0.27, 0.56, -0.02], sx > 0 ? 1.15 : Math.PI - 1.15, sx * 0.1, 6, 0.075, 0.042, sx > 0 ? 3 : 0, 1);
+    bolt(pts[2], sx > 0 ? 0.35 : Math.PI - 0.35, 0, 3, 0.05, 0.016, sx > 0 ? 4 : 1, 1);       // 小分叉
+    bolt(pts[4], sx > 0 ? 1.9 : Math.PI - 1.9, 0, 2, 0.045, 0.012, sx > 0 ? 5 : 2, 1);
   }
   return pb;
 }
@@ -163,54 +179,62 @@ export function zees(k = 1) {
   return pb;
 }
 
-// ------------------------------------------------------------ 05 贪婪：绕着头转的金币星环（每枚是一个扁圆柱，id = 第几枚）
-export function coins(n = 90, k = 1) {
-  const R = rng(51), pb = new PB();
+// ------------------------------------------------------------ 05 贪婪：绕着头转的金色方孔铜钱（外圈厚边 + 方孔 + 孔边的凸框 + 四个点状纹样），id = 第几枚
+export function coins(n = 40, k = 1) {
+  const R = rng(51), pb = new PB(), r0 = 0.11, h = 0.03;
   for (let c = 0; c < n; c++) {
-    const per = Math.round(220 * k);
-    for (let i = 0; i < per; i++) {
-      const a = R() * TAU, r = 0.06 * Math.sqrt(R()), rim = r > 0.05, face = R() < 0.5 ? 1 : -1;
-      P(pb, R, [Math.cos(a) * r, Math.sin(a) * r, face * 0.008], rim ? 1.6 : 0.8 + 0.6 * (Math.abs(Math.cos(a * 5)) > 0.9 ? 1 : 0), c / n, c);
+    for (let i = 0; i < Math.round(650 * k); i++) {
+      const a = R() * TAU, r = r0 * Math.sqrt(R()), x = Math.cos(a) * r, y = Math.sin(a) * r;
+      if (Math.max(Math.abs(x), Math.abs(y)) < h) continue;                              // 方孔
+      const rim = r > r0 * 0.84, frame = Math.max(Math.abs(x), Math.abs(y)) < h * 1.6;
+      const dots = [[0, 1], [1, 0], [0, -1], [-1, 0]].some(([ux, uy]) => Math.hypot(x - ux * r0 * 0.56, y - uy * r0 * 0.56) < 0.011);
+      const face = R() < 0.5 ? 1 : -1;
+      P(pb, R, [x, y, face * (rim || frame || dots ? 0.009 : 0.005)], rim || frame ? 1.5 : dots ? 1.3 : 0.55, c / n, c);
+    }
+    for (let i = 0; i < Math.round(180 * k); i++) { const a = R() * TAU; P(pb, R, [Math.cos(a) * r0, Math.sin(a) * r0, (R() * 2 - 1) * 0.009], 1.2, c / n, c); }   // 外缘厚度
+  }
+  return pb;
+}
+
+// ------------------------------------------------------------ 06 暴食：三种实心的食物（id 0 一碗米饭 + 筷子、1 鸡腿、2 包子），各两份，绕着头漂浮；每份的 aExtra.y = 份号
+export function food(k = 1) {
+  const R = rng(62), pb = new PB(), N = n => Math.round(n * k);
+  for (let copy = 0; copy < 6; copy++) {
+    const kind = copy % 3;
+    if (kind === 0) {
+      for (let i = 0; i < N(2600); i++) {                                  // 碗：下半球壳 + 口沿 + 碗脚
+        const a = R() * TAU, e = R() * Math.PI / 2, x = Math.cos(a) * Math.cos(e) * 0.14, z = Math.sin(a) * Math.cos(e) * 0.14, y = -Math.sin(e) * 0.09;
+        const lip = e < 0.12, band = Math.abs(e - 0.55) < 0.06;
+        P(pb, R, [x, y, z * 0.5], lip ? 1.4 : band ? 1.1 : 0.55, copy / 6, copy);
+      }
+      for (let i = 0; i < N(1500); i++) { const a = R() * TAU, r = 0.13 * Math.sqrt(R()), dome = Math.sqrt(Math.max(0, 1 - (r / 0.13) ** 2)); P(pb, R, [Math.cos(a) * r, 0.055 * dome + (R() - 0.5) * 0.01, Math.sin(a) * r * 0.5], 0.9 + 0.5 * R(), copy / 6, copy); }   // 米饭（颗粒感）
+      for (const dx of [-0.02, 0.02]) for (let i = 0; i < N(400); i++) { const f = R(); P(pb, R, [0.04 + dx + f * 0.1, 0.03 + f * 0.17, 0.01], 1.3, copy / 6, copy); }   // 一双筷子
+    } else if (kind === 1) {
+      for (let i = 0; i < N(2400); i++) {                                  // 鸡腿：饱满的肉（椭圆体表面）+ 骨头 + 骨头末端的两个圆头
+        const a = R() * TAU, e = Math.acos(2 * R() - 1), x = Math.sin(e) * Math.cos(a), y = Math.sin(e) * Math.sin(a), z = Math.cos(e);
+        const rx = 0.11, ry = 0.075, edge = Math.abs(z) < 0.3;
+        P(pb, R, [0.04 + x * rx, 0.03 + y * ry, z * 0.035], edge ? 1.2 : 0.6 + 0.3 * (y > 0.3 ? 1 : 0), copy / 6, copy);
+      }
+      for (let i = 0; i < N(500); i++) { const f = R(); P(pb, R, [-0.06 - f * 0.1, -0.02 - f * 0.07, (R() - 0.5) * 0.01], 1.2, copy / 6, copy); }
+      for (const o of [[-0.17, -0.08], [-0.155, -0.11]]) for (let i = 0; i < N(200); i++) { const a = R() * TAU, r = 0.018 * Math.sqrt(R()); P(pb, R, [o[0] + Math.cos(a) * r, o[1] + Math.sin(a) * r, 0], 1.3, copy / 6, copy); }
+    } else {
+      for (let i = 0; i < N(2600); i++) {                                  // 包子：圆顶 + 顶上一圈褶子（亮线）
+        const a = R() * TAU, e = R() * Math.PI / 2, r = Math.cos(e), x = Math.cos(a) * r * 0.12, z = Math.sin(a) * r * 0.12, y = Math.sin(e) * 0.085 - 0.03;
+        const pleat = e > 0.55 && Math.abs(Math.sin(a * 6 + e * 3)) < 0.12, base = e < 0.08;
+        P(pb, R, [x, y, z * 0.5], pleat ? 1.4 : base ? 1.1 : 0.55, copy / 6, copy);
+      }
     }
   }
   return pb;
 }
 
-// ------------------------------------------------------------ 06 暴食：大胡子（发丝）+ 碗、鸡腿、包子的轮廓
-export function beard(k = 1) {
-  const R = rng(61), pb = new PB();
-  for (let s = 0; s < Math.round(420 * k); s++) {
-    const a = lerp(-1.25, 1.25, R()), root = [Math.sin(a) * 0.4, -0.38 - 0.18 * Math.cos(a), 0.18 + 0.2 * Math.cos(a)];
-    const L = 0.35 + 0.35 * Math.cos(a) * R(), curl = (R() - 0.5) * 0.3;
-    const pts = []; for (let j = 0; j <= 8; j++) { const f = j / 8; pts.push([root[0] + Math.sin(f * 3 + curl * 10) * 0.03 + root[0] * 0.15 * f, root[1] - f * L, root[2] + 0.06 * f - 0.08 * f * f]); }
-    poly(pb, R, pts, 60, 0.7 + 0.5 * R(), 0.004, 0);
-  }
-  return pb;
-}
-export function food(k = 1) {
-  // 三种食物轮廓（id 0 碗、1 鸡腿、2 包子），各两份，绕着头漂浮；每份的 aExtra.x = 份号
-  const R = rng(62), pb = new PB();
-  const shapes = [
-    t => [Math.cos(t) * 0.16, Math.min(0, Math.sin(t)) * 0.12 + (Math.sin(t) > 0 ? 0 : 0), 0],                    // 碗（半圆 + 口沿）
-    t => { const u = t / TAU; return u < 0.6 ? [Math.cos(u / 0.6 * TAU) * 0.1 + 0.05, Math.sin(u / 0.6 * TAU) * 0.08 + 0.04, 0] : [-0.05 - (u - 0.6) * 0.4, -0.04 - (u - 0.6) * 0.3, 0]; },   // 鸡腿
-    t => [Math.cos(t) * 0.12, Math.max(-0.05, Math.sin(t) * 0.1), 0],                                                // 包子
-  ];
-  for (let copy = 0; copy < 6; copy++) {
-    const sh = shapes[copy % 3];
-    for (let i = 0; i < Math.round(2200 * k); i++) { const t = R() * TAU, p = sh(t); P(pb, R, [p[0] + (R() - 0.5) * 0.006, p[1] + (R() - 0.5) * 0.006, 0], 1.3, copy / 6, copy); }
-    if (copy % 3 === 0) for (let i = 0; i < Math.round(700 * k); i++) { const f = R(); P(pb, R, [lerp(-0.16, 0.16, f), 0, 0], 1.4, copy / 6, copy); }
-    if (copy % 3 === 2) for (let i = 0; i < Math.round(500 * k); i++) { const a = R() * TAU, r = 0.025 * R(); P(pb, R, [Math.cos(a) * r, 0.08 + Math.sin(a) * r, 0], 1.5, copy / 6, copy); }
-  }
-  return pb;
-}
-
-// ------------------------------------------------------------ 07 色欲：一圈心形粒子（每颗心 id = 第几颗）
+// ------------------------------------------------------------ 07 色欲：一圈心形（实心 + 亮边，每颗心 id = 第几颗）
 export function hearts(n = 14, k = 1) {
   const R = rng(71), pb = new PB();
-  for (let h = 0; h < n; h++) for (let i = 0; i < Math.round(900 * k); i++) {
+  for (let h = 0; h < n; h++) for (let i = 0; i < Math.round(1300 * k); i++) {
     const t = R() * TAU, x = 16 * Math.pow(Math.sin(t), 3), y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
-    const fill = R() < 0.25 ? Math.sqrt(R()) : 1;
-    P(pb, R, [x * 0.0045 * fill, y * 0.0045 * fill, 0], fill === 1 ? 1.4 : 0.5, h / n, h);
+    const fill = R() < 0.6 ? Math.sqrt(R()) : 1;
+    P(pb, R, [x * 0.0072 * fill, y * 0.0072 * fill, (R() - 0.5) * 0.01], fill === 1 ? 1.5 : 0.6, h / n, h);
   }
   return pb;
 }

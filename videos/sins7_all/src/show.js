@@ -8,7 +8,7 @@ import { glowText, fs, BOXES, setCtx } from './text.js';
 import { idolMaterial } from './idol.js';
 import * as H from './halo.js';
 import * as PR from './props.js';
-import { SINS, C3, tone, GRAY, SLOT_DX, slotX, HEAD_C, A, setAudio, env, lastIdx, kickSpring, beatInBar } from './show_core.js';
+import { SINS, C3, hexs, tone, GRAY, SLOT_DX, slotX, HEAD_C, A, setAudio, env, lastIdx, kickSpring, beatInBar } from './show_core.js';
 export { SINS };
 export const charsList = () => S?.chars ?? [];
 
@@ -27,8 +27,8 @@ function makeStars(n, z, size, seed) {
   g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('aSeed', new THREE.BufferAttribute(Sd, 1));
   const m = new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uSize: { value: size }, uScale: { value: 1 }, uSpeed: { value: z < -15 ? 0.12 : 0.32 } }, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
     vertexShader: `attribute float aSeed; uniform float uTime, uSize, uScale, uSpeed; varying float vB;
-      void main(){ vec3 p = position; p.x += uTime*uSpeed*(0.6 + 0.8*aSeed); p.x = mod(p.x + 30.0, 60.0) - 30.0; p.y += 0.15*sin(uTime*0.1 + aSeed*20.0);
-        gl_Position = projectionMatrix*modelViewMatrix*vec4(p, 1.0); gl_PointSize = uSize*(0.6 + 1.4*aSeed*aSeed)*uScale; vB = (0.25 + 0.75*aSeed)*(0.7 + 0.3*sin(uTime*2.0 + aSeed*50.0)); }`,
+      void main(){ vec3 p = position; float w = 6.28318530718/65.0; p.x += uSpeed/w*(0.6 + 0.8*aSeed)*sin(uTime*w + aSeed*40.0); p.y += 0.15*sin(uTime*w*6.0 + aSeed*20.0);   // 周期 = 成片时长
+        gl_Position = projectionMatrix*modelViewMatrix*vec4(p, 1.0); gl_PointSize = uSize*(0.6 + 1.4*aSeed*aSeed)*uScale; vB = (0.25 + 0.75*aSeed)*(0.7 + 0.3*sin(uTime*6.28318530718/65.0*21.0 + aSeed*50.0)); }`,
     fragmentShader: `varying float vB; void main(){ vec2 c = gl_PointCoord - 0.5; if (length(c) > 0.5) discard; gl_FragColor = vec4(vec3(0.85, 0.85, 0.95)*vB*0.5, 1.0); }` });
   const p = new THREE.Points(g, m); p.frustumCulled = false; p.renderOrder = -60; K.scene.add(p); K.mats.push(m); return p;
 }
@@ -85,25 +85,25 @@ function makeChar(sin, i, heads) {
           float a = uA; q.xz = mat2(cos(a), -sin(a), sin(a), cos(a))*q.xz; p = uH + q;                             // 蛇头转向
         }`, colHook: 'if (aExtra.y > 1.5 && aExtra.y < 2.5) { col = vec3(1.0, 0.95, 0.55); b *= 1.6 + 1.2*uB; } if (aExtra.y > 2.5 && aExtra.y < 3.5) col = vec3(1.0, 0.45, 0.55);' }, rig);
   } else if (sin.id === 'wrath') {
-    C.horns = P(PR.lightningHorns(), { bright: 1.2, col: tone(sin.col, 0.3), posHook: '{ float id = aExtra.y; float on = step(0.35, fract(sin(floor(uTime*14.0 + id*3.7)*43.1)*91.7)); vis *= mix(1.0, on, step(0.5, mod(id, 3.0))); p *= 1.0 + uB*0.35; }' });
+    C.horns = P(PR.lightningHorns(), { bright: 1.0, col: tone(sin.col, 0.3), posHook: '{ float id = aExtra.y; float on = step(0.35, fract(sin(floor(uTime*14.0 + id*3.7)*43.1)*91.7)); vis *= mix(1.0, on, step(0.5, mod(id, 3.0))); p *= 1.0 + uB*0.35; }' });
   } else if (sin.id === 'sloth') {
-    C.hat = P(PR.beanie(), { bright: 0.75, posHook: '{ p.y -= uB*0.32; p.z += uB*0.06; }' });
-    C.scarf = P(PR.scarf(), { bright: 0.7 }, rig);
+    C.hat = P(PR.beanie(), { bright: 1.3, posHook: '{ p.y -= uB*0.32; p.z += uB*0.06; }' });
+    C.scarf = P(PR.scarf(), { bright: 1.2 }, rig);
     C.zz = P(PR.zees(), { bright: 1.3, posHook: '{ float f = fract(uTime*0.35 + aExtra.y*0.33); p += vec3(0.08*sin(f*6.0 + aExtra.y), f*0.5, 0.0); vis *= uB*sin(3.14159*f); }' });
   } else if (sin.id === 'greed') {
-    C.coins = P(PR.coins(90), { bright: 1.1, posHook: `{
-        float c = aExtra.y, n = 90.0, a = c/n*6.28318*3.0 + uTime*0.8*(0.8 + 0.4*h1(c)), rr = 0.85 + 0.25*h1(c*3.1), yy = 0.05 + 0.25*(h1(c*7.3) - 0.5);
-        float spin = uTime*3.0 + c; vec3 q = vec3(p.x*cos(spin), p.y, p.x*sin(spin) + p.z);
+    C.coins = P(PR.coins(40), { bright: 1.8, size: 0.0095, posHook: `{
+        float c = aExtra.y, n = 40.0, a = c/n*6.28318*3.0 + uTime*0.8*(0.8 + 0.4*h1(c)), rr = 0.85 + 0.25*h1(c*3.1), yy = 0.05 + 0.25*(h1(c*7.3) - 0.5);
+        float spin = 0.6*sin(uTime*1.7 + c*1.3); vec3 q = vec3(p.x*cos(spin) + p.z*sin(spin), p.y, -p.x*sin(spin) + p.z*cos(spin));   // 轻轻摆动，大多数时候正面朝镜头
         vec3 orbit = vec3(cos(a)*rr, yy + 0.15*sin(a)*0.3, sin(a)*rr*0.45 - 0.1); vec3 far = normalize(h3(c*1.7) - 0.5)*4.0;
         p = mix(far, orbit, clamp(uB*1.4 - h1(c*2.3)*0.4, 0.0, 1.0)) + q; vis *= step(c, uC); }` });
   } else if (sin.id === 'gluttony') {
-    C.beard = P(PR.beard(), { bright: 0.8, posHook: '{ p.x += 0.01*sin(uTime*2.0 + p.y*20.0)*(0.1 - p.y); }' });
-    C.food = P(PR.food(), { bright: 1.0, col: tone(sin.col, 0.2), posHook: `{
+    // 暴食：三种实心的食物绕着头漂浮，反转时一份份飞进嘴里
+    C.food = P(PR.food(), { bright: 1.6, size: 0.0095, col: tone(sin.col, 0.2), posHook: `{
         float c = aExtra.y, a = c/6.0*6.28318 + uTime*0.35; vec3 home = vec3(cos(a)*1.05, 0.15 + 0.35*sin(a*1.7 + c), sin(a)*0.35 + 0.2);
         vec3 mouth = vec3(0.0, -0.3, 0.45); float k = clamp(uB*1.6 - c*0.12, 0.0, 1.0);
         p = mix(home, mouth, k*k) + p*(1.0 - 0.8*k); vis *= 1.0 - smoothstep(0.85, 1.0, k); }` }, rig);
   } else if (sin.id === 'lust') {
-    C.hearts = P(PR.hearts(14), { bright: 1.1, posHook: `{
+    C.hearts = P(PR.hearts(14), { bright: 1.8, size: 0.0095, posHook: `{
         float c = aExtra.y, a = c/14.0*6.28318 + uTime*0.4, rr = 0.82 + 0.1*sin(uTime + c);
         vec3 home = vec3(cos(a)*rr, 0.05 + 0.55*sin(a)*0.8, 0.25 + 0.1*cos(a));
         vec3 o = home + normalize(home - vec3(0.0, 0.05, 0.0))*uB*(1.5 + h1(c)*2.0); p = o + p*(1.0 + 0.25*uA + uB*0.8); }` });
@@ -252,11 +252,11 @@ export function frame(t) {
     const de = t - e1; if (de < 0.5) F.shock = { c: [960, 470], r: 0.7 * outExpo(de / 0.5), a: 0.8 * (1 - de / 0.5), col: '#FFFFFF' };
     if (de < 0.15) F.shake = 1 - de / 0.15;
     const g = clamp((t - fade) / (end - fade - 0.3));
-    cam = { ...LINEUP, pos: [Math.sin(t * 0.4) * 0.25 * g, 0.3, 10.6 - 0.12 * (t - end + 65) * 0] };
+    cam = { ...LINEUP, pos: [Math.sin(t * 0.4) * 0.25 * (1 - g), LINEUP.pos[1], LINEUP.pos[2]] };   // 最后落回开头第一帧的镜头
     spotX = slotX(3); spotInt = 0.55 * g;
     F.names = clamp(de / 0.2) * (1 - clamp((t - fade) / 1.2));
     if (t >= e2) F.subs.push({ text: '你身上，哪一宗最重？', t0: e2, t1: fade + 1.0, size: 60, sub: '评论区告诉我。', pop: e2 });
-    F.auraCol = '#B49CE0'; F.auraK = 0.6 * (1 - g) + 0.35 * g;
+    F.auraCol = hexs(C3('#B49CE0').lerp(C3(GRAY), g)); F.auraK = 0.6 * (1 - g) + 0.35 * g;   // 最后回到开头的灰色
   }
   S.spot.position.set(spotX, 4.6, -0.6); S.spot.material.uniforms.uInt.value = spotInt * 0.35; S.spot.material.uniforms.uW.value = 0.3;
   S.stars.forEach(s => { s.material.uniforms.uScale.value = K.scale; });
@@ -264,6 +264,7 @@ export function frame(t) {
   S.chars.forEach(C => { if (C.st.lite && (C.st.scatter ?? 0) < 0.3) F.icons.push({ i: C.i, p: project([slotX(C.i), 1.12, 0]), gray: C.st.gray }); });
   return F;
 }
+const qw = w => TAU * Math.max(1, Math.round(w * 65 / TAU)) / 65;   // 角频率按成片时长量化
 const projHead = C => project([C.g.position.x, HEAD_C[1], 0.3]);
 
 function setState(C, s) {
@@ -304,8 +305,8 @@ function setState(C, s) {
 // 角色动起来：头微微转动、呼吸；道具跟着节奏；反转那一拍的笑点
 function animate(C, t, dt2, dt3, on, a) {
   const id = C.sin.id, bb = beatInBar(t), beatK = Math.exp(-bb.d / 0.12);
-  C.head.rotation.set(0, (on ? 0.12 : 0.07) * Math.sin(t * 1.6 + C.i), (on ? 0.04 : 0.025) * Math.sin(t * 1.3 + C.i));   // 头一直在轻轻转动（灰色的脸也是）
-  C.head.scale.setScalar(1 + 0.01 * Math.sin(TAU * t / 3.2));
+  C.head.rotation.set(0, (on ? 0.12 : 0.07) * Math.sin(t * qw(1.6) + C.i), (on ? 0.04 : 0.025) * Math.sin(t * qw(1.3) + C.i));   // 头一直在轻轻转动（灰色的脸也是）
+  C.head.scale.setScalar(1 + 0.01 * Math.sin(t * qw(TAU / 3.2)));
   const gag = dt3 >= 0 ? Math.exp(-Math.pow((dt3 - 0.3) / 0.28, 2)) : 0, hold = dt3 >= 0 ? clamp(dt3 / 0.15) : 0;
   const u = (m, k, v) => { m.uniforms[k].value = v; };
   if (id === 'pride') {
@@ -329,9 +330,10 @@ function animate(C, t, dt2, dt3, on, a) {
     if (C.horns) u(C.horns.material, 'uB', gag);
   } else if (id === 'sloth') {
     C.head.rotation.x = on ? 0.12 + 0.06 * Math.pow(0.5 + 0.5 * Math.sin(t * 2.2), 4) : 0;
+    C.eyes.forEach(m => { m.material.uniforms.uOpen.value *= 0.45; });
     for (const o of [C.hat, C.zz]) if (o) u(o.material, 'uB', hold);
   } else if (id === 'greed') {
-    if (C.coins) { u(C.coins.material, 'uB', 1); u(C.coins.material, 'uC', on ? 30 + 20 * clamp(dt2 / 2) + 40 * hold : 0); }
+    if (C.coins) { u(C.coins.material, 'uB', 1); u(C.coins.material, 'uC', on ? 14 + 8 * clamp(dt2 / 2) + 18 * hold : 0); }
   } else if (id === 'gluttony') {
     if (C.food) u(C.food.material, 'uB', hold);
   } else if (id === 'lust') {
