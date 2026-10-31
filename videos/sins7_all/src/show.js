@@ -4,7 +4,7 @@ import { K, glow, project } from './core.js';
 import { FACE } from './geo.js';
 import { cloudMaterial } from './mat.js';
 import { clamp, lerp, lerp3, prog, sine, outExpo, outBack, inOut, hash, TAU } from './util.js';
-import { glowText, fs, BOXES } from './text.js';
+import { glowText, fs, BOXES, setCtx } from './text.js';
 import { idolMaterial } from './idol.js';
 import * as H from './halo.js';
 import * as PR from './props.js';
@@ -50,13 +50,15 @@ function makeChar(sin, i, heads) {
   const mk = () => idolMaterial(sin.col, { bright: 0.85, cran: 0.3, rim: 0.15, cranEdge: 1 });
   const mGray = mk(), mCol = mk(), mGag = mk();
   mGray.uniforms.uGray.value = 1; [mGray, mCol, mGag].forEach(m => { m.uniforms.uEyeOpen.value = 0; });
+  mCol.uniforms.uRamp.value = mGag.uniforms.uRamp.value = 1;                       // 变色：保留灰色阶段的明暗，只映射颜色
   const C = { sin, i, g, rig, head,
     gray: pts(heads.neutral, mGray, head), col: pts(heads[sin.id], mCol, head), gag: pts(heads[sin.id + 'Gag'] ?? heads[sin.id], mGag, head),
     grayLite: pts(heads.neutralLite, mGray, head), colLite: pts(heads[sin.id + 'Lite'], mCol, head),
-    body: pts(heads.body, idolMaterial(sin.col, { bright: 0.5, rim: 0.9, size: 0.0085, cran: 0.8 }), rig) };
+    body: pts(heads.body, idolMaterial(sin.col, { bright: 0.75, rim: 0.45, size: 0.0085, cran: 0.8, dust: true }), rig) };
+  C.bodyLite = pts(heads.bodyLite, C.body.material, rig);                           // 那一排里的脸也带着脖子和肩膀
   C.mats = [mGray, mCol, mGag, C.body.material];
   // 身后的颜色光晕、放射的细光线、光环（完整的细圆环，在头后面，比头大一圈）
-  C.aura = glowMesh(sin.col, 4.2, g, -1.2, -15);
+  C.aura = glowMesh(sin.col, 5.0, g, -1.2, -15); C.aura.material = H.glowPlane(1); C.aura.material.uniforms.uCol.value.set(sin.col);
   C.rays = new THREE.Mesh(new THREE.PlaneGeometry(7, 7), H.raysPlane()); C.rays.position.set(HEAD_C[0], HEAD_C[1], -1.0); C.rays.renderOrder = -14; g.add(C.rays);
   C.rays.material.uniforms.uCol.value.set(tone(sin.col, 0.3)); C.rays.material.uniforms.uN.value = 72;
   C.halo = new THREE.Group(); C.halo.position.set(HEAD_C[0], HEAD_C[1], -0.7); rig.add(C.halo);
@@ -69,19 +71,19 @@ function makeChar(sin, i, heads) {
   const P = (pb, o = {}, parent = C.props) => { const m = propMat(o.col ?? sin.col, o); const p = pts(pb.geometry(THREE), m, parent, o.order ?? 30); C.propMats.push(m); if (parent !== C.props) C.bodyProps.push(p); return p; };
   if (sin.id === 'pride') {
     // 王冠：uB 笑点时尖角伸长；uC 宝石闪（每一拍）
-    C.crown = P(PR.crown(), { bright: 1.0, posHook: '{ float y0 = 0.61; if (p.y > y0) p.y = y0 + (p.y - y0)*(1.0 + uB*0.55); }', colHook: 'if (aExtra.y > 0.5) { col = vec3(1.0); b *= 1.0 + 2.5*uC; } else b *= 1.4;' });
-    C.collar = P(PR.collar(), { bright: 1.6 }, rig);
+    C.crown = P(PR.crown(), { bright: 0.95, size: 0.0085, posHook: `{ float y0 = ${PR.CROWN_TOP.toFixed(3)}; if (p.y > y0) p.y = y0 + (p.y - y0)*(1.0 + uB*0.6); }`,
+      colHook: 'if (aExtra.y > 4.5) col = vec3(1.0, 0.86, 0.6); else if (aExtra.y > 0.5) { col = vec3(1.0, 0.95, 1.0); b *= 1.0 + 1.2*uC; }' });
   } else if (sin.id === 'envy') {
-    const sk = PR.snake(); C.snakeHead = sk.head;
-    C.snake = P(sk.pb, { bright: 1.9, size: 0.009, uniforms: { uH: { value: new THREE.Vector3(...sk.head) } }, uniformDecl: 'uniform vec3 uH;',
+    const sk = PR.snake(); C.snakeHead = sk.head; const SL = sk.L.toFixed(3);
+    C.snake = P(sk.pb, { bright: 1.25, size: 0.0085, uniforms: { uH: { value: new THREE.Vector3(...sk.head) } }, uniformDecl: 'uniform vec3 uH;',
       posHook: `
         if (aExtra.y < 0.5) { float w = sin(aExtra.x*40.0 - uTime*3.0); p += vec3(0.0, 0.014*w*(0.5 + uD), 0.01*cos(aExtra.x*34.0 - uTime*2.4)); }   // 蛇身随低音起伏
         else {
           vec3 q = p - uH;
           if (aExtra.y > 3.5) { float ja = uB*0.55; q.yz = mat2(cos(ja), sin(ja), -sin(ja), cos(ja))*q.yz; }        // 下颌张开
-          if (aExtra.y > 2.5 && aExtra.y < 3.5) { q.z = 0.3 + (q.z - 0.3)*uC; vis *= step(0.05, uC); }           // 信子伸出
+          if (aExtra.y > 2.5 && aExtra.y < 3.5) { q.z = ${SL} + (q.z - ${SL})*uC; vis *= step(0.05, uC); }           // 信子伸出
           float a = uA; q.xz = mat2(cos(a), -sin(a), sin(a), cos(a))*q.xz; p = uH + q;                             // 蛇头转向
-        }`, colHook: 'if (aExtra.y > 1.5 && aExtra.y < 2.5) { col = vec3(1.0, 0.95, 0.55); b *= 1.8 + 1.5*uB; } if (aExtra.y > 2.5 && aExtra.y < 3.5) col = vec3(1.0, 0.45, 0.55);' }, rig);
+        }`, colHook: 'if (aExtra.y > 1.5 && aExtra.y < 2.5) { col = vec3(1.0, 0.95, 0.55); b *= 1.6 + 1.2*uB; } if (aExtra.y > 2.5 && aExtra.y < 3.5) col = vec3(1.0, 0.45, 0.55);' }, rig);
   } else if (sin.id === 'wrath') {
     C.horns = P(PR.lightningHorns(), { bright: 1.2, col: tone(sin.col, 0.3), posHook: '{ float id = aExtra.y; float on = step(0.35, fract(sin(floor(uTime*14.0 + id*3.7)*43.1)*91.7)); vis *= mix(1.0, on, step(0.5, mod(id, 3.0))); p *= 1.0 + uB*0.35; }' });
   } else if (sin.id === 'sloth') {
@@ -135,9 +137,10 @@ export function events() {
 }
 
 // ------------------------------------------------------------ 镜头（每宗的特写取景：头顶、王冠到下巴、肩膀上的道具都在画面里）
-const LINEUP = { pos: [0, 0.3, 10.6], target: [0, 0.0, 0], fov: 35 };
+const LINEUP = { pos: [0, 0.25, 9.6], target: [0, -0.05, 0], fov: 35 };
 const FRAME = { pride: [0.25, 3.7], envy: [-0.3, 3.9] };
 const fr = i => FRAME[SINS[i].id] ?? [0.1, 3.6];
+const lineupCam = t => orbit({ ...LINEUP, pos: [LINEUP.pos[0], LINEUP.pos[1], LINEUP.pos[2] - 0.15 * Math.sin(t * 0.7)] }, 0.025 * Math.sin(t * 0.9), 0);
 const close = (i, k = 1) => { const [ty, d] = fr(i); return { pos: [slotX(i), ty + 0.1, d * k], target: [slotX(i), ty, 0], fov: 35 }; };
 const face = i => SINS[i].id === 'envy' ? { pos: [slotX(i), -0.05, 2.9], target: [slotX(i), -0.1, 0], fov: 35 } : { pos: [slotX(i), 0.37, 3.5], target: [slotX(i), 0.35, 0], fov: 35 };
 const card = (i, k = 1) => ({ pos: [slotX(i) - 1.1, 0.1, 5.0 * k], target: [slotX(i) - 1.1, -0.05, 0], fov: 35 });
@@ -151,7 +154,8 @@ export function frame(t) {
   const bb = beatInBar(t);
   // 每两拍（第 2、4 拍）：镜头 2% 推近冲击 + 3px 轻微震动
   const off = (bb.k === 1 || bb.k === 3) ? Math.exp(-bb.d / 0.1) : 0;
-  F.shake = 0.5 * off;
+  F.shake = 0.67 * off;                                                                // 4px
+  S.chars.forEach(O => { O.g.position.set(slotX(O.i), 0, 0); });
   const AUD = { kick, low, mid, high, t };
   S.chars.forEach(C => setState(C, { lite: true, gray: true, eyes: 0, halo: 0, props: 0, scatter: 0, aud: AUD }));
   let cam = LINEUP, spotX = slotX(3), spotInt = 0.55, focus = -1;
@@ -164,39 +168,51 @@ export function frame(t) {
     const from = j >= 0 ? order[j % order.length] : 3, to = j + 1 < stops.length ? order[(j + 1) % order.length] : 0;
     const t0 = j >= 0 ? stops[j] : 0, t1 = j + 1 < stops.length ? stops[j + 1] : R0;
     spotX = lerp(slotX(from), slotX(to), sine(clamp((t - t0) / Math.max(0.1, (t1 - t0) * 0.45))));
-    const lit = j >= 0 ? from : 3, lk = j >= 0 ? Math.exp(-(t - t0) / 0.25) : 0;
-    for (const m of S.chars[lit].mats) m.uniforms.uDim.value *= 1 + 0.9 * lk;
-    cam = { ...LINEUP, pos: [Math.sin(t * 0.4) * 0.25, 0.3, 10.6 - 0.12 * t] };
-    F.subs.push({ text: '七宗罪，其实是大脑的〔亮〕七种出厂设置〔/亮〕。', t0: 0.2, t1: 2.45, size: 52 });
-    F.subs.push({ text: '刷到这条，看看你是哪一宗——', t0: B[lastIdx(B, 2.45)] > 2.3 ? B[lastIdx(B, 2.45)] : 2.5, t1: R0 - 0.12, size: 52 });
+    // 聚光灯落在哪张脸上，那张脸就猛地亮起、放大 10%，带一下震动
+    const lit = j >= 0 ? from : 3, lk = j >= 0 ? Math.exp(-(t - t0) / 0.22) : 0;
+    setState(S.chars[lit], { ...S.chars[lit].st, pop: lk });
+    if (j >= 0 && t - t0 < 0.12) F.shake = Math.max(F.shake, 0.7 * (1 - (t - t0) / 0.12));
+    cam = orbit({ ...LINEUP, pos: [0, 0.25, 9.6 - 0.1 * t] }, 0.03 * Math.sin(t * 1.3), 0);
+    F.subs.push({ text: '七宗罪，其实是大脑的〔亮〕七种出厂设置〔/亮〕。', t0: 0.2, t1: 2.45, size: 56, pop: 0.2 });
+    const t2 = B[lastIdx(B, 2.45)] > 2.3 ? B[lastIdx(B, 2.45)] : 2.5;
+    F.subs.push({ text: '刷到这条，看看你是哪一宗——', t0: t2, t1: R0 - 0.12, size: 56, pop: t2 });
   } else if (t < R[28]) {
     let i = 0; while (i < 6 && t >= D(i + 1)) i++;
     const d = D(i), C = S.chars[i], sin = SINS[i]; focus = i;
     const b2 = bar(i, 1), b3 = bar(i, 2), b4 = bar(i, 3), next = i < 6 ? D(i + 1) : R[28];
-    const tIn = t - d, push = outExpo(clamp(tIn / 0.4)), leave = clamp((t - (next - 0.32)) / 0.32);
+    // 转场（从第二宗起）：D 拉回七张脸那一排 → 聚光灯从上一张脸移到这张脸 → 第 2 拍落定、这张脸亮起放大 → 推进到特写
+    const bD = lastIdx(B, d + 0.01), land = i === 0 ? d : (B[bD + 1] ?? d + 0.5);
+    const tIn = t - d, tL = t - land;
+    const push = tL >= 0 ? outExpo(clamp(tL / 0.5)) : 0, spread = tL >= 0 ? inOut(clamp(tL / 0.5)) : 0;
+    const leave = clamp((t - (next - 0.25)) / 0.25), suck = inOut(leave);          // 吸气：结尾卡整体化成粒子向画面中心收缩
     const transformed = t >= b2, inhale = Math.pow(clamp((t - (b2 - 0.3)) / 0.3), 3) * (t < b2 ? 1 : 0);
     const dt2 = t - b2, dt3 = t - b3, dt4 = t - b4;
-    const scatterOthers = 2.2 * push * (1 - leave);
-    S.chars.forEach((O, j) => { if (j !== i) setState(O, done(j) ? { lite: true, gray: false, eyes: 1, halo: 0.6, props: 1, scatter: scatterOthers, aud: AUD } : { lite: true, gray: true, eyes: 0, halo: 0, props: 0, scatter: scatterOthers, aud: AUD }); });
+    S.chars.forEach((O, j) => {
+      if (j === i) return;
+      if (i > 0) O.g.position.x += Math.sign(j - i) * 6.5 * spread;                 // 推进时其他脸向两边散开
+      setState(O, done(j) ? { lite: true, gray: false, eyes: 1, halo: 0.6, props: 1, scatter: i === 0 ? 2.2 * push : 0, aud: AUD } : { lite: true, gray: true, eyes: 0, halo: 0, props: 0, scatter: i === 0 ? 2.2 * push : 0, aud: AUD });
+    });
+    const litK = i > 0 && tL >= 0 ? Math.exp(-tL / 0.22) : 0;
     setState(C, { lite: false, gray: !transformed, eyes: transformed ? outExpo(clamp(dt2 / 0.12)) : 0, halo: transformed ? outExpo(clamp(dt2 / 0.3)) : 0,
-      props: transformed ? clamp(dt2 / 0.3) : 0, scatter: leave * 2.4, aud: AUD, inhale, gag: dt3 >= 0 && dt3 < 1.2 && t < b4, spotlit: !transformed });
-    // 镜头：第 1 小节缓慢推近｜第 2 小节重拍上猛地后拉再缓慢推近，绕人物 ±4 度｜第 3 小节快速推到脸部特写、停一拍、弹回｜第 4 小节缓慢后拉
+      props: transformed ? clamp(dt2 / 0.3) : 0, scatter: 0.25 * suck, aud: AUD, inhale, gag: dt3 >= 0 && dt3 < 1.2 && t < b4, spotlit: !transformed, pop: litK, shrink: 1 - 0.88 * suck });
+    if (litK > 0 && tL < 0.12) F.shake = Math.max(F.shake, 0.8 * (1 - tL / 0.12));
+    // 镜头：第 1 小节推近（之后一直缓慢推近并绕人物转动）｜第 2 小节重拍猛地后拉再推近，±4 度｜第 3 小节快速推到脸部特写、停一拍、弹回｜第 4 小节缓慢后拉
     let cm;
-    if (t < b2) cm = camLerp(LINEUP, close(i, 1 - 0.06 * clamp(tIn / 2)), push);
-    else if (t < b3) { const jolt = Math.exp(-dt2 * 5) * (1 - Math.exp(-dt2 * 40)); cm = close(i, 1.12 * (1 + 0.25 * jolt) - 0.1 * clamp(dt2 / 2)); cm = orbit(cm, 0.07 * Math.sin(dt2 * 1.6), slotX(i)); }
-    else if (t < b4) { const go = outExpo(clamp(dt3 / 0.18)), back = inOut(clamp((dt3 - 0.18 - (B[1] - B[0])) / 0.4)); cm = camLerp(close(i, 1.0), face(i), go * (1 - back)); }
-    else cm = card(i, 1 + 0.08 * clamp(dt4 / 1.5));
+    const sway = 0.07 * Math.sin((t - d) * 1.1);
+    if (t < b2) { const near = close(i, 1 - 0.07 * clamp(tL / 1.5)); cm = orbit(camLerp(lineupCam(t), near, push), sway * push, slotX(i)); }
+    else if (t < b3) { const jolt = Math.exp(-dt2 * 5) * (1 - Math.exp(-dt2 * 40)); cm = close(i, 1.12 * (1 + 0.25 * jolt) - 0.12 * clamp(dt2 / 2)); cm = orbit(cm, sway, slotX(i)); }
+    else if (t < b4) { const go = outExpo(clamp(dt3 / 0.18)), back = inOut(clamp((dt3 - 0.18 - (B[1] - B[0])) / 0.4)); cm = orbit(camLerp(close(i, 1.0), face(i), go * (1 - back)), sway * 0.5, slotX(i)); }
+    else cm = orbit(card(i, 1 + 0.06 * clamp(dt4 / 1.6)), sway * 0.6, slotX(i));
     if (inhale > 0) cm = { ...cm, pos: [cm.pos[0], cm.pos[1], cm.pos[2] * (1 - 0.03 * inhale)] };
-    // 换宗：甩镜头（快速横移到下一张脸，粒子被拉出运动模糊的拖尾）
-    if (leave > 0) {
-      const j = Math.min(6, i + 1), whip = inOut(leave);
-      const to = i < 6 ? { pos: [slotX(j), 0.3, 6.5], target: [slotX(j), 0.0, 0], fov: 35 } : LINEUP;
-      cm = camLerp(cm, to, whip);
-      F.blur = Math.sin(Math.PI * leave) * (slotX(j) > slotX(i) ? 1 : -1);
-    }
-    if (tIn < 0.4 && i > 0) { const from = { pos: [slotX(i), 0.3, 6.5], target: [slotX(i), 0.0, 0], fov: 35 }; cm = camLerp(from, close(i, 1 - 0.06 * clamp(tIn / 2)), push); }
-    cam = { ...cm, pos: [cm.pos[0], cm.pos[1], cm.pos[2] * (1 - 0.02 * off)] };
-    spotX = slotX(i); spotInt = transformed ? 0 : 0.18 * (1 - push) + 0.06;
+    // 吸气：人物缩小并移向画面中心（镜头看的那一点）
+    if (suck > 0) { const tg = cm.target; C.g.position.set(lerp(slotX(i), tg[0], suck), lerp(0, tg[1] - HEAD_C[1] * 0.12, suck), lerp(0, 0.4, suck)); }
+    cam = { ...cm, pos: [cm.pos[0], cm.pos[1], cm.pos[2] * (1 - 0.03 * off)] };          // 每两拍镜头推一下 3%
+    // 聚光灯：从上一张脸移到这张脸（D → D+0.5），落定后照着这张灰色的脸
+    const sp = i > 0 ? sine(clamp(tIn / 0.45)) : 1;
+    spotX = lerp(slotX(Math.max(0, i - 1)), slotX(i), sp);
+    spotInt = transformed ? 0 : (tL < 0 ? 0.55 : 0.18 * (1 - push) + 0.06);
+    // 拉回那一排的重拍：冲击波 + 震动
+    if (i > 0 && tIn < 0.5) { F.shock = { c: [960, 500], r: 0.7 * outExpo(tIn / 0.5), a: 0.8 * (1 - tIn / 0.5), col: '#FFFFFF' }; if (tIn < 0.15) F.shake = Math.max(F.shake, 1 - tIn / 0.15); if (tIn < 1 / 30 + 1e-4) F.ca = 1; }
     // 大重拍：冲击波、震动、色差
     const hits = [b2, b3, b4].map(x => t - x).filter(x => x >= 0);
     const hit = hits.length ? Math.min(...hits) : 9;
@@ -204,13 +220,12 @@ export function frame(t) {
     if (hit < 1 / 30 + 1e-4) F.ca = 1;
     const hp = projHead(C);
     if (hit < 0.5) F.shock = { c: hp, r: 0.7 * outExpo(hit / 0.5), a: 0.8 * (1 - hit / 0.5), col: tone(sin.col, 0.5) };
-    if (dt2 >= 0 && dt2 < 0.2) { F.flash = 0.3 * (1 - dt2 / 0.2); F.flashCol = tone(sin.col, 0.35); }
-    if (dt4 >= 0 && dt4 < 0.2) { F.flash = 0.26 * (1 - dt4 / 0.2); F.flashCol = tone(sin.col, 0.4); }
-    F.bloom = 0.72 + 0.3 * Math.exp(-hit * 4) + 0.15 * kick;
+    // 不做整屏闪白/雾：人脸始终清楚
+    F.bloom = 0.9 + 0.25 * Math.exp(-hit * 4) + 0.2 * Math.max(0, kick);
     if (transformed) { F.auraCol = sin.col; F.auraK = 1 - 0.7 * leave; }
     animate(C, t, dt2, dt3, transformed, AUD);
     // 律动：鼓点涟漪、高音火花
-    if (transformed && leave < 0.5) {
+    if (transformed && leave < 0.3) {
       const kb = lastIdx(B, t); if (kb >= 0 && t - B[kb] < 0.6) F.ripples.push({ c: hp, k: (t - B[kb]) / 0.6, col: sin.col, r0: 230 });
       for (let h = Math.max(0, lastIdx(A.hats, t) - 3); h <= lastIdx(A.hats, t); h++) {
         const ht = A.hats[h]; if (h < 0 || t - ht > 0.15) continue;
@@ -222,7 +237,7 @@ export function frame(t) {
     F.header = i;
     const beatAfter = x => { const j = lastIdx(B, x); return B[j + 1] ?? x + 0.5; };
     if (t < b4) {
-      F.subs.push({ text: sin.first, t0: d + 0.02, t1: b3 - 0.06, size: 52, col: sin.col, pop: d + 0.02 });
+      if (t >= land) F.subs.push({ text: sin.first, t0: land + 0.01, t1: b3 - 0.06, size: 52, col: sin.col, pop: land + 0.01 });
       if (t >= b3) F.subs.push({ text: sin.twist, t0: b3, t1: b4 - 0.06, size: 52, col: tone(sin.col, 0.55), pop: b3, flash: beatAfter(b3 + 0.01) });
     } else F.card = { i, t0: b4, fade: leave };
     F.dim = 1 - 0.15 * inhale;
@@ -257,29 +272,31 @@ function setState(C, s) {
   const gag = !!s.gag;
   C.gray.visible = s.gray && !s.lite; C.col.visible = !s.gray && !s.lite && !gag; C.gag.visible = !s.gray && !s.lite && gag;
   C.grayLite.visible = s.gray && s.lite; C.colLite.visible = !s.gray && s.lite;
-  C.body.visible = !s.lite;
+  C.body.visible = !s.lite; C.bodyLite.visible = s.lite;
+  C.body.material.uniforms.uGray.value = s.gray ? 1 : 0; C.body.material.uniforms.uRamp.value = s.gray ? 0 : 1;
   const sc = s.scatter ?? 0;
   // 灰色闭眼的脸：亮度提高到 2.5 倍，聚光灯从上方照着；变身后人物是画面里最亮的东西
   const c = C3(C.sin.col), luma = 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
-  const base = s.gray ? (s.lite ? 1.4 : 2.6) : 1.35 * clamp(0.42 / luma, 0.62, 1.25);       // 按颜色的亮度补偿：绿色不过曝、紫色不发暗
+  const base = s.gray ? (s.lite ? 3.2 : 2.6) : (s.lite ? 2.4 : 1.85) * clamp(0.42 / luma, 0.7, 1.15);       // 按颜色的亮度补偿：绿色不过曝、紫色不发暗
   const live = s.gray ? 0 : 1;
   for (const m of C.mats) {
-    m.uniforms.uDim.value = base * (1 - 0.15 * (s.inhale ?? 0)) * (1 + (0.12 + 0.13 * live) * Math.max(0, kick));
-    m.uniforms.uScatter.value = sc + live * 0.035 * mid; m.uniforms.uScatterDist.value = sc > 0.1 ? 1.4 : 0.35; m.uniforms.uScatFade.value = 1;
-    m.uniforms.uDrift.value = 0.0015 + live * 0.02 * mid;                                           // 中音：脸上的粒子轻微地向外流动
+    m.uniforms.uDim.value = base * (1 - 0.15 * (s.inhale ?? 0)) * (1 + 0.2 * Math.max(0, kick)) * (1 + 0.9 * (s.pop ?? 0));
+    m.uniforms.uScatter.value = sc + live * 0.008 * mid; m.uniforms.uScatterDist.value = sc > 0.1 ? 1.4 : 0.35; m.uniforms.uScatFade.value = 1;
+    m.uniforms.uDrift.value = 0.004 + live * 0.006 * mid;                                           // 粒子持续流动（中音时多一点），但不糊掉五官
   }
-  C.rig.scale.setScalar(1 + (s.lite ? 0 : 0.015 + 0.025 * live) * kick);                // 灰色脸也跟着鼓点轻轻弹动                                                     // 低音：整体放大 4% 再回弹
+  C.rig.scale.setScalar((1 + (s.lite ? 0.03 : 0.06) * kick) * (1 + 0.1 * (s.pop ?? 0)));   // 每一拍放大 6% 再回弹；被聚光灯照到时猛地放大 10%                // 灰色脸也跟着鼓点轻轻弹动                                                     // 低音：整体放大 4% 再回弹
   const eo = s.eyes;
   C.eyes.forEach(m => { m.visible = eo > 0.01 && sc < 1; m.material.uniforms.uInt.value = 0.95 * eo * (1 + 0.3 * Math.max(0, kick)); m.material.uniforms.uOpen.value = 0.45 + 0.55 * eo; m.material.uniforms.uRays.value = 0.8 * eo; });
   C.eyeHalo.forEach(m => { m.visible = eo > 0.01 && sc < 1; m.material.uniforms.uInt.value = 0.28 * eo; });
   C.halo.visible = s.halo > 0.01 && sc < 1.2;
-  C.halo.scale.setScalar(lerp(0.2, 1, s.halo) * (1 - 0.3 * clamp(sc)) * (1 + 0.06 * Math.max(0, kick)));
+  C.halo.scale.setScalar(lerp(0.2, 1, s.halo) * (1 - 0.3 * clamp(sc)) * (1 + 0.1 * Math.max(0, kick)));
   C.haloMats.forEach((m, j) => { m.uniforms.uBright.value = (j ? 0.3 : 0.95) * s.halo * (1 + 0.8 * Math.max(0, kick)) * (1 - clamp(sc)); });
   C.aura.visible = C.rays.visible = !s.gray && sc < 1.5;
-  C.aura.material.uniforms.uInt.value = (s.lite ? 0.04 : 0.09) * (1 + 0.6 * Math.max(0, kick)) * (1 - clamp(sc / 1.5));
+  C.aura.material.uniforms.uInt.value = (s.lite ? 0.03 : 0.07) * (1 + 0.6 * Math.max(0, kick)) * (1 - clamp(sc / 1.5));
   C.aura.scale.setScalar(1 + 0.12 * Math.max(0, kick));
   C.rays.material.uniforms.uInt.value = (s.lite ? 0.03 : 0.12) * (1 + 0.5 * Math.max(0, kick)) * (1 - clamp(sc / 1.5));
-  C.rays.material.uniforms.uRot.value = 0.05 * (a ? a.t : 0); C.rays.material.uniforms.uBurst.value = 1;
+  C.rays.material.uniforms.uRot.value = 0.05 * (a ? a.t : 0); C.rays.material.uniforms.uBurst.value = 1 + 0.45 * Math.max(0, kick);   // 放射光线随鼓点伸长
+  C.g.scale.setScalar(s.shrink != null ? s.shrink : 1);
   C.props.visible = s.props > 0.01; C.propMats.forEach(m => { m.uniforms.uAsm.value = s.props; m.uniforms.uScatter.value = sc; m.uniforms.uScatterDist.value = 1.4; });
   for (const o of C.bodyProps) o.visible = s.props > 0.01;
 }
@@ -294,13 +311,14 @@ function animate(C, t, dt2, dt3, on, a) {
   if (id === 'pride') {
     C.head.rotation.x = on ? -0.13 : 0;
     if (C.crown) { u(C.crown.material, 'uB', gag); u(C.crown.material, 'uC', on ? beatK : 0); C.crown.scale.setScalar(1 + 0.15 * gag); }
+    C.eyes.forEach(m => { m.material.uniforms.uInt.value *= 1 + 1.0 * gag; });
   } else if (id === 'envy') {
     C.eyes.forEach((m, e) => { m.position.x = [FACE.eyeR, FACE.eyeL][e][0] + 0.05; m.material.uniforms.uInt.value *= 1 + 1.6 * hold * (1 - 0.5 * clamp(dt3 - 0.8)); });
     C.eyeHalo.forEach((m, e) => { m.position.x = [FACE.eyeR, FACE.eyeL][e][0] + 0.05; m.material.uniforms.uInt.value *= 1 + 1.2 * hold; });
     if (C.snake) {
       // 蛇头平时侧着；反转那一拍突然转向镜头、张嘴吐信；平时信子每两拍吐一次
       const turn = dt3 >= 0 ? outBack(clamp(dt3 / 0.22)) : 0;
-      u(C.snake.material, 'uA', -1.0 * (1 - turn));
+      u(C.snake.material, 'uA', -0.75 * (1 - turn));
       u(C.snake.material, 'uB', dt3 >= 0 ? clamp(dt3 / 0.12) * (1 - clamp((dt3 - 1.0) / 0.3)) : 0);
       const flick = (bb.k === 0 || bb.k === 2) ? Math.sin(Math.PI * clamp(bb.d / 0.3)) : 0;
       u(C.snake.material, 'uC', Math.max(flick, dt3 >= 0 ? clamp(dt3 / 0.12) * (1 - clamp((dt3 - 1.0) / 0.3)) : 0));
@@ -347,16 +365,37 @@ function drawSub(t, ctx, s) {
   ctx.restore();
   if (s.sub) glowText(s.sub, 960, y + 66, fs(700, 34), 'rgba(255,255,255,0.8)', { alpha: a, glow: 8 });
 }
+// 吸气：把整张结尾卡（罪名大字、字幕、四字词）画到离屏画布，再切成小方块，旋转着向画面中心收缩、淡出
+let OC = null;
 function drawCard(t, ctx, c) {
-  const sin = SINS[c.i], a = clamp((t - c.t0) / 0.12) * (1 - c.fade);
+  if (c.fade > 0) {
+    if (!OC) { OC = document.createElement('canvas'); OC.width = 1920; OC.height = 1080; OC.x = OC.getContext('2d', { willReadFrequently: true }); }
+    const o = OC.x; o.setTransform(1, 0, 0, 1, 0, 0); o.clearRect(0, 0, 1920, 1080);
+    setCtx(o, t); drawCardBody(t, o, { ...c, fade: 0, noBg: true }); setCtx(ctx, t);
+    const e = c.fade, data = o.getImageData(0, 0, 1920, 1080).data, cell = 8, cx = 960, cy = 540;
+    ctx.save(); ctx.globalAlpha = Math.pow(1 - e, 0.7);
+    for (let y = 0; y < 1080; y += cell) for (let x = 0; x < 1920; x += cell) {
+      if (data[((y + 4) * 1920 + x + 4) * 4 + 3] < 12 && data[((y + 1) * 1920 + x + 1) * 4 + 3] < 12) continue;
+      const h = hash(x * 0.137 + y * 0.731), k = clamp(e * (1.25 + 0.5 * h) - 0.1 * h);
+      const ang = 1.6 * k * (h - 0.3), dx = x + cell / 2 - cx, dy = y + cell / 2 - cy, r = 1 - k;
+      const nx = cx + (dx * Math.cos(ang) - dy * Math.sin(ang)) * r, ny = cy + (dx * Math.sin(ang) + dy * Math.cos(ang)) * r, sz = cell * (1 - 0.6 * k);
+      ctx.drawImage(OC, x, y, cell, cell, nx - sz / 2, ny - sz / 2, sz, sz);
+    }
+    ctx.restore();
+    return;
+  }
+  drawCardBody(t, ctx, c);
+}
+function drawCardBody(t, ctx, c) {
+  const sin = SINS[c.i], a = clamp((t - c.t0) / 0.12);
   if (a <= 0) return;
-  ctx.save(); const g = ctx.createLinearGradient(0, 0, 900, 0); g.addColorStop(0, `rgba(0,0,0,${0.45 * a})`); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, 900, 1080); ctx.restore();
+  if (!c.noBg) { ctx.save(); const g = ctx.createLinearGradient(0, 0, 900, 0); g.addColorStop(0, `rgba(0,0,0,${0.45 * a})`); g.addColorStop(1, 'rgba(0,0,0,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, 900, 1080); ctx.restore(); }
   const sc = popScale(t - c.t0);
   ctx.save(); ctx.translate(430, 420); ctx.scale(sc, sc);
   glowText(sin.name, 0, 0, fs(900, 190), sin.col, { alpha: a, glow: 40, glow2: 80, glowColor: sin.col, shadowBlur: 18 });
   ctx.restore();
   glowText(`出厂设置 · 0${c.i + 1} / 07`, 430, 560, fs(700, 28), tone(sin.col, 0.5), { alpha: a, glow: 10, glowColor: sin.col });
-  ctx.save(); const g2 = ctx.createLinearGradient(0, 800, 0, 1080); g2.addColorStop(0, 'rgba(0,0,0,0)'); g2.addColorStop(1, `rgba(0,0,0,${0.65 * a})`); ctx.fillStyle = g2; ctx.fillRect(0, 800, 1920, 280); ctx.restore();
+  if (!c.noBg) { ctx.save(); const g2 = ctx.createLinearGradient(0, 800, 0, 1080); g2.addColorStop(0, 'rgba(0,0,0,0)'); g2.addColorStop(1, `rgba(0,0,0,${0.65 * a})`); ctx.fillStyle = g2; ctx.fillRect(0, 800, 1920, 280); ctx.restore(); }
   marked(ctx, sin.twist, 960, 922, 44, a, tone(sin.col, 0.55));
   glowText(sin.fact, 960, 995, fs(700, 48), tone(sin.col, 0.6), { alpha: a, glow: 18, glowColor: sin.col });
   drawTags(t, ctx, c);
@@ -368,11 +407,12 @@ const TAG_ANG = [128, 50, 210, 330].map(d => d * Math.PI / 180);
 const tagCache = new Map();
 function tagSprite(word, col) {
   const key = word + col; if (tagCache.has(key)) return tagCache.get(key);
-  const c = document.createElement('canvas'), pad = 18; const x = c.getContext('2d'); x.font = fs(700, 34);
-  const w = Math.ceil(x.measureText(word).width) + pad * 2, h = 34 + pad * 2; c.width = w; c.height = h;
-  x.font = fs(700, 34); x.textAlign = 'center'; x.textBaseline = 'middle';
-  x.shadowColor = col; x.shadowBlur = 12; x.fillStyle = col; x.fillText(word, w / 2, h / 2 + 1);
-  x.shadowBlur = 4; x.fillText(word, w / 2, h / 2 + 1);
+  const c = document.createElement('canvas'), pad = 20, F = 42; const x = c.getContext('2d'); x.font = fs(700, F);
+  const w = Math.ceil(x.measureText(word).width) + pad * 2, h = F + pad * 2; c.width = w; c.height = h;
+  x.font = fs(700, F); x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineJoin = 'round';
+  x.shadowColor = col; x.shadowBlur = 14; x.fillStyle = col; x.fillText(word, w / 2, h / 2 + 1);   // 轻微的同色发光
+  x.shadowBlur = 0; x.strokeStyle = 'rgba(8,6,14,0.85)'; x.lineWidth = 5; x.strokeText(word, w / 2, h / 2 + 1);   // 暗色描边：手机上也看得清
+  x.fillText(word, w / 2, h / 2 + 1);
   const o = { c, w, h }; tagCache.set(key, o); return o;
 }
 function drawTags(t, ctx, c) {
@@ -383,15 +423,15 @@ function drawTags(t, ctx, c) {
   const pc = project(cen.toArray());
   sin.tags.forEach((word, k) => {
     const tk = A.B[j0 + k] ?? c.t0 + k * 0.5, d = t - tk; if (d < 0) return;
-    const pin = clamp(d / 0.15), pop = 0.8 + 0.2 * outBack(pin), a = pin * (1 - fade) * (0.88 + 0.12 * kick);
+    const pin = clamp(d / 0.15), pop = 0.8 + 0.2 * outBack(pin), a = pin * (0.85 + 0.15 * kick);
     if (a <= 0.003 && fade < 0.01) return;
     const ang = TAG_ANG[k], right = Math.cos(ang) > 0;
     q.set(1.22 * Math.cos(ang), 1.22 * Math.sin(ang), 0); C.halo.localToWorld(q);
     const pr = project(q.toArray());                                         // 光环上的连接点
     const ux = pr[0] - pc[0], uy = pr[1] - pc[1], ul = Math.hypot(ux, uy) || 1;
     const fl = 6 * Math.sin(TAU * t / 2.6 + k * 1.7);                        // 上下漂浮 6px
-    const elbow = [pr[0] + ux / ul * 40, pr[1] + uy / ul * 40 + fl], dot = [elbow[0] + (right ? 34 : -34), elbow[1]];
-    const sp = tagSprite(word, hi), tx = dot[0] + (right ? 16 + sp.w / 2 - 18 : -16 - sp.w / 2 + 18), ty = dot[1];
+    const elbow = [pr[0] + ux / ul * 70, pr[1] + uy / ul * 70 + fl], dot = [elbow[0] + (right ? 34 : -34), elbow[1]];
+    const sp = tagSprite(word, hi), tx = dot[0] + (right ? 14 + sp.w / 2 - 20 : -14 - sp.w / 2 + 20), ty = dot[1];
     if (fade < 0.01) {
       ctx.save(); ctx.globalAlpha = a * 0.55; ctx.strokeStyle = hi; ctx.lineWidth = 1; ctx.shadowColor = sin.col; ctx.shadowBlur = 4;
       ctx.beginPath(); ctx.moveTo(pr[0], pr[1]); ctx.lineTo(elbow[0], elbow[1]); ctx.lineTo(dot[0], dot[1]); ctx.stroke();

@@ -278,7 +278,7 @@ export function dustMaterial() {
         vec4 mv = viewMatrix*vec4(p, 1.0);
         gl_Position = projectionMatrix*mv;
         float dist = -mv.z;
-        float big = step(0.985, h1(aSeed*3.7));
+        float big = 0.0;   // 不要镜头前那种大的虚化光斑（看起来像多余的小圆圈）
         float px = (0.006 + big*0.05)*uPx/max(dist, 0.1);
         float b = (0.35 + 0.65*h1(aSeed*5.9))*(0.6 + 0.4*sin(uTime*qf(50.0 + floor(aSeed*40.0)) + aSeed*17.0));
         b *= mix(0.55, 0.07, big)*uAlpha;

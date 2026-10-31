@@ -137,8 +137,8 @@ export function idolMaterial(sinHex, o = {}) {
     size: o.size ?? 0.0085, bright: o.bright ?? 0.5, depthRef: 6, maxPx: o.maxPx ?? 7, facing: 0, light: o.light ?? 0.85, drift: 0.0015,
     colA: hexOf(light), colB: hexOf(dark),
     uniforms: { uRim: { value: o.rim ?? 1.3 }, uRimCol: { value: rim }, uBack: { value: 0.1 }, uCut: { value: BODY_CUT }, uSeeThru: { value: 0 }, uSeeX: { value: -99 },
-      uGray: { value: 0 }, uSin: { value: c.clone() }, uDim: { value: 1 }, uCran: { value: o.cran ?? 1 }, uCranEdge: { value: o.cranEdge ?? 0 } },
-    uniformDecl: 'uniform float uRim, uBack, uCut, uSeeThru, uSeeX, uGray, uDim, uCran, uCranEdge; uniform vec3 uRimCol, uSin;',
+      uGray: { value: 0 }, uSin: { value: c.clone() }, uDim: { value: 1 }, uCran: { value: o.cran ?? 1 }, uCranEdge: { value: o.cranEdge ?? 0 }, uRamp: { value: 0 } },
+    uniformDecl: 'uniform float uRim, uBack, uCut, uSeeThru, uSeeX, uGray, uDim, uCran, uCranEdge, uRamp; uniform vec3 uRimCol, uSin;',
     posHook: o.dust ? /* glsl */`{
       // 胸口往下逐渐消散：下半部的一部分粒子变成向上飘的光尘
       float low = smoothstep(-1.75, -2.6, p.y);
@@ -148,12 +148,14 @@ export function idolMaterial(sinHex, o = {}) {
       : '{ vec4 wq = modelMatrix*vec4(p, 1.0); if (wq.y < uCut) vis = 0.0; else vis *= smoothstep(uCut, uCut + 0.35, wq.y); }',
     colHook: /* glsl */`
       b *= mix(1.0, tw, 0.25)/tw;                // 雕像表面不闪烁
+      float rampL = 0.6, rimK2 = 0.0;
       if (hasN > 0.5) {
         // 顶侧主光：眉骨、鼻梁、颧骨、下颌有清楚的明暗
         vec3 n2 = normalize(normalMatrix*aNormal);
         float lam = max(dot(n2, normalize(vec3(-0.4, 0.78, 0.5))), 0.0);
         float fill = max(dot(n2, normalize(vec3(0.6, -0.1, 0.8))), 0.0);
-        b *= (0.1 + 1.25*pow(lam, 1.3) + 0.22*fill)/max(lit, 0.05);
+        rampL = 0.1 + 1.25*pow(lam, 1.3) + 0.22*fill;
+        b *= rampL/max(lit, 0.05);
         // 逆光亮边：只给真正的轮廓（后脑、脖子、肩胸），人脸网格的边界不加
         float rw = aMisc.y == 4.0 ? 1.0 : 0.12;
         float rimk = exp(-facing*facing/0.02)*rw;
@@ -162,7 +164,15 @@ export function idolMaterial(sinHex, o = {}) {
         if (aMisc.y == 4.0) b *= uCran*mix(1.0, smoothstep(0.2, 0.6, facing), uCranEdge);   // 后脑侧对镜头的点淡掉（去掉额头上那道发箍一样的亮弧）
         if (aMisc.y == 4.0) rimk *= mix(1.0, smoothstep(0.04, -0.12, position.z), uCranEdge);   // 后脑靠前的一圈不加亮边（就是额头上那道“发箍”）
         b += aMisc.x*uBright*uRim*rimk*(1.0 - 0.6*back);
-        col = mix(col, uRimCol, clamp(rimk*1.1, 0.0, 1.0));
+        rimK2 = clamp(rimk*1.1, 0.0, 1.0);
+        col = mix(col, uRimCol, rimK2);
+      }
+      // 变色：保留灰色阶段的明暗结构，只把亮度映射成这一宗的颜色（暗部深色 → 亮部主色 → 高光接近白色）
+      if (uRamp > 0.5) {
+        float L = clamp(rampL/1.25, 0.0, 1.0);
+        vec3 dk = uSin*0.28, hi2 = mix(uSin, vec3(1.0), 0.8);
+        vec3 rc = L < 0.5 ? mix(dk, uSin, L/0.5) : mix(uSin, hi2, (L - 0.5)/0.5);
+        col = mix(rc, uRimCol, rimK2);
       }
       if (aMisc.y == 1.0) b = 0.0;   // 原模型的闭眼线不用（换成半垂的眼睑）
       b *= mix(1.0, 1.0 - uSeeThru, step(wp.x, uSeeX));

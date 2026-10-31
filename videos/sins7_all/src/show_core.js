@@ -23,7 +23,7 @@ export const C3 = h => new THREE.Color(h);
 export const hexs = c => '#' + c.getHexString();
 export const tone = (hex, k) => hexs(C3(hex).lerp(C3('#FFFFFF'), k));
 export const GRAY = '#8A8798';
-export const SLOT_DX = 1.6;
+export const SLOT_DX = 1.4;
 export const slotX = i => (i - 3) * SLOT_DX;
 export const HEAD_C = [0, 0.1, 0];
 

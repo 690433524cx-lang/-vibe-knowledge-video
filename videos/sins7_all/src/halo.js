@@ -137,9 +137,11 @@ export function fogPlane(seed) {
       gl_FragColor = vec4(uCol*m*uInt, 1.0);
     }`, { uSeed: { value: seed } });
 }
-export function glowPlane() {
+export function glowPlane(hole = 0) {
+  // hole > 0：中间挖空（人物身后的光晕不盖在脸上，只在脸的外围亮）
   return planeMat(/* glsl */`
-    void main(){ vec2 p = vUv*2.0 - 1.0; float r = length(p); gl_FragColor = vec4(uCol*(exp(-r*r*3.0)*0.8 + exp(-r*r*12.0)*0.4)*uInt, 1.0); }`, {});
+    void main(){ vec2 p = vUv*2.0 - 1.0; float r = length(p); float g = exp(-r*r*3.0)*0.8 + exp(-r*r*12.0)*0.4;
+      g *= mix(1.0, smoothstep(0.12, 0.42, r), ${hole.toFixed(2)}); gl_FragColor = vec4(uCol*g*uInt, 1.0); }`, {});
 }
 
 // ------------------------------------------------------------ 地面：稀疏的粒子地表 + 冲击波

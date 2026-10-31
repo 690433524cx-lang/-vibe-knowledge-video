@@ -27,9 +27,18 @@ for (let s = 0; s + WIN < N; s++) {
   if (best < TH) still.push(s);
 }
 const fmt = i => (i / FPS).toFixed(2) + 's';
+// 每 0.5 秒：相邻帧的平均差异（灰度级，0–255）
+const adj = new Float64Array(N);
+for (let i = 1; i < N; i++) { const a = frame(i - 1), b = frame(i); let s = 0; for (let k = 0; k < P; k++) s += Math.abs(a[k] - b[k]); adj[i] = s / P; }
+const per = [];
+for (let s = 1; s < N; s += WIN) { let m = 0, c = 0; for (let i = s; i < Math.min(N, s + WIN); i++) { m += adj[i]; c++; } per.push([s / FPS, m / c]); }
 const ok1 = maxMean <= 190, ok2 = maxRun <= 3, ok3 = still.length === 0;
 console.log(`帧数 ${N}（${(N / FPS).toFixed(2)} 秒）`);
 console.log(`[${ok1 ? '通过' : '失败'}] 最亮一帧平均亮度 ${maxMean.toFixed(1)}（${fmt(maxAt)}），上限 190`);
 console.log(`[${ok2 ? '通过' : '失败'}] 平均亮度 >160 最多连续 ${maxRun} 帧${maxRun ? '（到 ' + fmt(runAt) + '）' : ''}，上限 3`);
 console.log(`[${ok3 ? '通过' : '失败'}] 静止检测：${N - WIN} 个 0.5 秒窗口，最小变化 ${(worst * 100).toFixed(2)}% 像素（窗口起点 ${fmt(worstAt)}），门槛 ${(TH * 100).toFixed(1)}%${still.length ? '；静止窗口起点：' + still.slice(0, 10).map(fmt).join(', ') : ''}`);
+console.log('每 0.5 秒相邻帧平均差异（灰度级）：');
+console.log(per.map(([t, v]) => `${t.toFixed(1).padStart(5)}s ${v.toFixed(2)}`).join('\n'));
+const vals = per.map(p => p[1]).sort((a, b) => a - b);
+console.log(`最小 ${vals[0].toFixed(2)}，中位数 ${vals[vals.length >> 1].toFixed(2)}，平均 ${(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2)}`);
 process.exit(ok1 && ok2 && ok3 ? 0 : 1);

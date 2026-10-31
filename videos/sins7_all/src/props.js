@@ -13,29 +13,42 @@ function poly(pb, R, pts, n, br, w = 0.006, id = 0) {
   let acc = 0; pts.slice(0, -1).forEach((a, i) => { line(pb, R, a, pts[i + 1], Math.max(2, Math.round(n * seg[i] / L)), br, w, acc / L, (acc + seg[i]) / L, id); acc += seg[i]; });
 }
 
-// ------------------------------------------------------------ 01 傲慢：戴在头顶上的王冠（冠圈 + 一圈向上的尖角，尖角顶端是发光的宝石）+ 吸血鬼式的高立领
-// aExtra.y：0 冠圈与尖角，1 宝石；aExtra.x：在尖角上的高度（0 底 → 1 尖）
+// ------------------------------------------------------------ 01 傲慢：一顶实心的粒子王冠，戴在头顶（额头上方，不挡眉毛和眼睛）
+// 底部是贴合头部的冠环（雕花纹样），上面 7 个尖角、正中最高；只有尖角顶端的宝石是最亮的小点
+// aExtra.y：0 紫色的冠身，5 金白色的边与雕花，1 宝石；aExtra.x：在尖角上的高度（0 底 → 1 尖）
+export const CROWN_TOP = 0.6;
 export function crown(k = 1) {
   const R = rng(77), pb = new PB(), N = n => Math.round(n * k);
-  const y0 = 0.5, rx = 0.47, rz = 0.43, cz = -0.08, band = 0.11;          // 冠圈贴着头顶一圈（额头上方）
-  const ring = (a, y) => [Math.sin(a) * rx * (1 + 0.04 * (y - y0) / band), y, cz + Math.cos(a) * rz * (1 + 0.04 * (y - y0) / band)];
-  for (let i = 0; i < N(14000); i++) {                                     // 冠圈：上下两条亮边 + 中间的纹饰
-    const a = R() * TAU, v = R(), edge = v < 0.08 || v > 0.92, deco = Math.abs(Math.sin(a * 12)) > 0.94;
-    P(pb, R, ring(a, y0 + v * band), edge ? 1.7 : deco ? 1.3 : 0.6, 0, 0);
+  const C = [0, 0.0625, -0.1], RX = 0.5, RY = 0.65, RZ = 0.6125;           // 后脑椭球（和 geo.js 一致）
+  const y0 = 0.47, band = CROWN_TOP - 0.47;
+  const fy = y => Math.sqrt(Math.max(0.05, 1 - Math.pow((y - C[1]) / RY, 2)));
+  const base = fy(y0);
+  const ring = (a, y, out = 0) => { const g = 1.05 + 0.05 * clamp((y - y0) / band) + out; return [Math.sin(a) * RX * base * g, y, C[2] + Math.cos(a) * RZ * base * g]; };
+  // 冠环：外表面（雕花）+ 内表面（暗）+ 上下两圈金边
+  for (let i = 0; i < N(26000); i++) {
+    const a = R() * TAU, v = R(), y = y0 + v * band;
+    const rim = v < 0.1 || v > 0.9;
+    const scroll = Math.abs(Math.sin(a * 14 + Math.sin(v * TAU) * 1.3)) < 0.13 && v > 0.22 && v < 0.78;
+    const dot = Math.hypot(((a * 7 / TAU + 0.5) % 1 - 0.5) * 0.9, v - 0.5) < 0.09;
+    const outer = R() < 0.78;
+    const p = ring(a, y, outer ? 0 : -0.035);
+    P(pb, R, p, rim || scroll ? (outer ? 1.0 : 0.3) : outer ? 0.42 : 0.16, 0, (rim || scroll) && outer ? 5 : 0);
+    if (dot && outer && R() < 0.5) P(pb, R, ring(a, y, 0.008), 1.1, 0, 5);
   }
-  const n = 9;                                                             // 9 个尖角，正前方最高
-  for (let s = 0; s < n; s++) {
-    const a = (s / n) * TAU, front = 0.5 + 0.5 * Math.cos(a), h = 0.16 + 0.16 * Math.pow(front, 1.5), w = 0.15;
-    for (let j = 0; j < N(2600); j++) {
-      const u = Math.pow(R(), 0.85), half = w * (1 - u) * 0.5, off = (R() * 2 - 1) * half;
-      const edge = Math.abs(Math.abs(off) - half) < 0.006;
-      const p = ring(a + off / rx, y0 + band + u * h);
-      P(pb, R, p, edge ? 1.8 : 0.7, u, 0);
+  // 7 个尖角：贴着冠环弧度的实心三角板（两层表面），金边 + 中脊；分布在正面 ±105°
+  const n = 7;
+  for (let sIdx = 0; sIdx < n; sIdx++) {
+    const f = sIdx / (n - 1) * 2 - 1, a = f * 1.83, front = 1 - Math.abs(f);
+    const h = 0.13 + 0.17 * Math.pow(front, 1.4), w = 0.2 - 0.03 * Math.abs(f);
+    for (let j = 0; j < N(4200); j++) {
+      const u = Math.pow(R(), 0.9), half = w * (1 - u) * 0.5, off = (R() * 2 - 1) * half;
+      const edge = Math.abs(Math.abs(off) - half) < 0.007, ridge = Math.abs(off) < 0.004;
+      const flare = 0.035 * u;                                            // 尖角微微向外张
+      const p = ring(a + off / (RX * base), CROWN_TOP + u * h, flare + (R() < 0.5 ? 0 : -0.016));
+      P(pb, R, p, edge ? 1.0 : ridge ? 0.75 : 0.36, u, edge || ridge ? 5 : 0);
     }
-    const tip = ring(a, y0 + band + h + 0.025);                           // 宝石
-    for (let j = 0; j < N(500); j++) { const q = R() * TAU, r = 0.022 * Math.sqrt(R()), e = R() * 2 - 1; P(pb, R, [tip[0] + Math.cos(q) * r, tip[1] + e * 0.022, tip[2] + Math.sin(q) * r], 2.6, 1, 1); }
-    const gem = ring(a, y0 + band * 0.5);                                  // 冠圈上的宝石
-    for (let j = 0; j < N(300); j++) { const q = R() * TAU, r = 0.018 * Math.sqrt(R()); P(pb, R, [gem[0] + Math.cos(q) * r * 0.6, gem[1] + Math.sin(q) * r, gem[2] + 0.01], 2.4, 1, 1); }
+    const tip = ring(a, CROWN_TOP + h + 0.03, 0.035);                    // 顶端的宝石：一个小而亮的点
+    for (let j = 0; j < N(260); j++) { const q = R() * TAU, r = 0.02 * Math.cbrt(R()), e = (R() * 2 - 1) * 0.02; P(pb, R, [tip[0] + Math.cos(q) * r, tip[1] + e, tip[2] + Math.sin(q) * r], 1.5, 1, 1); }
   }
   return pb;
 }
@@ -53,45 +66,57 @@ export function collar(k = 1) {
   return pb;
 }
 
-// ------------------------------------------------------------ 02 嫉妒：一条真正的蛇——从左肩起，绕过脖子后面一圈，蛇头搭在右肩上朝向镜头
+// ------------------------------------------------------------ 02 嫉妒：一条蛇——尾巴从右肩垂到胸前，往上绕过右肩、脖子后面、左侧，横过喉咙前面一圈，蛇头搭在右肩上
+// 蛇身从尾到头逐渐变粗（颈部稍收），身上是菱形鳞片纹；蛇头是立体的三角楔形，两只发光的小眼睛，嘴前分叉的信子
 // aExtra.y：0 蛇身，1 蛇头（上颌），4 下颌，2 眼睛，3 信子；aExtra.x：蛇身上从尾（0）到头（1）的位置
 export function snake(k = 1) {
   const R = rng(91), pb = new PB();
-  const ctrl = [[-0.78, -1.32, 0.12], [-0.55, -1.0, 0.3], [-0.42, -0.78, 0.12], [-0.3, -0.7, -0.32], [0.05, -0.68, -0.45], [0.36, -0.72, -0.25], [0.44, -0.8, 0.12], [0.3, -0.9, 0.34], [0.46, -0.92, 0.42], [0.56, -0.84, 0.46]];
+  const ctrl = [[0.6, -2.0, 0.3], [0.56, -1.6, 0.34], [0.5, -1.22, 0.24], [0.4, -0.98, -0.02], [0.16, -0.84, -0.3], [-0.18, -0.82, -0.3], [-0.34, -0.88, 0.0], [-0.2, -0.98, 0.28], [0.08, -1.02, 0.34], [0.3, -0.98, 0.36], [0.42, -0.9, 0.44]];
   const cat = (P0, P1, P2, P3, u) => P0.map((_, j) => 0.5 * ((2 * P1[j]) + (-P0[j] + P2[j]) * u + (2 * P0[j] - 5 * P1[j] + 4 * P2[j] - P3[j]) * u * u + (-P0[j] + 3 * P1[j] - 3 * P2[j] + P3[j]) * u * u * u));
   const path = s => { const m = ctrl.length - 1, x = s * m, i = Math.min(m - 1, Math.floor(x)), u = x - i; return cat(ctrl[Math.max(0, i - 1)], ctrl[i], ctrl[i + 1], ctrl[Math.min(m, i + 2)], u); };
-  const N = Math.round(60000 * k);
+  const N = Math.round(70000 * k);
   for (let i = 0; i < N; i++) {
-    const s = R(), c = path(s), c2 = path(Math.min(1, s + 0.003)), tg = norm(sub(c2, c));
+    const s = Math.pow(R(), 0.85), c = path(s), c2 = path(Math.min(1, s + 0.003)), tg = norm(sub(c2, c));
     const n1 = norm(cross(tg, [0, 1, 0])), n2 = cross(n1, tg);
-    const rad = lerp(0.016, 0.068, Math.pow(Math.sin(Math.PI * Math.min(1, s * 0.9 + 0.08)), 0.7)) * (s > 0.93 ? lerp(1, 0.75, (s - 0.93) / 0.07) : 1);
+    const rad = lerp(0.008, 0.062, Math.pow(s, 0.6)) * (s > 0.94 ? lerp(1, 0.7, (s - 0.94) / 0.06) : 1);   // 尾细头粗，接近头部的颈子略收
     const th = R() * TAU;
-    // 鳞片：沿身体的大菱形格子，格线亮、鳞片中间暗；绕到脖子后面的一段变暗（被脖子挡住的感觉）
-    const g1 = Math.abs(Math.sin(s * 95 + th * 2)), g2 = Math.abs(Math.sin(s * 95 - th * 2));
-    const scale = Math.min(g1, g2) < 0.16 ? 1.5 : 0.32 + 0.25 * Math.min(g1, g2);
-    const belly = Math.sin(th) < -0.6 ? 0.6 : 1;
-    const behind = c[2] < -0.05 ? 0.3 : 1;
+    // 菱形鳞片：格线亮、鳞片中间暗；腹部偏暗；绕到脖子后面的一段更暗（被脖子挡住）
+    const sc = 70 / Math.max(0.3, rad / 0.062);
+    const g1 = Math.abs(Math.sin(s * sc + th * 2.5)), g2 = Math.abs(Math.sin(s * sc - th * 2.5));
+    const scale = Math.min(g1, g2) < 0.17 ? 1.25 : 0.3 + 0.22 * Math.min(g1, g2);
+    const belly = Math.sin(th) < -0.55 ? 0.55 : 1;
+    const behind = c[2] < -0.05 ? 0.25 : 1;
     P(pb, R, addv(c, addv(mul(n1, Math.cos(th) * rad), mul(n2, Math.sin(th) * rad))), scale * belly * behind, s, 0);
   }
-  // 蛇头：楔形（宽的后颌 → 收窄的圆吻），顶面扁平；只在表面取点，边缘亮，避免糊成一团
+  // 蛇头：立体楔形。俯视是圆角三角形（后颌宽、吻部尖），侧面上平下斜；只在表面取点，轮廓线亮
   const H = path(1), L = 0.3;
-  const halfW = u => 0.11 * (1 - 0.5 * u) * Math.sqrt(Math.max(0, 1 - Math.pow(u, 5)));
-  const wedge = (id, flip) => {
-    for (let i = 0; i < Math.round(7000 * k); i++) {
-      const u = R(), v = R() * 2 - 1, w = halfW(u), sg = flip ? -1 : 1;
-      const hgt = (flip ? 0.03 : 0.048) * (1 - 0.45 * u);
-      const yy = sg * hgt * Math.sqrt(Math.max(0, 1 - Math.pow(Math.abs(v), 6)));
-      const edge = Math.abs(v) > 0.93 || u > 0.985;
-      const plate = !flip && (Math.abs(Math.sin(u * 26 + v * 3)) < 0.15 || Math.abs(Math.sin(v * 7)) < 0.12) ? 0.6 : 0.22;   // 头顶的鳞板
-      P(pb, R, [H[0] + v * w, H[1] + yy, H[2] + u * L], edge ? 0.85 : plate, u, id);
+  const halfW = u => 0.1 * (1 - 0.72 * u) * Math.sqrt(Math.max(0, 1 - Math.pow(u, 6))) + 0.012;
+  const top = u => 0.05 * (1 - 0.55 * u), bot = u => 0.034 * (1 - 0.6 * u);
+  const head = (id, upper) => {
+    for (let i = 0; i < Math.round(9000 * k); i++) {
+      const u = R(), w = halfW(u), v = R() * 2 - 1, sg = upper ? 1 : -1, hh = upper ? top(u) : bot(u);
+      const side = R() < 0.3;
+      let p, br;
+      if (side) { const e = R(); p = [Math.sign(v) * w, sg * hh * e * 0.95, u * L]; br = 0.3; }        // 侧面
+      else {
+        const prof = Math.sqrt(Math.max(0, 1 - Math.pow(Math.abs(v), 4)));
+        p = [v * w, sg * hh * prof, u * L];
+        const outline = Math.abs(v) > 0.9 || u > 0.975;
+        const brow = upper && Math.abs(Math.abs(v) - 0.62) < 0.07 && u > 0.18 && u < 0.6;              // 眉脊
+        const plates = upper && (Math.abs(Math.sin(u * 22 + Math.abs(v) * 2)) < 0.14 || Math.abs(v) < 0.05);
+        br = outline ? 1.1 : brow ? 0.9 : plates ? 0.6 : upper ? 0.3 : 0.22;
+      }
+      P(pb, R, [H[0] + p[0], H[1] + p[1], H[2] + p[2]], br, u, id);
     }
+    // 下颌和上颌之间的嘴线
+    if (!upper) for (let i = 0; i < 900; i++) { const u = R(), sx = R() < 0.5 ? -1 : 1; P(pb, R, [H[0] + sx * halfW(u) * 0.98, H[1], H[2] + u * L], 0.9, u, id); }
   };
-  wedge(1, false); wedge(4, true);
-  // 眼睛：头两侧靠上，凸出来的亮点（各 220 点）
-  for (const sx of [-1, 1]) for (let i = 0; i < 220; i++) { const a = R() * TAU, r = 0.017 * Math.sqrt(R()); P(pb, R, [H[0] + sx * (halfW(0.32) + 0.004), H[1] + 0.04 + Math.sin(a) * r * 0.8, H[2] + 0.32 * L + Math.cos(a) * r], 2.2, 0, 2); }
+  head(1, true); head(4, false);
+  // 眼睛：头顶两侧靠后（各一团小而亮的点，略微凸出）
+  for (const sx of [-1, 1]) for (let i = 0; i < 260; i++) { const a = R() * TAU, r = 0.016 * Math.sqrt(R()), u = 0.36; P(pb, R, [H[0] + sx * (halfW(u) * 0.78) + Math.cos(a) * r * 0.5, H[1] + top(u) * 0.9 + Math.sin(a) * r * 0.6, H[2] + u * L + Math.cos(a + 1) * r], 2.2, 0, 2); }
   // 分叉的信子
-  for (let i = 0; i < 1200; i++) { const u = R(), fork = u > 0.6 ? (i % 2 ? 1 : -1) * (u - 0.6) * 0.18 : 0; P(pb, R, [H[0] + fork, H[1] - 0.004, H[2] + L + u * 0.2], 1.6, u, 3); }
-  return { pb, head: H };
+  for (let i = 0; i < 1400; i++) { const u = R(), fork = u > 0.6 ? (i % 2 ? 1 : -1) * (u - 0.6) * 0.2 : 0; P(pb, R, [H[0] + fork, H[1] - 0.006, H[2] + L + u * 0.17], 1.3, u, 3); }
+  return { pb, head: H, L };
 }
 
 // ------------------------------------------------------------ 03 愤怒：两根闪电角（折线，噼啪闪烁）

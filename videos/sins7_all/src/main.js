@@ -26,12 +26,12 @@ export async function init() {
   outCtx = outCanvas.getContext('2d');
   initCore(glCanvas, { W, H: Hh, bolts: [] });
   window.K = K;
-  K.bloom.radius = 0.6; K.bloom.threshold = 0.15;
+  K.bloom.radius = 0.5; K.bloom.threshold = 0.5;   // 只让眼睛、光环、道具的亮点发光，辉光不盖在脸上
   const k = PREVIEW ? 0.5 : 1;
   // ---- 脸：中性闭眼（抽签的灰色脸）+ 每一宗的表情；全尺寸用于特写，轻量版用于那一排
   const obj = parseOBJ(await (await fetch('assets/canonical_face_model.obj')).text());
   const heads = {};
-  const lite = (pb, fc) => pb.subset(i => i >= fc ? hash(i * 0.37) < 0.22 : (pb.m[i * 2 + 1] > 0 ? hash(i * 0.71) < 0.5 : hash(i * 0.53) < 0.18));
+  const lite = (pb, fc) => pb.subset(i => i >= fc ? hash(i * 0.37) < 0.2 : (pb.m[i * 2 + 1] > 0 ? hash(i * 0.71) < 0.75 : hash(i * 0.53) < 0.42));   // 那一排的脸：五官点保留得多，才清楚
   const ids = ['neutral', ...SHOW.SINS.slice(0, UPTO + 1).map(s => s.id)]; if (UPTO >= 0) ids.push('prideGag');
   for (const id of ids) {
     const { pb, faceCount } = buildExpressionHead(obj, id, k);
@@ -42,6 +42,7 @@ export async function init() {
   const f = new Float32Array(await (await fetch('assets/body_points.bin')).arrayBuffer()), body = new PB(), step = PREVIEW ? 6 : 3;
   for (let i = 0; i < f.length / 6; i += step) body.add([f[i * 6], f[i * 6 + 1], f[i * 6 + 2]], [f[i * 6 + 3], f[i * 6 + 4], f[i * 6 + 5]], (i * 0.618) % 1, [0, 0, 0], [0, 0, 0, 1], [0.85, 4]);
   heads.body = body.geometry(THREE);
+  heads.bodyLite = body.subset(i => hash(i * 0.917) < 0.3).geometry(THREE);
   // ---- 远景：暗色光晕、三层雾、上方的光
   S.bgGlow = new THREE.Mesh(new THREE.PlaneGeometry(60, 34), H.glowPlane()); S.bgGlow.position.set(0, 0.5, -16); S.bgGlow.renderOrder = -40; K.scene.add(S.bgGlow);
   S.fog = [[-3.6, 30, 14, 1.3], [-7, 40, 20, 4.1], [-11, 56, 28, 7.7]].map(([z, w, h, seed]) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), H.fogPlane(seed)); m.position.set(0, 0, z); m.renderOrder = -30; K.scene.add(m); return m; });
@@ -73,7 +74,7 @@ export function render(t) {
   ['b', 'd', 'm', 'h'].forEach(x => { fu['uN0' + x].value.copy(nb[x]); fu['uN1' + x].value.copy(nb[x]); });
   fu.uTide.value = 0; fu.uTideMix.value = 0; fu.uBright.value = 1;
   S.bgGlow.material.uniforms.uCol.value.copy(fc); S.bgGlow.material.uniforms.uInt.value = 0.03 * kk;
-  S.fog.forEach((m, j) => { m.material.uniforms.uCol.value.copy(fc).lerp(C3('#9A90B0'), 0.25); m.material.uniforms.uInt.value = [0.012, 0.014, 0.016][j] * kk; });
+  S.fog.forEach((m, j) => { m.material.uniforms.uCol.value.copy(fc).lerp(C3('#9A90B0'), 0.25); m.material.uniforms.uInt.value = [0.004, 0.007, 0.012][j] * kk; });   // 雾只留在远处和画面边缘
   K.dust.material.uniforms.uColA.value.copy(fc).lerp(C3('#FFFFFF'), 0.4); K.dust.material.uniforms.uColB.value.set('#FFFFFF');
   K.dust.material.uniforms.uCam.value.copy(K.camera.position); K.dust.material.uniforms.uAlpha.value = 0.4 + 0.6 * kk;
   const dir = new THREE.Vector3(); K.camera.getWorldDirection(dir);

@@ -143,6 +143,7 @@ export function buildHead(obj, opts = {}) {
     [[3.9 * S, 4.9 * S, 4.4 * S], 1.8 * S, 1000], [[-3.9 * S, 4.9 * S, 4.4 * S], 1.8 * S, 1000],
   ];
   for (const [c, r, n] of centers) {
+    if (opts.noJaw && c === FACE.mouth) continue;   // 合集里嘴周围不额外加密（否则嘴会发亮）
     const w = F.map((f, i) => { const cen = mul(addv(addv(V[f[0]], V[f[1]]), V[f[2]]), 1 / 3); return len(sub(cen, c)) < r ? area[i] : 0; });
     const pick = pickBy(w);
     for (let i = 0; i < n; i++) { const [p, nn] = sampleTri(pick()); pb.add(p, nn, R(), [0, 0, 0], [R(), 0, 0, 1], [1.05, 0]); }
