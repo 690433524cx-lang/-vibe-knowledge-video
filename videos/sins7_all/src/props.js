@@ -71,7 +71,7 @@ export function collar(k = 1) {
 // aExtra.y：0 蛇身，1 蛇头（上颌），4 下颌，2 眼睛，3 信子；aExtra.x：蛇身上从尾（0）到头（1）的位置
 export function snake(k = 1) {
   const R = rng(91), pb = new PB();
-  const ctrl = [[0.6, -2.0, 0.3], [0.56, -1.6, 0.34], [0.5, -1.22, 0.24], [0.4, -0.98, -0.02], [0.16, -0.84, -0.3], [-0.18, -0.82, -0.3], [-0.34, -0.88, 0.0], [-0.2, -0.98, 0.28], [0.08, -1.02, 0.34], [0.3, -0.98, 0.36], [0.42, -0.9, 0.44]];
+  const ctrl = [[0.6, -2.0, 0.3], [0.56, -1.6, 0.34], [0.5, -1.22, 0.24], [0.4, -0.98, -0.02], [0.16, -0.84, -0.3], [-0.18, -0.82, -0.3], [-0.34, -0.88, 0.0], [-0.2, -0.98, 0.28], [0.08, -1.02, 0.36], [0.34, -0.94, 0.4], [0.52, -0.74, 0.4], [0.56, -0.52, 0.38]];   // 绕脖子一圈后，蛇头抬起到脸的一侧、下巴的高度
   const cat = (P0, P1, P2, P3, u) => P0.map((_, j) => 0.5 * ((2 * P1[j]) + (-P0[j] + P2[j]) * u + (2 * P0[j] - 5 * P1[j] + 4 * P2[j] - P3[j]) * u * u + (-P0[j] + 3 * P1[j] - 3 * P2[j] + P3[j]) * u * u * u));
   const path = s => { const m = ctrl.length - 1, x = s * m, i = Math.min(m - 1, Math.floor(x)), u = x - i; return cat(ctrl[Math.max(0, i - 1)], ctrl[i], ctrl[i + 1], ctrl[Math.min(m, i + 2)], u); };
   const N = Math.round(70000 * k);
@@ -89,8 +89,8 @@ export function snake(k = 1) {
     P(pb, R, addv(c, addv(mul(n1, Math.cos(th) * rad), mul(n2, Math.sin(th) * rad))), scale * belly * behind, s, 0);
   }
   // 蛇头：立体楔形。俯视是圆角三角形（后颌宽、吻部尖），侧面上平下斜；只在表面取点，轮廓线亮
-  const H = path(1), L = 0.4;
-  const halfW = u => 0.135 * (1 - 0.72 * u) * Math.sqrt(Math.max(0, 1 - Math.pow(u, 6))) + 0.012;
+  const H = path(1), L = 0.46;
+  const halfW = u => 0.16 * (1 - 0.72 * u) * Math.sqrt(Math.max(0, 1 - Math.pow(u, 6))) + 0.012;
   const top = u => 0.065 * (1 - 0.55 * u), bot = u => 0.045 * (1 - 0.6 * u);
   const head = (id, upper) => {
     for (let i = 0; i < Math.round(12000 * k); i++) {

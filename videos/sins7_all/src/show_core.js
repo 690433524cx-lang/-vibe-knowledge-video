@@ -23,7 +23,7 @@ export const C3 = h => new THREE.Color(h);
 export const hexs = c => '#' + c.getHexString();
 export const tone = (hex, k) => hexs(C3(hex).lerp(C3('#FFFFFF'), k));
 export const GRAY = '#8A8798';
-export const SLOT_DX = 1.4;
+export const SLOT_DX = 1.385;   // 画面宽度的 90% 平均分成 7 格（排成一排时的镜头距离下）
 export const slotX = i => (i - 3) * SLOT_DX;
 export const HEAD_C = [0, 0.1, 0];
 

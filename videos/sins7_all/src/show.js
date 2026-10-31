@@ -52,8 +52,8 @@ function makeGather(n = 6000) {
 }
 function propMat(hex, o = {}) {
   return cloudMaterial({ size: o.size ?? 0.008, bright: o.bright ?? 0.9, depthRef: 4, maxPx: 6, drift: 0.002, colA: tone(hex, 0.75), colB: hex,
-    uniforms: { uGray: { value: 0 }, uA: { value: 0 }, uB: { value: 0 }, uC: { value: 0 }, uD: { value: 0 }, uAsm: { value: 1 }, ...(o.uniforms || {}) },
-    uniformDecl: 'uniform float uGray, uA, uB, uC, uD, uAsm;' + (o.uniformDecl || ''),
+    uniforms: { uGray: { value: 0 }, uA: { value: 0 }, uB: { value: 0 }, uC: { value: 0 }, uD: { value: 0 }, uAsm: { value: 1 }, uL: { value: 0 }, ...(o.uniforms || {}) },
+    uniformDecl: 'uniform float uGray, uA, uB, uC, uD, uAsm, uL;' + (o.uniformDecl || ''),   // uL = 1：排成一排时的精简小道具
     posHook: (o.posHook || '') + `
       { float k = clamp(uAsm*1.25 - h1(aSeed*5.7)*0.25, 0.0, 1.0); k = k*k*(3.0 - 2.0*k);
         p = mix(p + normalize(h3(aSeed*9.1) - 0.5)*(0.6 + 0.6*h1(aSeed*2.1)), p, k); vis *= smoothstep(0.0, 0.3, k); }`,
@@ -95,6 +95,7 @@ function makeChar(sin, i, heads) {
     const sk = PR.snake(); C.snakeHead = sk.head; const SL = sk.L.toFixed(3);
     C.snake = P(sk.pb, { bright: 1.35, size: 0.009, uniforms: { uH: { value: new THREE.Vector3(...sk.head) } }, uniformDecl: 'uniform vec3 uH;',
       posHook: `
+        if (uL > 0.5 && aExtra.y < 0.5 && aExtra.x < 0.24) vis = 0.0;   /* 排成一排时不要垂下来的长尾巴 */
         if (aExtra.y < 0.5) { float w = sin(aExtra.x*40.0 - uTime*qw(3.0)); p += vec3(0.0, 0.016*w*(0.5 + uD), 0.01*cos(aExtra.x*34.0 - uTime*qw(2.4))); }   // 蛇身随低音起伏
         else {
           vec3 q = p - uH;
@@ -107,7 +108,7 @@ function makeChar(sin, i, heads) {
     C.horns = P(PR.lightningHorns(), { bright: 1.0, col: tone(sin.col, 0.3), posHook: '{ float id = aExtra.y; float on = step(0.35, fract(sin(floor(mod(uTime, 65.0)*14.0 + id*3.7)*43.1)*91.7)); vis *= mix(1.0, on, step(0.5, mod(id, 3.0))); p *= 1.0 + uB*0.35; }' });
   } else if (sin.id === 'sloth') {
     C.hat = P(PR.beanie(), { bright: 1.3, posHook: '{ p.y -= uB*0.32; p.z += uB*0.06; }' });
-    C.scarf = P(PR.scarf(), { bright: 1.2 }, rig);
+    C.scarf = P(PR.scarf(), { bright: 1.2, posHook: '{ if (uL > 0.5 && aExtra.y > 0.5 && p.y < -1.08) vis = 0.0; }' }, rig);   // 排成一排时垂下的部分不超过肩膀
     C.zz = P(PR.zees(), { bright: 1.3, posHook: '{ float f = fract(uTime*floor(0.35*uLoop + 0.5)/uLoop + aExtra.y*0.33); p += vec3(0.08*sin(f*6.0 + aExtra.y), f*0.5, 0.0); vis *= uB*sin(3.14159*f); }' });
   } else if (sin.id === 'greed') {
     // 贪婪：金币像星环一样绕着头转（环面略倾斜），每枚金币正面朝镜头轻轻摆动，表面有一道扫过的金属反光
@@ -115,6 +116,7 @@ function makeChar(sin, i, heads) {
         float c = aExtra.y, n = 64.0, a = c/n*6.28318*2.0 + uTime*qw(0.55), rr = 0.98 + 0.22*h1(c*3.1) + 0.05*sin(c*2.7);
         float spin = 0.55*sin(uTime*qw(1.7) + c*1.3); vec3 q = vec3(p.x*cos(spin) + p.z*sin(spin), p.y, -p.x*sin(spin) + p.z*cos(spin));
         vec3 orbit = vec3(cos(a)*rr, 0.08 + 0.03*h1(c*7.3) - sin(a)*rr*0.22, sin(a)*rr*0.5 - 0.1); vec3 far = normalize(h3(c*1.7) - 0.5)*4.0;
+        if (uL > 0.5) { float a2 = c/8.0*6.28318 + uTime*qw(0.55); orbit = vec3(cos(a2)*0.6, 0.1 - sin(a2)*0.12, sin(a2)*0.3 - 0.05); q *= 0.5; vis *= step(c, 7.5); }   /* 排成一排：贴着头的一小圈，最多 8 枚 */
         p = mix(far, orbit, clamp(uB*1.4 - h1(c*2.3)*0.4, 0.0, 1.0)) + q; vis *= step(c, uC); }`,
       colHook: '{ float gl = exp(-pow(aExtra.x - 1.3*sin(uTime*qw(2.2) + aExtra.y*0.7), 2.0)*10.0); col = mix(col, vec3(1.0, 0.97, 0.85), gl*0.8); b *= 0.75 + 1.4*gl; }' });
     C.eyeShapes = [FACE.eyeR, FACE.eyeL].map(e => { const m = propMat('#FFD25A', { bright: 0.85, size: 0.007 }); const o = pts(PR.coinEye().geometry(THREE), m, head, 47); o.position.set(e[0], e[1], e[2] + 0.03); return o; });
@@ -123,12 +125,15 @@ function makeChar(sin, i, heads) {
     C.food = P(PR.food(2), { bright: 2.3, size: 0.0095, col: tone(sin.col, 0.35), posHook: `{
         float c = aExtra.y, a = c/8.0*6.28318 + uTime*qw(0.3); vec3 home = vec3(cos(a)*1.25, 0.12 + sin(a)*0.82, 0.3);   /* 一圈绕在头四周、彼此分开，不挡脸 */
         vec3 mouth = vec3(0.0, -0.3, 0.45); float k = clamp(uB*2.4 - c*0.2, 0.0, 1.0);   // 一个接一个被吸进嘴里
-        p = mix(home, mouth, k*k) + p*1.55*(1.0 - 0.8*k); vis *= 1.0 - smoothstep(0.85, 1.0, k); }` }, rig);
+        if (uL > 0.5) { vis *= (c < 0.5 || abs(c - 2.0) < 0.5) ? 1.0 : 0.0; float sd = c < 0.5 ? -1.0 : 1.0; home = vec3(sd*0.52, 0.02 + 0.07*sin(uTime*qw(1.3) + c), 0.3 + 0.06*cos(uTime*qw(1.3) + c)); k = 0.0; }   /* 排成一排：只留碗和鸡腿，贴着头两侧 */
+        p = mix(home, mouth, k*k) + p*mix(1.55, 0.62, uL)*(1.0 - 0.8*k); vis *= 1.0 - smoothstep(0.85, 1.0, k); }` }, rig);
   } else if (sin.id === 'lust') {
     C.hearts = P(PR.hearts(24), { bright: 2.0, size: 0.0095, posHook: `{
         float c = aExtra.y, a = c/24.0*6.28318 + uTime*qw(0.4), rr = 0.84 + 0.18*h1(c*5.1) + 0.08*sin(uTime*qw(1.0) + c);
         vec3 home = vec3(cos(a)*rr, 0.05 + 0.6*sin(a)*0.85, 0.25 + 0.1*cos(a));
-        vec3 o = home + normalize(home - vec3(0.0, 0.05, 0.0))*uB*(1.5 + h1(c)*2.0); p = o + p*(1.0 + 0.25*uA + uB*0.8); }` });
+        float hs = 1.0;
+        if (uL > 0.5) { float a2 = c/8.0*6.28318 + uTime*qw(0.4); home = vec3(cos(a2)*0.52, 0.08 + sin(a2)*0.66, 0.3); hs = 0.46; vis *= step(c, 7.5); }   /* 排成一排：贴着头的一小圈，最多 8 颗 */
+        vec3 o = home + normalize(home - vec3(0.0, 0.05, 0.0))*uB*(1.5 + h1(c)*2.0); p = o + p*hs*(1.0 + 0.25*uA + uB*0.8); }` });
     C.eyeShapes = [FACE.eyeR, FACE.eyeL].map(e => { const m = propMat('#FF7FB5', { bright: 1.8, size: 0.008 }); const o = pts(PR.heartEye().geometry(THREE), m, head, 47); o.position.set(e[0], e[1], e[2] + 0.03); return o; });
   }
   return C;
@@ -242,7 +247,9 @@ export function frame(t) {
     let charge = 0;
     if (!transformed && tL >= 0) { const bi = lastIdx(B, t), bl = lastIdx(B, land - 0.01); charge = 0.32 * clamp((bi - bl) / 4) * (0.6 + 0.4 * Math.exp(-(t - B[bi]) / 0.15)); }
     if (tL >= 0 && dt2 < 0.6) { const gu = S.gather.material.uniforms; S.gather.visible = true; gu.uK.value = transformed ? 1 : gk; gu.uB.value = transformed ? outExpo(clamp(dt2 / 0.6)) : 0; gu.uC.value.set(slotX(i), HEAD_C[1] + 0.05, 0.1); gu.uCol.value.set(transformed ? tone(sin.col, 0.5) : '#D8D4E8'); gu.uInt.value = transformed ? 2.2 : 1.6; }
-    setState(C, { lite: false, gray: !transformed, eyes: transformed ? outExpo(clamp(dt2 / 0.12)) : charge, halo: transformed ? outExpo(clamp(dt2 / 0.3)) : 0,
+    const inRow = i > 0 && tL < 0;                                                   // 拉回的那一排：这张脸也按格子的样子画
+    if (i > 0 && t < b2) F.names = tL < 0 ? 1 : 1 - clamp(tL / 0.25);
+    setState(C, { lite: inRow, gray: !transformed, eyes: transformed ? outExpo(clamp(dt2 / 0.12)) : charge, halo: transformed ? outExpo(clamp(dt2 / 0.3)) : 0,
       props: transformed ? 1 : (tL >= 0 ? clamp(tL / 0.4) : 0), scatter: 0.25 * suck, aud: AUD, inhale, gag: dt3 >= 0 && dt3 < 1.2 && t < b4, spotlit: !transformed, pop: litK, shrink: 1 - 0.88 * suck });
     if (litK > 0 && tL < 0.12) F.shake = Math.max(F.shake, 0.8 * (1 - tL / 0.12));
     // 镜头：第 1 小节推近（之后一直缓慢推近并绕人物转动）｜第 2 小节重拍猛地后拉再推近，±4 度｜第 3 小节快速推到脸部特写、停一拍、弹回｜第 4 小节缓慢后拉
@@ -302,7 +309,7 @@ export function frame(t) {
   S.spot.position.set(spotX, 4.6, -0.6); S.spot.material.uniforms.uInt.value = spotInt * 0.35; S.spot.material.uniforms.uW.value = 0.3;
   S.stars.forEach(s => { s.material.uniforms.uScale.value = K.scale; });
   F.cam = cam; F.kick = kick; F.focus = focus;
-  S.chars.forEach(C => { if (C.st.lite && (C.st.scatter ?? 0) < 0.3) F.icons.push({ i: C.i, p: project([slotX(C.i), 1.12, 0]), gray: C.st.gray }); });
+  // 头顶的七个小图标去掉（和道具重复）
   return F;
 }
 const qw = w => TAU * Math.max(1, Math.round(w * 65 / TAU)) / 65;   // 角频率按成片时长量化
@@ -333,14 +340,18 @@ function setState(C, s) {
   C.eyes.forEach(m => { m.visible = !C.eyeShapes && eo > 0.01 && sc < 1; m.material.uniforms.uInt.value = 0.95 * eo * (1 + 0.3 * Math.max(0, kick)); m.material.uniforms.uOpen.value = 0.45 + 0.55 * eo; m.material.uniforms.uRays.value = 0.8 * eo; });
   C.eyeHalo.forEach(m => { m.visible = eo > 0.01 && sc < 1; m.material.uniforms.uInt.value = 0.28 * eo; });
   C.halo.visible = s.halo > 0.01 && sc < 1.2; C.halo.rotation.z = qw(0.35) * (a ? a.t : 0) + C.i;   // 光环一直慢慢转
-  C.halo.scale.setScalar(lerp(0.2, 1, s.halo) * (1 - 0.3 * clamp(sc)) * (1 + 0.1 * Math.max(0, kick)));
-  C.haloMats.forEach((m, j) => { m.uniforms.uBright.value = (j ? 0.3 : 0.95) * s.halo * (1 + 0.8 * Math.max(0, kick)) * (1 - clamp(sc)); });
-  C.aura.visible = C.rays.visible = !s.gray && sc < 1.5;
+  // 排成一排时光环缩小：直径不超过格子宽度的 85%、互不重叠，亮度降到 60%，外圈刻度不要
+  C.halo.scale.setScalar((s.lite ? 0.42 : lerp(0.2, 1, s.halo)) * (1 - 0.3 * clamp(sc)) * (1 + (s.lite ? 0.04 : 0.1) * Math.max(0, kick)));
+  C.haloMats.forEach((m, j) => { m.uniforms.uBright.value = (j ? (s.lite ? 0 : 0.3) : 0.95 * (s.lite ? 0.6 : 1)) * s.halo * (1 + 0.8 * Math.max(0, kick)) * (1 - clamp(sc)); });
+  C.aura.visible = !s.gray && sc < 1.5; C.rays.visible = !s.gray && !s.lite && sc < 1.5;   // 排成一排时不要放射光线（会越过格子）
   C.aura.material.uniforms.uInt.value = (s.lite ? 0.03 : 0.07) * (1 + 0.6 * Math.max(0, kick)) * (1 - clamp(sc / 1.5));
-  C.aura.scale.setScalar(1 + 0.12 * Math.max(0, kick));
+  C.aura.scale.setScalar((s.lite ? 0.27 : 1) * (1 + 0.12 * Math.max(0, kick)));
   C.rays.material.uniforms.uInt.value = (s.lite ? 0.03 : 0.12) * (1 + 0.5 * Math.max(0, kick)) * (1 - clamp(sc / 1.5));
   C.rays.material.uniforms.uRot.value = qw(0.22) * (a ? a.t : 0); C.rays.material.uniforms.uBurst.value = 1 + 0.45 * Math.max(0, kick);   // 放射光线随鼓点伸长
   C.g.scale.setScalar(s.shrink != null ? s.shrink : 1);
+  if (s.lite) C.body.material.uniforms.uDim.value *= 0.5;
+  C.bodyLite.scale.set(0.47, 1, 0.8); C.halo.position.z = s.lite ? -0.25 : -0.7;   // 光环贴近头部，不因透视偏到旁边的格子   // 排成一排时肩膀收窄，不越过格子   // 排成一排时肩膀和身体淡一半，视线集中在脸上
+  C.propMats.forEach(m => { m.uniforms.uL.value = s.lite ? 1 : 0; });
   C.props.visible = s.props > 0.01; C.propMats.forEach(m => { m.uniforms.uAsm.value = s.props; m.uniforms.uScatter.value = sc; m.uniforms.uScatterDist.value = 1.4; m.uniforms.uGray.value = s.gray ? 1 : 0; });   // 灰色阶段戴着灰色版本的道具
   for (const o of C.bodyProps) o.visible = s.props > 0.01;
 }
@@ -389,7 +400,11 @@ export function draw2D(t, ctx, F) {
   glowText('七宗罪 · 出厂设置', 60, 58, fs(700, 24), 'rgba(255,255,255,0.6)', { align: 'left', glow: 6, nobox: true });
   if (F.header != null) glowText(`0${F.header + 1} / 07`, 1860, 58, fs(700, 24), tone(SINS[F.header].col, 0.4), { align: 'right', glow: 10, glowColor: SINS[F.header].col, nobox: true });
   for (const ic of F.icons) drawIcon(ctx, SINS[ic.i].icon, ic.p[0], ic.p[1], ic.gray ? GRAY : SINS[ic.i].col, ic.gray ? 0.55 : 1);
-  if (F.names > 0) S.chars.forEach(C => { const p = project([slotX(C.i), -1.05, 0]); glowText(C.sin.name, p[0], p[1], fs(700, 40), C.sin.col, { alpha: F.names, glow: 18, glowColor: C.sin.col }); });
+  if (F.names > 0) S.chars.forEach(C => {                                   // 名字放在肩膀下方，下面一块半透明的暗色底
+    const p = project([C.g.position.x, -1.78, 0]);
+    ctx.save(); ctx.globalAlpha = 0.62 * F.names; ctx.fillStyle = '#0B0912'; const w = 120, h = 54; ctx.beginPath(); ctx.roundRect(p[0] - w / 2, p[1] - h / 2, w, h, 10); ctx.fill(); ctx.restore();
+    glowText(C.sin.name, p[0], p[1] + 2, fs(700, 38), tone(C.sin.col, 0.25), { alpha: F.names, glow: 12, glowColor: C.sin.col });
+  });
   // 鼓点涟漪：从人物身后向外推出一圈很淡的光环
   for (const r of F.ripples) { ctx.save(); ctx.globalAlpha = 0.22 * (1 - r.k); ctx.strokeStyle = r.col; ctx.lineWidth = 2; ctx.shadowColor = r.col; ctx.shadowBlur = 14; ctx.beginPath(); ctx.arc(r.c[0], r.c[1], r.r0 * (1 + 1.2 * r.k), 0, TAU); ctx.stroke(); ctx.restore(); }
   if (F.card) drawCard(t, ctx, F.card);
@@ -472,11 +487,11 @@ function drawTags(t, ctx, c) {
     const pin = clamp(d / 0.15), pop = 0.8 + 0.2 * outBack(pin), a = pin * (0.85 + 0.15 * kick);
     if (a <= 0.003 && fade < 0.01) return;
     const ang = TAG_ANG[k], right = Math.cos(ang) > 0;
-    q.set(1.22 * Math.cos(ang), 1.22 * Math.sin(ang), 0); C.halo.localToWorld(q);
+    const ra = ang - C.halo.rotation.z; q.set(1.22 * Math.cos(ra), 1.22 * Math.sin(ra), 0); C.halo.localToWorld(q);   // 光环在转，标注点不跟着转
     const pr = project(q.toArray());                                         // 光环上的连接点
     const ux = pr[0] - pc[0], uy = pr[1] - pc[1], ul = Math.hypot(ux, uy) || 1;
     const fl = 6 * Math.sin(TAU * t / 2.6 + k * 1.7);                        // 上下漂浮 6px
-    const elbow = [pr[0] + ux / ul * 70, pr[1] + uy / ul * 70 + fl], dot = [elbow[0] + (right ? 34 : -34), elbow[1]];
+    const elbow = [pr[0] + ux / ul * 70, Math.min(842, pr[1] + uy / ul * 70) + fl], dot = [elbow[0] + (right ? 34 : -34), elbow[1]];   // 四字词必须在字幕区域上方
     const sp = tagSprite(word, hi), tx = dot[0] + (right ? 14 + sp.w / 2 - 20 : -14 - sp.w / 2 + 20), ty = dot[1];
     if (fade < 0.01) {
       ctx.save(); ctx.globalAlpha = a * 0.55; ctx.strokeStyle = hi; ctx.lineWidth = 1; ctx.shadowColor = sin.col; ctx.shadowBlur = 4;
