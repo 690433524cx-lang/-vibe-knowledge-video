@@ -160,7 +160,7 @@ export function buildHead(obj, opts = {}) {
   line(LM.lipsOut, 1.45, 3); line(LM.lipsIn, 1.6, 3, 0.002);
   line(LM.browR, 1.25, 3, 0.003); line(LM.browL, 1.25, 3, 0.003);
   line(LM.nose, 1.2, 3, 0.003); line(LM.nostril, 1.3, 3, 0.0025);
-  line(LM.jaw, 0.9, 3, 0.004, 0.003);
+  if (!opts.noJaw) line(LM.jaw, 0.9, 3, 0.004, 0.003);   // 脸的外轮廓线（会在额头上形成一道“发箍”，七宗罪合集里不用）
   for (const side of ['R', 'L']) {
     const pts = LID[side].map(([a, b]) => { const m = mul(addv(V[a], V[b]), 0.5); const d = mul(sub(V[b], V[a]), 0.15); return addv(addv(m, d), mul(norm(addv(VN[a], VN[b])), 0.004)); });
     const q = polyline(pts, 0.0018);
@@ -193,7 +193,8 @@ export function buildHead(obj, opts = {}) {
     const p = [C[0] + x * RX * (1 - 0.08 * Math.max(0, -y)), C[1] + y * RY, C[2] + z * RZ];
     if (p[1] < -5.6 * S) continue;
     const fz = faceZ(p[0], p[1]);
-    if (fz != null && p[2] > fz - 2.0 * S) continue;
+    const gap = opts.noJaw && p[1] > 3 * S ? 0.35 * S : 2.0 * S;   // 额头上方：后脑紧贴着脸的上缘，不留暗缝
+    if (fz != null && p[2] > fz - gap) continue;
     if (fz == null && p[2] > 3.4 * S && p[1] < 6 * S) continue;
     const n = norm([x / RX, y / RY, z / RZ]);
     pb.add(p, n, R(), [0, 0, 0], [R(), 0, 0, 1], [0.95, 4]); nBack++;

@@ -137,8 +137,8 @@ export function idolMaterial(sinHex, o = {}) {
     size: o.size ?? 0.0085, bright: o.bright ?? 0.5, depthRef: 6, maxPx: o.maxPx ?? 7, facing: 0, light: o.light ?? 0.85, drift: 0.0015,
     colA: hexOf(light), colB: hexOf(dark),
     uniforms: { uRim: { value: o.rim ?? 1.3 }, uRimCol: { value: rim }, uBack: { value: 0.1 }, uCut: { value: BODY_CUT }, uSeeThru: { value: 0 }, uSeeX: { value: -99 },
-      uGray: { value: 0 }, uSin: { value: c.clone() }, uDim: { value: 1 }, uCran: { value: o.cran ?? 1 } },
-    uniformDecl: 'uniform float uRim, uBack, uCut, uSeeThru, uSeeX, uGray, uDim, uCran; uniform vec3 uRimCol, uSin;',
+      uGray: { value: 0 }, uSin: { value: c.clone() }, uDim: { value: 1 }, uCran: { value: o.cran ?? 1 }, uCranEdge: { value: o.cranEdge ?? 0 } },
+    uniformDecl: 'uniform float uRim, uBack, uCut, uSeeThru, uSeeX, uGray, uDim, uCran, uCranEdge; uniform vec3 uRimCol, uSin;',
     posHook: o.dust ? /* glsl */`{
       // 胸口往下逐渐消散：下半部的一部分粒子变成向上飘的光尘
       float low = smoothstep(-1.75, -2.6, p.y);
@@ -159,7 +159,8 @@ export function idolMaterial(sinHex, o = {}) {
         float rimk = exp(-facing*facing/0.02)*rw;
         float back = smoothstep(-0.03, -0.3, facing);
         b *= mix(1.0, uBack, back);
-        if (aMisc.y == 4.0) b *= uCran;
+        if (aMisc.y == 4.0) b *= uCran*mix(1.0, smoothstep(0.2, 0.6, facing), uCranEdge);   // 后脑侧对镜头的点淡掉（去掉额头上那道发箍一样的亮弧）
+        if (aMisc.y == 4.0) rimk *= mix(1.0, smoothstep(0.04, -0.12, position.z), uCranEdge);   // 后脑靠前的一圈不加亮边（就是额头上那道“发箍”）
         b += aMisc.x*uBright*uRim*rimk*(1.0 - 0.6*back);
         col = mix(col, uRimCol, clamp(rimk*1.1, 0.0, 1.0));
       }

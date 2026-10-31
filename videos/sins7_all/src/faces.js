@@ -43,8 +43,9 @@ export function expression(obj, cfg = {}) {
 // 每一宗的表情（中性闭眼 = 抽签时的灰色脸）
 export const EXPR = {
   neutral: { close: 1 },
-  pride: { close: 0.45, smile: [0.0, 0.03], brow: [0.004, 0.004] },                 // 眼睛往下看、嘴角一侧上挑（下巴抬起在头部姿态里）
-  envy: { close: 0.3, smile: [0.022, 0.012], wide: 0.03, brow: [-0.004, 0.006] },   // 勉强挤出的笑
+  pride: { close: 0.45, smile: [-0.008, 0.07], wide: 0.02, brow: [0.004, 0.014] },   // 嘴角一侧上挑的坏笑、眼睛往下看（下巴抬起在头部姿态里）
+  prideGag: { close: 0.5, smile: [-0.01, 0.11], wide: 0.035, brow: [0.004, 0.022] },  // 反转那一拍：坏笑更明显
+  envy: { close: 0.28, smile: [0.05, 0.04], wide: 0.08, brow: [0.014, 0.008] },      // 勉强挤出的笑（嘴角拉宽、上提，眉毛被扯起来）
   wrath: { close: 0.2, smile: [-0.002, -0.002], brow: [-0.02, -0.02], browIn: 0.012 }, // 嘴角平直、眉头压低
   sloth: { close: 0.55, smile: [0.004, 0.004], jaw: 0.006 },                         // 眼睛只睁一半，嘴角放松
   greed: { close: 0.15, smile: [0.03, 0.03], wide: 0.04, jaw: 0.012 },              // 咧开的贪心笑
@@ -54,5 +55,10 @@ export const EXPR = {
 
 export function buildExpressionHead(obj, id, k = 1) {
   const o = expression(obj, EXPR[id]);
-  return buildHead(o, { seed: 7, face: Math.round(110000 * k), back: Math.round(60000 * k), neck: 0 });
+  const r = buildHead(o, { seed: 7, face: Math.round(110000 * k), back: Math.round(60000 * k), neck: 0, noJaw: true });
+  // 去掉嘴唇那一圈发光的轮廓线（标记 3、嘴附近的点），嘴只用粒子的明暗表现
+  const M = [0, -4.27 / 16, 5.3 / 16];
+  const keep = r.pb.subset(i => !(r.pb.m[i * 2 + 1] === 3 && Math.hypot((r.pb.p[i * 3] - M[0]) / 1.6, r.pb.p[i * 3 + 1] - M[1], r.pb.p[i * 3 + 2] - M[2]) < 0.14));
+  let fc = 0; for (let i = 0; i < r.faceCount; i++) if (!(r.pb.m[i * 2 + 1] === 3 && Math.hypot((r.pb.p[i * 3] - M[0]) / 1.6, r.pb.p[i * 3 + 1] - M[1], r.pb.p[i * 3 + 2] - M[2]) < 0.14)) fc++;
+  return { pb: keep, faceCount: fc };
 }

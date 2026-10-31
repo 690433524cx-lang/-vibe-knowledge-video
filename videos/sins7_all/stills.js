@@ -10,9 +10,11 @@ const { openBrowser, openPage } = require('./tools/page');
   const { srv, url, browser } = await openBrowser();
   const errors = [];
   const page = await openPage(browser, url, preview, errors);
+  if (process.env.CAM) await page.evaluate(c => { window.CAM_OVERRIDE = JSON.parse(c); }, process.env.CAM);
+  const tag = process.env.TAG || '';
   for (const t of times) {
     const data = await page.evaluate(t => { window.render(t); return document.getElementById('out').toDataURL('image/jpeg', 0.92); }, t);
-    fs.writeFileSync(path.join(outDir, `t_${t.toFixed(2).padStart(6, '0')}.jpg`), Buffer.from(data.split(',')[1], 'base64'));
+    fs.writeFileSync(path.join(outDir, `t_${t.toFixed(2).padStart(6, '0')}${tag}.jpg`), Buffer.from(data.split(',')[1], 'base64'));
   }
   await browser.close(); srv.close();
   if (errors.length) { console.error('页面错误：\n' + [...new Set(errors)].join('\n')); process.exit(1); }

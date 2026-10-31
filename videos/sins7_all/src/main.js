@@ -32,7 +32,8 @@ export async function init() {
   const obj = parseOBJ(await (await fetch('assets/canonical_face_model.obj')).text());
   const heads = {};
   const lite = (pb, fc) => pb.subset(i => i >= fc ? hash(i * 0.37) < 0.22 : (pb.m[i * 2 + 1] > 0 ? hash(i * 0.71) < 0.5 : hash(i * 0.53) < 0.18));
-  for (const id of ['neutral', ...SHOW.SINS.slice(0, UPTO + 1).map(s => s.id)]) {
+  const ids = ['neutral', ...SHOW.SINS.slice(0, UPTO + 1).map(s => s.id)]; if (UPTO >= 0) ids.push('prideGag');
+  for (const id of ids) {
     const { pb, faceCount } = buildExpressionHead(obj, id, k);
     heads[id] = pb.geometry(THREE); heads[id + 'Lite'] = lite(pb, faceCount).geometry(THREE);
   }
@@ -45,7 +46,8 @@ export async function init() {
   S.bgGlow = new THREE.Mesh(new THREE.PlaneGeometry(60, 34), H.glowPlane()); S.bgGlow.position.set(0, 0.5, -16); S.bgGlow.renderOrder = -40; K.scene.add(S.bgGlow);
   S.fog = [[-3.6, 30, 14, 1.3], [-7, 40, 20, 4.1], [-11, 56, 28, 7.7]].map(([z, w, h, seed]) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), H.fogPlane(seed)); m.position.set(0, 0, z); m.renderOrder = -30; K.scene.add(m); return m; });
   S.dust = K.dust;
-  SHOW.build(S, BEATS, heads);
+  const audioEnv = await (await fetch('audio_env.json')).json();
+  SHOW.build(S, BEATS, heads, audioEnv);
   for (let j = 0; j < 4; j++) {
     const c = document.createElement('canvas'); c.width = 480; c.height = 270;
     const x = c.getContext('2d'), im = x.createImageData(480, 270);
@@ -60,17 +62,18 @@ export function render(t) {
   tickMaterials(t);
   const F = SHOW.frame(t);
   // 镜头 + 震动（最大 6px）
-  const c = F.cam, sh = F.shake ?? 0;
+  const c = window.CAM_OVERRIDE ?? F.cam, sh = window.CAM_OVERRIDE ? 0 : (F.shake ?? 0);
   const px = 2 * Math.tan(17.5 * Math.PI / 180) * Math.hypot(c.pos[2] - c.target[2], c.pos[1] - c.target[1]) / FH * 6 * sh;
   setCamera({ pos: [c.pos[0] + px * Math.sin(t * 91), c.pos[1] + px * Math.cos(t * 73), c.pos[2]], target: [c.target[0] + px * Math.sin(t * 91), c.target[1] + px * Math.cos(t * 73), c.target[2]], fov: c.fov });
   // 雾和光尘染上这一宗的颜色（抽签时是灰色）
-  const fc = C3(F.fogCol), kk = F.fogK;
+  // 背景：近黑色的深空；只有人物身后有一团颜色光晕（在 show.js 里），雾只留很淡的一层
+  const fc = C3(F.auraCol), kk = F.auraK * 0.35;
   const fu = K.final.uniforms;
   const nb = { b: C3('#050508'), d: fc.clone().multiplyScalar(0.05 * kk), m: fc.clone().multiplyScalar(0.09 * kk), h: fc.clone().lerp(C3('#FFFFFF'), 0.3).multiplyScalar(0.14 * kk) };
   ['b', 'd', 'm', 'h'].forEach(x => { fu['uN0' + x].value.copy(nb[x]); fu['uN1' + x].value.copy(nb[x]); });
   fu.uTide.value = 0; fu.uTideMix.value = 0; fu.uBright.value = 1;
-  S.bgGlow.material.uniforms.uCol.value.copy(fc); S.bgGlow.material.uniforms.uInt.value = 0.08 * kk;
-  S.fog.forEach((m, j) => { m.material.uniforms.uCol.value.copy(fc).lerp(C3('#9A90B0'), 0.25); m.material.uniforms.uInt.value = [0.03, 0.034, 0.04][j] * kk; });
+  S.bgGlow.material.uniforms.uCol.value.copy(fc); S.bgGlow.material.uniforms.uInt.value = 0.03 * kk;
+  S.fog.forEach((m, j) => { m.material.uniforms.uCol.value.copy(fc).lerp(C3('#9A90B0'), 0.25); m.material.uniforms.uInt.value = [0.012, 0.014, 0.016][j] * kk; });
   K.dust.material.uniforms.uColA.value.copy(fc).lerp(C3('#FFFFFF'), 0.4); K.dust.material.uniforms.uColB.value.set('#FFFFFF');
   K.dust.material.uniforms.uCam.value.copy(K.camera.position); K.dust.material.uniforms.uAlpha.value = 0.4 + 0.6 * kk;
   const dir = new THREE.Vector3(); K.camera.getWorldDirection(dir);
@@ -79,12 +82,17 @@ export function render(t) {
   const qn = new THREE.Quaternion(); K.camera.getWorldQuaternion(qn);
   for (const g of K.glows) if (g.userData.billboard && g.visible) { const pq = new THREE.Quaternion(); g.parent.getWorldQuaternion(pq); g.quaternion.copy(pq.invert().multiply(qn)); }
   S.spot.quaternion.copy(qn);
+  S.chars?.forEach?.(() => {});
+  for (const C of (SHOW.charsList?.() ?? [])) { C.aura.quaternion.copy(qn); C.rays.quaternion.copy(qn); }
   K.bloom.strength = F.bloom;
-  updateSparks(t, []);
-  fu.uCA.value = sh > 0.9 ? 0.002 : 0.0006; fu.uVig.value = 1.1; fu.uGlitch.value = 0; fu.uTime.value = t;
+  if (F.sparkCol) { K.sparks.material.uniforms.uColA.value.set(F.sparkCol); K.sparks.material.uniforms.uColB.value.set('#FFFFFF'); }
+  updateSparks(t, F.bursts ?? []);
+  fu.uCA.value = F.ca ? 0.002 : 0.0006; fu.uVig.value = 1.35; fu.uGlitch.value = 0; fu.uTime.value = t;
   K.composer.render();
   BOXES.length = 0;
   outCtx.setTransform(1, 0, 0, 1, 0, 0); outCtx.globalAlpha = 1; outCtx.drawImage(glCanvas, 0, 0);
+  // 甩镜头的运动模糊：沿运动方向叠几层位移的画面
+  if (Math.abs(F.blur ?? 0) > 0.02) { const L = 90 * F.blur * K.scale; outCtx.save(); outCtx.globalCompositeOperation = 'lighter'; for (let j = 1; j <= 5; j++) { outCtx.globalAlpha = 0.16 * Math.abs(F.blur) * (1 - j / 6); outCtx.drawImage(glCanvas, -L * j / 5, 0); } outCtx.restore(); }
   outCtx.setTransform(K.scale, 0, 0, K.scale, 0, 0);
   setCtx(outCtx, t);
   SHOW.draw2D(t, outCtx, F);
