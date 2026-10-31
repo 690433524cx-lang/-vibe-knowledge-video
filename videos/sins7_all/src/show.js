@@ -165,7 +165,8 @@ const FRAME = { pride: [0.25, 3.7], envy: [-0.3, 3.9] };
 const fr = i => FRAME[SINS[i].id] ?? [0.1, 3.6];
 const lineupCam = t => orbit({ ...LINEUP, pos: [LINEUP.pos[0], LINEUP.pos[1] + 0.08 * Math.sin(t * qw(1.7)), LINEUP.pos[2] - 0.25 * Math.sin(t * qw(1.1))] }, 0.05 * Math.sin(t * qw(1.9)), 0);
 // 七个彩色角色排成一排：眼睛发光、戴着各自的道具、下面有罪名（开头第 0 帧和结尾共用，保证首尾一样）
-function heroLineup(t, F, AUD) {
+function heroLineup(t, F, AUD0) {
+  const AUD = { ...AUD0, mid: 0, low: 0 };   // 中低音不影响这一排（首尾才能完全一样），鼓点弹动保留
   S.chars.forEach(O => { setState(O, { lite: true, gray: false, eyes: 1, halo: 0.85, props: 1, scatter: 0, aud: AUD }); animate(O, t, 9, -9, true, AUD); });
   F.names = 1; F.auraCol = '#B49CE0'; F.auraK = 0.6;
   return lineupCam(t);
