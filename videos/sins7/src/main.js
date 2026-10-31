@@ -1,11 +1,11 @@
 // 《七宗罪，其实是大脑的七种出厂设置》总集：1920×1080、30fps。每帧 render(t) 只由 t 决定；所有时间来自 beats.json。
 // 结构：开头 0–R0（七尊灰白神像 → 扫描点亮 → 两句字幕）｜七张卡 R0–R14（每宗两小节：A 卡「罪」、B 卡「大脑」）｜结尾 R14–结束
 import * as THREE from 'three';
-import { K, FW, FH, initCore, buildFaces, updateSparks, tickMaterials, setCamera } from './core.js';
+import { K, FW, FH, initCore, updateSparks, tickMaterials, setCamera } from './core.js';
 import { setLoop, clamp, lerp, lerp3, prog, sine, outExpo, out3, inOut, hash, loopSin } from './util.js';
 import { SHARED } from './mat.js';
 import { setCtx, glowText, fs, C, BOXES } from './text.js';
-import { SINS, BG, GROUND_Y, HALO_C, buildShared, createIdol } from './idol.js';
+import { loadProfile } from './silhouette.js';
 import * as H from './halo.js';
 import * as CARD from './cards.js';
 
@@ -25,32 +25,14 @@ export async function init() {
   outCtx = outCanvas.getContext('2d');
   initCore(glCanvas, { W, H: Hh, bolts: [] });
   window.K = K;
-  K.bloom.radius = 0.6; K.bloom.threshold = 0.15;
-  const objText = await (await fetch('assets/canonical_face_model.obj')).text();
+  K.bloom.radius = 0.15; K.bloom.threshold = 0.3;
   const k = PREVIEW ? 0.5 : 1;
-  buildFaces(objText, { face: Math.round(170000 * k), back: Math.round(140000 * k), neck: 0 });
-  buildShared(K.obj, k);
-  // ---- 远景：巨大的暗色光晕、三层雾、体积光束、放射光芒
-  S.bgGlow = new THREE.Mesh(new THREE.PlaneGeometry(44, 30), H.glowPlane()); S.bgGlow.position.set(0, 0.5, -16); S.bgGlow.renderOrder = -40; K.scene.add(S.bgGlow);
-  S.fog = [[-3.6, 24, 12, 1.3], [-7, 34, 17, 4.1], [-11, 46, 24, 7.7]].map(([z, w, h, seed]) => {
-    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), H.fogPlane(seed)); m.position.set(0, 0, z); m.renderOrder = -30; K.scene.add(m); return m;
-  });
-  S.shafts = new THREE.Mesh(new THREE.PlaneGeometry(22, 13), H.shaftsPlane()); S.shafts.position.set(0, 0.3, -2.2); S.shafts.renderOrder = -20; K.scene.add(S.shafts);
-  S.shafts.material.uniforms.uAsp.value = 22 / 13; S.shafts.material.uniforms.uO.value.set(0.5, (0.12 - 0.3) / 13 + 0.5);
-  S.rays = new THREE.Mesh(new THREE.PlaneGeometry(11, 11), H.raysPlane()); S.rays.position.set(HALO_C[0], HALO_C[1], HALO_C[2] - 0.1); S.rays.renderOrder = -10; K.scene.add(S.rays);
-  // ---- 地面与小人影
-  S.ground = new THREE.Points(H.buildGround(k).geometry(THREE), H.groundMaterial()); S.ground.frustumCulled = false; K.scene.add(S.ground); K.mats.push(S.ground.material);
-  S.people = new THREE.Points(H.buildPeople(PREVIEW ? 0.6 : 1).geometry(THREE), (() => { const m = H.ringMaterial('#FFFFFF', 0.9); m.uniforms.uSize.value = 0.006; return m; })());
-  S.people.frustumCulled = false; K.scene.add(S.people); K.mats.push(S.people.material);
-  // ---- 每宗一尊神像 + 一套光环（卡片里同一时间只显示一尊）
-  S.idols = SINS.map(sin => createIdol(sin, { brain: true }));
-  S.halos = SINS.map((sin, i) => CARD.buildHalo(sin, i, k));
-  S.idols.forEach((I, i) => CARD.buildFeatures(I, i, k));
+  await loadProfile(k);
   // ---- 扫描线与光柱
-  S.scanLine = new THREE.Mesh(new THREE.PlaneGeometry(0.035, 9), H.glowPlane()); S.scanLine.renderOrder = 70; K.scene.add(S.scanLine);
-  S.scanSoft = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 9), H.glowPlane()); S.scanSoft.renderOrder = 69; K.scene.add(S.scanSoft);
-  S.pillar = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 6), pillarMat()); S.pillar.renderOrder = 65; K.scene.add(S.pillar);
-  CARD.setScene(S, BEATS);
+  S.scanLine = new THREE.Mesh(new THREE.PlaneGeometry(0.03, 7), H.glowPlane()); S.scanLine.renderOrder = 70; K.scene.add(S.scanLine);
+  S.scanSoft = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 7), H.glowPlane()); S.scanSoft.renderOrder = 69; K.scene.add(S.scanSoft);
+  S.pillar = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 6), pillarMat()); S.pillar.renderOrder = 65; K.scene.add(S.pillar);
+  CARD.build(S, BEATS, k);
   // 噪点
   for (let j = 0; j < 4; j++) {
     const c = document.createElement('canvas'); c.width = 480; c.height = 270;

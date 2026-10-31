@@ -90,6 +90,12 @@ def analyse(x):
         return float(np.mean([lowE[int(b * fps):int(b * fps) + 10].mean() + lowo[int(b * fps):int(b * fps) + 4].max() for b in bs]))
     sc = [score(k) for k in range(4)]
     k = int(np.argmax(sc))
+    # 四拍都有底鼓时相位分不开（分数差 < 5%）：以 7.66 秒附近最强的段落进入（响度突增）作为小节第一拍
+    if max(sc) - sorted(sc)[-2] < 0.05 * max(sc):
+        near = [i for i, b in enumerate(beats) if abs(b - R0_GUESS) < 0.8]
+        jump = lambda b: db[int(b * fps):int(b * fps) + 10].mean() - db[int(b * fps) - 12:int(b * fps) - 2].mean()
+        j = max(near, key=lambda i: jump(beats[i]))
+        k = j % 4
     down = beats[k::4]
     r0 = int(np.argmin([abs(d - R0_GUESS) for d in down]))
     R = down[r0:]

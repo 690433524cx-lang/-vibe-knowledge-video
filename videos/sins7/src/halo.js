@@ -96,7 +96,7 @@ function plane(w, h, mat, order, parent) {
 // 放射光芒：从头部射向四周的细光线，缓慢旋转；uBurst 为开光时射出的长度
 export function raysPlane(size) {
   return planeMat(/* glsl */`
-    uniform float uRot, uBurst, uN;
+    uniform float uRot, uBurst, uN, uR0;
     void main(){
       vec2 p = (vUv*2.0 - 1.0); float r = length(p);
       float a = atan(p.y, p.x) + uRot;
@@ -105,11 +105,11 @@ export function raysPlane(size) {
       float ray = exp(-f*f/(0.0003 + 0.0016*w))*(0.15 + 0.85*w2*w2);
       float u2 = a/6.28318*(uN*0.37), f2 = fract(u2) - 0.5;
       float wide = exp(-f2*f2/0.01)*0.06;
-      float len = mix(0.35, 1.0, w)*uBurst;
-      float fall = smoothstep(0.12, 0.3, r)*smoothstep(len, len*0.25, r);
+      float len = uR0 + mix(0.3, 1.0, w)*(1.0 - uR0)*uBurst;
+      float fall = smoothstep(uR0 - 0.01, uR0 + 0.05, r)*smoothstep(len, mix(uR0, len, 0.25), r);
       float n = 0.6 + 0.4*fbm(vec2(r*6.0 - uTime*0.2, id));
       gl_FragColor = vec4(uCol*(ray + wide)*fall*n*uInt, 1.0);
-    }`, { uRot: { value: 0 }, uBurst: { value: 1 }, uN: { value: 90 } });
+    }`, { uRot: { value: 0 }, uBurst: { value: 1 }, uN: { value: 90 }, uR0: { value: 0.12 } });
 }
 // 体积光束（丁达尔）：从神像背后斜射出的几道宽光束，光束里有尘埃纹理
 export function shaftsPlane() {
@@ -179,4 +179,43 @@ export function buildPeople(k = 1) {
     }
   });
   return pb;
+}
+
+// ------------------------------------------------------------ 主环：一圈干净的亮环（白色核心 + 该宗颜色的柔和辉光）；uR 为半径（世界单位），uW 线宽
+export function mainRingPlane(R, pad = 0.6) {
+  const m = planeMat(/* glsl */`
+    uniform float uR, uW, uHalf; uniform vec3 uCore;
+    void main(){
+      vec2 p = (vUv*2.0 - 1.0)*uHalf; float r = length(p);
+      float d = abs(r - uR);
+      float core = exp(-pow(d/(uW*0.5), 2.0)*1.6);
+      float glow1 = exp(-pow(d/(uW*2.2), 2.0))*0.45, glow2 = exp(-d/(uW*7.0))*0.18;
+      gl_FragColor = vec4((uCore*core + uCol*(glow1 + glow2 + core*0.4))*uInt, 1.0);
+    }`, { uR: { value: R }, uW: { value: 0.028 }, uHalf: { value: R + pad }, uCore: { value: C3('#F3E8FF') } });
+  return m;
+}
+// 地平线的光带：小人影脚下的地面反光，衬出他们的实心剪影
+export function horizonPlane() {
+  return planeMat(/* glsl */`
+    void main(){ float y = vUv.y, x = vUv.x;
+      float band = exp(-pow((y - 0.18)/0.05, 2.0))*1.0 + exp(-(y - 0.18)/0.35)*step(0.18, y)*0.35;
+      float fx = smoothstep(0.0, 0.35, x)*smoothstep(1.0, 0.75, x);
+      gl_FragColor = vec4(uCol*band*fx*uInt, 1.0); }`, {});
+}
+// 实心剪影小人：头、躯干、腿（2D 形状），抬头仰望（头略向后仰）
+export function personShape(h, seed) {
+  const s = new THREE.Shape(), R = rng(seed), lean = 0.04 + 0.03 * R();
+  const w = h * 0.13;
+  s.moveTo(-w * 0.55, 0); s.lineTo(-w * 0.4, h * 0.46); s.lineTo(-w, h * 0.5); s.lineTo(-w * 0.95, h * 0.78);
+  s.quadraticCurveTo(-w * 0.6, h * 0.84, -w * 0.25, h * 0.83); s.lineTo(w * 0.25, h * 0.83); s.quadraticCurveTo(w * 0.6, h * 0.84, w * 0.95, h * 0.78);
+  s.lineTo(w, h * 0.5); s.lineTo(w * 0.4, h * 0.46); s.lineTo(w * 0.55, 0); s.lineTo(w * 0.1, 0); s.lineTo(0, h * 0.42); s.lineTo(-w * 0.1, 0); s.lineTo(-w * 0.55, 0);
+  const head = new THREE.Path(); head.absarc(lean * h, h * 0.92, h * 0.085, 0, TAU);
+  const g1 = new THREE.ShapeGeometry(s), g2 = new THREE.ShapeGeometry(new THREE.Shape(head.getPoints(20)));
+  return [g1, g2];
+}
+
+// 挂在某个物体上的径向光斑（不朝向相机，平面即 XY）
+export function glowPlaneMesh(hex, size, parent) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), glowPlane()); m.material.uniforms.uCol.value.set(hex);
+  m.renderOrder = 9; m.frustumCulled = false; parent.add(m); return m;
 }

@@ -164,7 +164,7 @@ export function brainMaterial(sinHex) {
     size: 0.012, bright: 0.55, depthRef: 6, maxPx: 7, facing: 0.35, light: 0.2, drift: 0.002,
     colA: hexOf(c.clone().lerp(C3('#FFFFFF'), 0.55)), colB: hexOf(c),
     uniforms: { uSeeX: { value: -99 }, uRegC: { value: [0, 1, 2, 3, 4].map(() => new THREE.Vector4(0, 0, 0, 0)) }, uRegR: { value: 0.03 },
-      uHot: { value: c.clone().lerp(C3('#FFFFFF'), 0.5) }, uAll: { value: 0 } },
+      uHot: { value: c.clone().lerp(C3('#FFFFFF'), 0.7) }, uAll: { value: 0 } },
     uniformDecl: 'uniform float uSeeX, uRegR, uAll; uniform vec4 uRegC[5]; uniform vec3 uHot;',
     posHook: '{ vec4 wq = modelMatrix*vec4(p, 1.0); vis *= smoothstep(0.02, -0.04, wq.x - uSeeX); }',
     colHook: /* glsl */`
@@ -172,7 +172,7 @@ export function brainMaterial(sinHex) {
         float reg = 0.0;
         for (int i = 0; i < 5; i++) { vec3 d = position - uRegC[i].xyz; reg += uRegC[i].w*exp(-dot(d, d)/uRegR); }
         reg += uAll;
-        col = mix(col, uHot, clamp(reg, 0.0, 1.0)); b *= 1.0 + reg*2.2;
+        col = mix(col, uHot, clamp(reg, 0.0, 1.0)); b *= 1.0 + reg*5.0;
       }`,
   });
 }

@@ -1,0 +1,3 @@
+Head scan: Lee Perry-Smith, Infinite-Realities, CC BY 3.0
+  (assets/LeePerrySmith.glb, from the three.js r160 examples; the side silhouette is extracted from it by tools/profile.py)
+Face model: MediaPipe canonical face model, Apache 2.0
