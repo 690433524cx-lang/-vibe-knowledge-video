@@ -469,6 +469,7 @@ export function frame(t) {
     const toOuter = t >= EV.outer ? inOut(clamp((t - EV.outer) / 1.0)) : 0;     // “陌生人？反而很少”：镜头推向外圈
     const oA = Math.atan2(over.pos[0], over.pos[2]), tgO = [Math.sin(oA + 0.55) * 5.7, GROUND + 0.4, Math.cos(oA + 0.55) * 5.7];
     over = { pos: lerp3(over.pos, [tgO[0] * 1.55, 3.0, tgO[2] * 1.55], 0.55 * toOuter), target: lerp3(over.target, tgO, 0.7 * toOuter), fov: 38 };
+    if (toOuter > 0) over = orbit(over, 0.12 * Math.sin((t - EV.outer) * 1.6) * toOuter, 0);   // 推到外圈后镜头继续绕着走，不停下
     cam = camLerp(charCam(slotX(WR) - 0.55, 0.12, 4.4), over, up);
     W.g.position.set(lerp(slotX(WR), 0, up), 0, 0);
     setState(W, { lite: false, gray: false, eyes: 1, halo: 1, props: 1, scatter: 2.2 * gone, aud: AUD });
