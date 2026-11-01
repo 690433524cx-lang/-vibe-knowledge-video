@@ -634,7 +634,7 @@ function drawPaths(ctx, P, t) {
   line(P.short, 22, RED, 0.5 * P.a); line(P.short, 11, '#FF6A50', 0.85 * P.a); line(P.short, 4, '#F4D4C6', P.a);   // 近路：又短又粗、很亮
   const comet = (tr, r) => {                                                 // 带拖尾的发光彗星
     for (let k = tr.length - 1; k >= 0; k--) { const p = tr[k], f = 1 - k / tr.length, rr = r * (0.35 + 0.65 * f);
-      const g = ctx.createRadialGradient(p[0], p[1], 0, p[0], p[1], rr); g.addColorStop(0, `rgba(240,160,135,${0.8 * f})`); g.addColorStop(0.35, `rgba(235,95,70,${0.6 * f})`); g.addColorStop(1, 'rgba(255,42,42,0)');
+      const g = ctx.createRadialGradient(p[0], p[1], 0, p[0], p[1], rr); g.addColorStop(0, `rgba(235,150,125,${0.62 * f})`); g.addColorStop(0.35, `rgba(235,95,70,${0.6 * f})`); g.addColorStop(1, 'rgba(255,42,42,0)');
       ctx.globalAlpha = P.a; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p[0], p[1], rr, 0, TAU); ctx.fill(); }
   };
   if (P.cs) comet(P.cs, 80);
@@ -783,7 +783,7 @@ function frame2(t, F, AUD, W) {
   } else if (t < iceT) {
     // ---- 杯子摔向地面炸开，画面一分为二：左边打沙袋（火越打越大），右边安静坐着（火慢慢熄成一颗余烬）
     const dC = t - cupT;
-    cam = orbit({ pos: [0.3 * Math.sin(t * qw(0.8)), 0.15 + 0.14 * Math.sin(t * qw(1.3)), 10.2 - 0.8 * clamp((t - cupT) / 10)], target: [0, -0.35, 0], fov: 35 }, 1.2 * sway, 0);
+    cam = orbit({ pos: [0.45 * Math.sin(t * 1.3), 0.15 + 0.2 * Math.sin(t * 1.9), 10.2 - 0.8 * clamp((t - cupT) / 10) + 0.25 * Math.sin(t * 1.1)], target: [0.15 * Math.sin(t * 0.9), -0.35, 0], fov: 35 }, 0.07 * Math.sin(t * 1.5), 0);   // 镜头一直在动
     if (dC < 0) {
       // 杯子下落（半身像化成粒子散开，杯子从上面掉下来）
       const f = clamp((t - (cupT - 0.55)) / 0.55), form = clamp(f / 0.45), fall = clamp((f - 0.45) / 0.55);
@@ -914,7 +914,7 @@ function drawFire(ctx, f, t) {
   if (f.ember) { const g = ctx.createRadialGradient(x, y - 8, 0, x, y - 8, 22); g.addColorStop(0, 'rgba(255,120,90,0.9)'); g.addColorStop(1, 'rgba(255,42,42,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y - 8, 22, 0, TAU); ctx.fill(); ctx.restore(); return; }
   for (const [k, col, al] of [[1, 'rgba(255,42,42,', 0.55], [0.72, 'rgba(255,110,60,', 0.7], [0.42, 'rgba(255,175,140,', 0.75]]) {
     for (let j = 0; j < 3; j++) {
-      const ph = t * (7 + j * 1.3) + f.seed * 3 + j * 2, w = W2 * k * (0.7 + 0.3 * Math.sin(ph)), h = H * k * (0.85 + 0.15 * Math.sin(ph * 1.7)), sx = x + (j - 1) * w * 0.35 + 10 * Math.sin(ph * 0.7);
+      const ph = t * (11 + j * 2.1) + f.seed * 3 + j * 2, w = W2 * k * (0.62 + 0.38 * Math.sin(ph)), h = H * k * (0.72 + 0.28 * Math.sin(ph * 1.7)), sx = x + (j - 1) * w * 0.35 + 24 * Math.sin(ph * 0.7);   // 火舌摇得更猛
       const g = ctx.createLinearGradient(0, y, 0, y - h); g.addColorStop(0, col + al + ')'); g.addColorStop(1, col + '0)');
       ctx.fillStyle = g; ctx.beginPath(); ctx.moveTo(sx - w / 2, y); ctx.bezierCurveTo(sx - w / 2, y - h * 0.5, sx + w * 0.15 * Math.sin(ph), y - h * 0.7, sx + 14 * Math.sin(ph * 1.3), y - h);
       ctx.bezierCurveTo(sx - w * 0.1 * Math.sin(ph), y - h * 0.6, sx + w / 2, y - h * 0.45, sx + w / 2, y); ctx.closePath(); ctx.fill();
