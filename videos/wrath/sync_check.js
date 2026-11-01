@@ -1,7 +1,7 @@
 // 音画同步检查：node sync_check.js [视频.mp4]
 // 1) 从页面读出所有画面事件（抽中 / 变身 / 反转 / 结尾卡 / 结尾）的时间；事件实际落在第 round(t*30) 帧
 // 2) 从音乐（music_extended.wav，或给定视频的音轨）里用全频段谱通量找起音（5 毫秒一格，窗长 1024 点）
-// 3) 每个事件取 ±0.12 秒内谱通量最大的那一格作为起音，误差 = |事件所在帧的时间 − 起音时间|，要求最大误差 < 0.04 秒
+// 3) 每个事件取 ±0.12 秒内足够强的谱通量峰里离事件最近的那一个作为起音，误差 = |事件所在帧的时间 − 起音时间|，要求最大误差 < 0.04 秒
 const { spawnSync } = require('child_process');
 const path = require('path');
 const { openBrowser, openPage } = require('./tools/page');
@@ -44,7 +44,10 @@ function onsetEnvelope(file) {
   for (const ev of events) {
     const tf = Math.round(ev.t * FPS) / FPS;              // 事件实际出现的那一帧
     const k0 = Math.max(0, Math.floor((ev.t - 0.12) / dt)), k1 = Math.min(d.length - 1, Math.ceil((ev.t + 0.12) / dt));
-    let best = k0; for (let k = k0; k <= k1; k++) if (d[k] > d[best]) best = k;
+    let mx = 0; for (let k = k0; k <= k1; k++) mx = Math.max(mx, d[k]);
+    // 窗口里可能有两下很近的敲击（比如重拍前的加花）：在所有足够强（≥ 最强的 60%）的峰里，取离事件最近的那一下
+    let best = -1; for (let k = Math.max(k0, 1); k < k1; k++) if (d[k] >= 0.6 * mx && d[k] >= d[k - 1] && d[k] >= d[k + 1] && (best < 0 || Math.abs(k * dt + WIN / 2 / SR - ev.t) < Math.abs(best * dt + WIN / 2 / SR - ev.t))) best = k;
+    if (best < 0) { best = k0; for (let k = k0; k <= k1; k++) if (d[k] > d[best]) best = k; }
     const onset = best * dt + WIN / 2 / SR, err = Math.abs(tf - onset);   // 窗的中心对应的时刻
     worst = Math.max(worst, err);
     rows.push(`${ev.name.padEnd(14, '　')} 画面 ${tf.toFixed(3)}s  鼓点 ${onset.toFixed(3)}s  误差 ${(err * 1000).toFixed(0)} ms`);
