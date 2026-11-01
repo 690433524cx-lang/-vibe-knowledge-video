@@ -392,8 +392,9 @@ function heroLineup(t, F, AUD0) {
   return lineupCam(t);
 }
 
+export const subsList = () => SUBS.map(s => ({ text: plain(s.text), t0: +s.t0.toFixed(3), t1: +s.t1.toFixed(3), minD: +s.minD.toFixed(3) }));
 export function events() {
-  return [{ name: '褪色开始扫描', t: EV.gray }, { name: '抽中愤怒', t: EV.stop }, { name: '三圈人群', t: EV.rings }, ...EV.bolts.map((b, i) => ({ name: `闪电 ${i + 1}`, t: b })), { name: '粒子大脑', t: EV.brain }, { name: '杏仁核爆发', t: EV.drop }, { name: '半身像', t: EV.bust }];
+  return [{ name: '褪色开始扫描', t: EV.gray }, { name: '抽中愤怒', t: EV.stop }, { name: '三圈人群', t: EV.rings }, ...EV.bolts.map((b, i) => ({ name: `闪电 ${i + 1}`, t: b })), { name: '粒子大脑', t: EV.brain }, { name: '杏仁核爆发', t: EV.drop }, { name: '半身像', t: EV.bust }, { name: '杯子炸开', t: SUBS[8].t0 }, { name: '沙袋对比高潮', t: SUBS[10].t0 }, { name: '冰山', t: SUBS[11].t0 }, { name: '沉到水下', t: DN.find(d => d >= SUBS[11].t0 - 0.01) }, { name: '结尾直视', t: SUBS[14].t0 }, { name: '回到那一排', t: nb(54.8) }];
 }
 
 // ------------------------------------------------------------ 每帧
