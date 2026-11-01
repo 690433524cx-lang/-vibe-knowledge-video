@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>七宗罪·总集</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}#gl{position:absolute;left:0;top:0;visibility:hidden}</style>
+<script type="importmap">{"imports":{"three":"./vendor/three/build/three.module.js","three/addons/":"./vendor/three/jsm/"}}</script>
+</head>
+<body>
+<canvas id="gl" width="1920" height="1080"></canvas>
+<canvas id="out" width="1920" height="1080"></canvas>
+<script type="module">
+import { init, render } from './src/main.js';
+window.render = render;
+init().then(() => { render(0); window.READY = true; }).catch(e => { console.error(e); window.FAILED = String(e && e.stack || e); });
+</script>
+</body>
+</html>
