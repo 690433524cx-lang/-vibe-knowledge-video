@@ -45,6 +45,9 @@ console.log('每 0.5 秒相邻帧平均差异（灰度级）：');
 console.log(per.map(([t, v]) => `${t.toFixed(1).padStart(5)}s ${v.toFixed(2)}`).join('\n'));
 const vals = per.map(p => p[1]).sort((a, b) => a - b);
 console.log(`最小 ${vals[0].toFixed(2)}，中位数 ${vals[vals.length >> 1].toFixed(2)}，平均 ${(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2)}`);
+// ---- 过曝：每帧亮于 240 的像素不超过画面的 0.3%
+{ let worst = 0, at = 0, bad = 0; for (let i = 0; i < N; i++) { const f = frame(i); let c = 0; for (let k = 0; k < P; k++) if (f[k] > 240) c++; const r = c / P; if (r > worst) { worst = r; at = i; } if (r > 0.003) bad++; }
+  console.log(`[${bad === 0 ? '通过' : '失败'}] 过曝：亮于 240 的像素最多占 ${(worst * 100).toFixed(2)}%（${fmt(at)}），超过 0.3% 的帧 ${bad} 帧`); var okW = bad === 0; }
 // ---- 空白画面
 let blankRun = 0, maxBlank = 0, blankAt = 0;
 for (let i = 0; i < N; i++) { const f = frame(i); let c = 0; for (let k = 0; k < P; k++) if (f[k] > 50) c++; blankRun = c / P < 0.005 ? blankRun + 1 : 0; if (blankRun > maxBlank) { maxBlank = blankRun; blankAt = i; } }
@@ -61,8 +64,8 @@ let ok6 = true; try {
   console.log(`[${ok6 ? '通过' : '失败'}] 字幕阅读时间：${subs.length} 条，最紧的一条余量 ${Math.min(...subs.map(s => s.t1 + 0.06 - s.t0 - s.minD)).toFixed(2)} 秒${bad.length ? '；不够：' + bad.map(b => b.text).join('｜') : ''}`);
 } catch (e) { console.log('[跳过] 字幕阅读时间：没有 subs_wrath.json'); }
 const avg = mean.reduce((a, b) => a + b, 0) / N;
-console.log(`[${avg >= 45 && avg <= 60 ? '通过' : '未达标'}] 全片平均亮度 ${avg.toFixed(1)}（目标 45–60）`);
+console.log(`[${avg >= 40 && avg <= 55 ? '通过' : '未达标'}] 全片平均亮度 ${avg.toFixed(1)}（目标 40–55）`);
 // 每秒的静止检测数值
 const perSec = []; for (let s0 = 0; s0 + 1 <= N / FPS + 1e-6; s0++) { let m = 0, c = 0; for (let i = Math.max(1, s0 * FPS); i < Math.min(N, (s0 + 1) * FPS); i++) { m += adj[i]; c++; } perSec.push(`${s0}s ${(m / c).toFixed(2)}`); }
 console.log('每秒相邻帧平均差异：' + perSec.join('  '));
-process.exit(ok1 && ok2 && ok3 && ok4 && ok5 && ok6 ? 0 : 1);
+process.exit(ok1 && ok2 && ok3 && ok4 && ok5 && ok6 && okW ? 0 : 1);

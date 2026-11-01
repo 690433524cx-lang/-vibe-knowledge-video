@@ -634,7 +634,7 @@ function drawPaths(ctx, P, t) {
   line(P.short, 22, RED, 0.5 * P.a); line(P.short, 11, '#FF6A50', 0.85 * P.a); line(P.short, 4, '#F4D4C6', P.a);   // 近路：又短又粗、很亮
   const comet = (tr, r) => {                                                 // 带拖尾的发光彗星
     for (let k = tr.length - 1; k >= 0; k--) { const p = tr[k], f = 1 - k / tr.length, rr = r * (0.35 + 0.65 * f);
-      const g = ctx.createRadialGradient(p[0], p[1], 0, p[0], p[1], rr); g.addColorStop(0, `rgba(242,214,200,${0.95 * f})`); g.addColorStop(0.35, `rgba(255,150,120,${0.75 * f})`); g.addColorStop(1, 'rgba(255,42,42,0)');
+      const g = ctx.createRadialGradient(p[0], p[1], 0, p[0], p[1], rr); g.addColorStop(0, `rgba(240,160,135,${0.8 * f})`); g.addColorStop(0.35, `rgba(235,95,70,${0.6 * f})`); g.addColorStop(1, 'rgba(255,42,42,0)');
       ctx.globalAlpha = P.a; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p[0], p[1], rr, 0, TAU); ctx.fill(); }
   };
   if (P.cs) comet(P.cs, 80);
@@ -783,7 +783,7 @@ function frame2(t, F, AUD, W) {
   } else if (t < iceT) {
     // ---- 杯子摔向地面炸开，画面一分为二：左边打沙袋（火越打越大），右边安静坐着（火慢慢熄成一颗余烬）
     const dC = t - cupT;
-    cam = orbit({ pos: [0, 0.15 + 0.1 * Math.sin(t * qw(1.3)), 10.2 - 0.6 * clamp((t - cupT) / 10)], target: [0, -0.35, 0], fov: 35 }, 0.6 * sway, 0);
+    cam = orbit({ pos: [0.3 * Math.sin(t * qw(0.8)), 0.15 + 0.14 * Math.sin(t * qw(1.3)), 10.2 - 0.8 * clamp((t - cupT) / 10)], target: [0, -0.35, 0], fov: 35 }, 1.2 * sway, 0);
     if (dC < 0) {
       // 杯子下落（半身像化成粒子散开，杯子从上面掉下来）
       const f = clamp((t - (cupT - 0.55)) / 0.55), form = clamp(f / 0.45), fall = clamp((f - 0.45) / 0.55);
@@ -801,8 +801,10 @@ function frame2(t, F, AUD, W) {
       // 左：沙袋 + 缩小的愤怒（头顶一团火，每打一下火窜高一截）
       const hits = B.filter(b => b > cupT + 0.3 && b < iceT - 0.2 && Math.round((b - cupT) / BEAT) % 2 === 1);
       const done = hits.filter(h => h <= t), last = done.length ? t - done[done.length - 1] : 9;
+      const punch = last < 0.35 ? Math.exp(-last / 0.1) : 0;   // 每打一下镜头跟着推一下
       let swing = 0; for (const h of done) { const d = t - h; swing += 0.46 * Math.exp(-d * 1.1) * Math.sin(d * 5.2); }   // 每打一下大幅摆动（20 度以上），铁链跟着晃
       const inK = clamp(dC / 0.3);                                           // 杯子的碎片直接飞成沙袋和两个人
+      cam = { ...cam, pos: [cam.pos[0] - 0.25 * punch, cam.pos[1], cam.pos[2] * (1 - 0.05 * punch)] };
       S.bag.g.visible = true; S.bag.g.scale.setScalar(1.55); S.bag.g.position.set(-3.55, 2.55, 0); S.bag.g.rotation.set(0.12 * Math.sin(t * 2.1) * Math.min(1, Math.abs(swing) * 3), 0.4, swing);
       if (last < 0.4) {
         const ip = new THREE.Vector3(-0.42, -1.2, 0.1); S.bag.g.updateMatrixWorld(true); S.bag.g.localToWorld(ip);
@@ -908,9 +910,9 @@ function draw2D2(t, ctx, F) {
 function drawFire(ctx, f, t) {
   // 头顶的一团火：几层摇曳的火舌（外红、中橙、芯白）；余烬时只剩一颗暗红的小点
   const [x, y] = f.p, H = 260 * f.h, W2 = 70 + 90 * f.h;
-  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  ctx.save(); ctx.globalCompositeOperation = 'source-over';   // 普通叠加：火舌重叠也不会叠成纯白
   if (f.ember) { const g = ctx.createRadialGradient(x, y - 8, 0, x, y - 8, 22); g.addColorStop(0, 'rgba(255,120,90,0.9)'); g.addColorStop(1, 'rgba(255,42,42,0)'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y - 8, 22, 0, TAU); ctx.fill(); ctx.restore(); return; }
-  for (const [k, col, al] of [[1, 'rgba(255,42,42,', 0.55], [0.72, 'rgba(255,110,60,', 0.7], [0.42, 'rgba(255,235,220,', 0.85]]) {
+  for (const [k, col, al] of [[1, 'rgba(255,42,42,', 0.55], [0.72, 'rgba(255,110,60,', 0.7], [0.42, 'rgba(255,175,140,', 0.75]]) {
     for (let j = 0; j < 3; j++) {
       const ph = t * (7 + j * 1.3) + f.seed * 3 + j * 2, w = W2 * k * (0.7 + 0.3 * Math.sin(ph)), h = H * k * (0.85 + 0.15 * Math.sin(ph * 1.7)), sx = x + (j - 1) * w * 0.35 + 10 * Math.sin(ph * 0.7);
       const g = ctx.createLinearGradient(0, y, 0, y - h); g.addColorStop(0, col + al + ')'); g.addColorStop(1, col + '0)');
