@@ -77,11 +77,11 @@ export function render(t) {
   const fu = K.final.uniforms;
   const nb = { b: C3('#0A0303'),   // 背景近黑 #0A0303，红色只在主体身后
       // 背景保持深色，但不要那么黑
-     d: fc.clone().multiplyScalar(0.05 * kk), m: fc.clone().multiplyScalar(0.09 * kk), h: fc.clone().lerp(C3('#FFFFFF'), 0.3).multiplyScalar(0.14 * kk) };
+     d: fc.clone().multiplyScalar(0.012 * kk), m: fc.clone().multiplyScalar(0.02 * kk), h: fc.clone().lerp(C3('#FFFFFF'), 0.3).multiplyScalar(0.03 * kk) };   // 背景不能整屏红雾
   ['b', 'd', 'm', 'h'].forEach(x => { fu['uN0' + x].value.copy(nb[x]); fu['uN1' + x].value.copy(nb[x]); });
   fu.uTide.value = 0; fu.uTideMix.value = 0; fu.uBright.value = 1;
-  S.bgGlow.material.uniforms.uCol.value.copy(fc); S.bgGlow.material.uniforms.uInt.value = 0.3 * kk;
-  S.fog.forEach((m, j) => { m.material.uniforms.uCol.value.copy(fc); m.material.uniforms.uInt.value = [0.045, 0.075, 0.11][j] * kk; });   // 红色只在主体身后的光晕里   // 雾只留在远处和画面边缘
+  S.bgGlow.material.uniforms.uCol.value.copy(fc); S.bgGlow.material.uniforms.uInt.value = 0.05 * kk;   // 背景近黑：红色只在主体身后的光晕里
+  S.fog.forEach((m, j) => { m.material.uniforms.uCol.value.copy(fc); m.material.uniforms.uInt.value = [0.004, 0.006, 0.008][j] * kk; });   // 红色只在主体身后的光晕里   // 雾只留在远处和画面边缘
   K.dust.material.uniforms.uColA.value.copy(fc).lerp(C3('#FFFFFF'), 0.4); K.dust.material.uniforms.uColB.value.set('#FFFFFF');
   K.dust.material.uniforms.uCam.value.copy(K.camera.position); K.dust.material.uniforms.uAlpha.value = 0.4 + 0.6 * kk;
   const dir = new THREE.Vector3(); K.camera.getWorldDirection(dir);
@@ -95,7 +95,7 @@ export function render(t) {
   K.bloom.strength = F.bloom;
   if (F.sparkCol) { K.sparks.material.uniforms.uColA.value.set(F.sparkCol); K.sparks.material.uniforms.uColB.value.set('#FFFFFF'); }
   updateSparks(t, F.bursts ?? []);
-  fu.uCA.value = F.ca ? 0.002 : 0.0006; fu.uVig.value = 1.1; fu.uGlitch.value = 0; fu.uTime.value = t % TL;
+  fu.uCA.value = F.ca ? 0.002 : 0.0006; fu.uVig.value = 1.45; fu.uGlitch.value = 0; fu.uTime.value = t % TL;
   K.composer.render();
   BOXES.length = 0;
   outCtx.setTransform(1, 0, 0, 1, 0, 0); outCtx.globalAlpha = 1; outCtx.drawImage(glCanvas, 0, 0);
