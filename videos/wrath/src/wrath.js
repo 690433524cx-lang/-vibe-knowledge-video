@@ -583,7 +583,7 @@ const titleCanvas = { c: null };
 export function draw2D(t, ctx, F) {
   // “七宗罪 · 第三集”：第 0 帧在画面上方（60px），愤怒标题出现时缩小飞到左上角，变成常驻的小字
   const hk = F.header, sk = F.series;
-  if (sk > 0.001 || hk > 0.001) {
+  if (!window.COVER && (sk > 0.001 || hk > 0.001)) {
     const k = inOut(hk), x = lerp(960, 60, k), y = lerp(92, 58, k), size = Math.round(lerp(60, 24, k));
     glowText(k > 0.98 ? '七宗罪 · 第三集 · 愤怒' : '七宗罪 · 第三集', x, y, fs(700, size), k > 0.5 ? 'rgba(255,215,205,0.75)' : '#EEE4E8', { align: k > 0.5 ? 'left' : 'center', glow: lerp(22, 6, k), glowColor: k > 0.5 ? RED : '#FFFFFF', nobox: true, alpha: hk > 0.001 && sk < 0.001 ? hk * (1 - clamp((t - (TL - 1.0)) / 0.3)) : Math.max(sk, hk) });
   }
@@ -612,8 +612,8 @@ export function draw2D(t, ctx, F) {
   if (F.paths) drawPaths(ctx, F.paths, t);
   for (const L of F.labels) drawLabel(ctx, L);
   if (F.spinner && F.spinner.a > 0.01) { const s = F.spinner; ctx.save(); ctx.globalAlpha = s.a; ctx.translate(s.x, s.y); for (let k = 0; k < 8; k++) { const a = k / 8 * TAU + s.t * 5; ctx.globalAlpha = s.a * (0.2 + 0.8 * ((k + Math.floor(s.t * 10)) % 8) / 7); ctx.fillStyle = HI; ctx.beginPath(); ctx.arc(Math.cos(a) * 16, Math.sin(a) * 16, 3.5, 0, TAU); ctx.fill(); } ctx.restore(); }
-  for (const s of F.subs) drawSub(t, ctx, s);
-  if (F.title) drawTitle(ctx, t, F.title);
+  if (!window.COVER) for (const s of F.subs) drawSub(t, ctx, s);   // 封面截图时不画字幕
+  if (F.title && !window.COVER) drawTitle(ctx, t, F.title);
   if (F.shock) { ctx.save(); ctx.globalAlpha = F.shock.a; ctx.strokeStyle = F.shock.col; ctx.lineWidth = lerp(6, 1, 1 - F.shock.a / 0.9); ctx.shadowColor = RED; ctx.shadowBlur = 18; ctx.beginPath(); ctx.arc(F.shock.c[0], F.shock.c[1], F.shock.r * 1920, 0, TAU); ctx.stroke(); ctx.restore(); }
 }
 function drawBolt(ctx, b, t) {
