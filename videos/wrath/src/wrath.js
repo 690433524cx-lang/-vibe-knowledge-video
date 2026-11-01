@@ -633,9 +633,11 @@ function drawPaths(ctx, P, t) {
   ctx.setLineDash([14, 14]); ctx.lineDashOffset = -t * 40; line(P.long, 4, HI, 0.75 * P.a); ctx.setLineDash([]);   // 远路：长长的虚线弧
   line(P.short, 22, RED, 0.5 * P.a); line(P.short, 11, '#FF6A50', 0.85 * P.a); line(P.short, 4, '#F4D4C6', P.a);   // 近路：又短又粗、很亮
   const comet = (tr, r) => {                                                 // 带拖尾的发光彗星
+    ctx.save(); ctx.globalCompositeOperation = 'source-over';               // 普通叠加：拖尾挤在一起时也不会叠成纯白
     for (let k = tr.length - 1; k >= 0; k--) { const p = tr[k], f = 1 - k / tr.length, rr = r * (0.35 + 0.65 * f);
       const g = ctx.createRadialGradient(p[0], p[1], 0, p[0], p[1], rr); g.addColorStop(0, `rgba(235,150,125,${0.62 * f})`); g.addColorStop(0.35, `rgba(235,95,70,${0.6 * f})`); g.addColorStop(1, 'rgba(255,42,42,0)');
       ctx.globalAlpha = P.a; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p[0], p[1], rr, 0, TAU); ctx.fill(); }
+    ctx.restore();
   };
   if (P.cs) comet(P.cs, 80);
   if (P.cl) comet(P.cl, P.slow >= 0 ? 46 + 26 * Math.exp(-P.slow / 0.4) : 46);
