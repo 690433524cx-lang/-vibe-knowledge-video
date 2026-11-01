@@ -346,7 +346,7 @@ const SHORT = [BR.eye, [-0.9, -0.33, -0.18], [-0.55, -0.36, -0.15], BR.amyg];
 const LONG = [BR.eye, [-0.85, -0.62, -0.2], [-0.2, -0.72, -0.2], [0.45, -0.5, -0.2], [0.78, 0.05, -0.2], [0.55, 0.6, -0.2], [-0.05, 0.82, -0.2], [-0.62, 0.68, -0.22], BR.pfc];
 function makeBrain() {
   const g = new THREE.Group(); g.position.set(-0.45, 0.05, 0); g.scale.setScalar(1.15); g.rotation.y = Math.PI; K.scene.add(g);   // 转半圈（不要用负缩放，否则法线反了、整颗大脑变暗）
-  const m = brainMaterial(RED); m.uniforms.uSeeX.value = 99; m.uniforms.uBright.value = 4.6; m.uniforms.uRegR.value = 0.025; m.uniforms.uSize.value = 0.014; m.uniforms.uHot.value.set(HI);   // 嫉妒那一集的大脑材质（会正确处理表面的明暗）
+  const m = brainMaterial(RED); m.uniforms.uSeeX.value = 99; m.uniforms.uBright.value = 5.4; m.uniforms.uRegR.value = 0.025; m.uniforms.uSize.value = 0.014; m.uniforms.uHot.value.set(HI);   // 嫉妒那一集的大脑材质（会正确处理表面的明暗）
   const p = pts(buildBrainSide(511, 1).geometry(THREE), m, g, 20);
   return { g, m, p };
 }
@@ -373,7 +373,7 @@ export function events() {
 
 // ------------------------------------------------------------ 每帧
 export function frame(t) {
-  const F = { flash: 0, flashCol: '#FFFFFF', shake: 0, shock: null, bloom: 1.0, auraCol: RED, auraK: 0.6, subs: [], names: null, ripples: [], bursts: [], blur: 0, ca: 0, labels: [], bolts: [], paths: null, scan: null, title: null, header: t >= 3.4 && t < TL - 0.7 };
+  const F = { flash: 0, flashCol: '#FFFFFF', shake: 0, shock: null, bloom: 1.0, auraCol: RED, auraK: 1.0, subs: [], names: null, ripples: [], bursts: [], blur: 0, ca: 0, labels: [], bolts: [], paths: null, scan: null, title: null, header: t >= 3.4 && t < TL - 0.7 };
   const endK = 1 - clamp((t - (TL - 0.9)) / 0.6);
   const kick = pulse(t) * endK, low = env(t, 'low'), mid = env(t, 'mid'), high = env(t, 'high');
   const bb = beatInBar(t), after = t >= DROP;
@@ -416,7 +416,7 @@ export function frame(t) {
       if (dt < 1 / 30 + 1e-4) F.ca = 1;
       F.auraK = 0.6 + 0.4 * k;
       F.bursts.push({ t0: EV.stop, pos: [slotX(WR), HEAD_C[1] + 0.6, 0.2], n: 60, speed: 1.4, life: 0.6, grav: -0.2, seed: 7, bright: 2.4 });
-    } else F.auraK = 0.25;
+    } else F.auraK = 0.7;
     if (t >= EV.title - 0.25) F.title = { t0: EV.title - 0.25 };
     F.sparkCol = HI;
   }
@@ -446,7 +446,7 @@ export function frame(t) {
       const cp = camNow.pos; m.g.rotation.set(-0.42, Math.atan2(cp[0] - m.g.position.x, cp[2] - m.g.position.z), 0, 'YXZ');
       const appear = clamp((t - EV.rings - 0.2 - m.ring * 0.25) / 0.6);
       let h = 0; for (const [bt, ri, idx] of plan) { const d = t - bt; if (d >= 0 && d < 0.6 && m.ring === ri && RINGS.slice(0, ri).reduce((a, r) => a + r.n, 0) + idx === n) h = Math.max(h, Math.exp(-d / 0.18) * (ri === 2 ? 0.5 : 1)); }
-      m.m.uniforms.uGray.value = 1 - 0.85 * h; m.m.uniforms.uDim.value = 3.2 * (1 + 1.4 * h) * (0.15 + 0.85 * appear) * (1 - gone);
+      m.m.uniforms.uGray.value = 1 - 0.85 * h; m.m.uniforms.uDim.value = 4.0 * (1 + 1.4 * h) * (0.15 + 0.85 * appear) * (1 - gone);
       m.m.uniforms.uScatter.value = 2.0 * (1 - appear) + 2.4 * gone; m.m.uniforms.uScatterDist.value = 1.4; m.m.uniforms.uDrift.value = 0.006;
     });
     S.minis.bodyMat.uniforms.uDim.value = 1.6 * up * (1 - gone);
@@ -461,7 +461,9 @@ export function frame(t) {
       const ys = [330, 520, 720];
       RINGS.forEach((ring, ri) => { let p = null, bd = 1e9; S.minis.forEach(m => { if (m.ring !== ri) return; const q = project([m.g.position.x, 0.25, m.g.position.z]); const d = Math.abs(q[0] - 1330) + Math.abs(q[1] - [330, 520, 720][ri]) * 0.6; if (q[0] > 60 && q[0] < 1400 && q[1] > 80 && q[1] < 1000 && d < bd) { bd = d; p = q; } }); if (!p) return; F.labels.push({ text: ring.label, x: 1560, y: ys[ri], to: p, a: clamp((up - 0.6) / 0.4) * (1 - gone) * clamp((t - EV.rings - 0.4 - ri * 0.3) / 0.3) }); });
     }
-    if (t >= EV.brain) { S.brain.g.visible = true; brainAsm(clamp((t - EV.brain) / 0.55)); }
+    // 人群化成粒子的同时，大脑已经在汇聚；镜头同时转到大脑的侧面（中间没有空白）
+    if (t >= EV.brain - 0.35) { S.brain.g.visible = true; brainAsm(clamp((t - EV.brain + 0.35) / 0.8)); }
+    if (t >= EV.brain - 0.2) cam = camLerp(cam, { pos: [0.35, 0.05, 5.0], target: [0.35, 0.0, 0], fov: 35 }, inOut(clamp((t - EV.brain + 0.2) / 0.75)));
   } else if (t < EV.bust0 + 2 * BEAT) {
     // ---- 粒子大脑：一道光从眼睛的位置进来，分成近路（先到杏仁核）和远路（绕到前面的理智）
     const BCAM = { pos: [0.35, 0.05, 5.0], target: [0.35, 0.0, 0], fov: 35 };
@@ -485,7 +487,7 @@ export function frame(t) {
     F.labels.push({ text: '理智', x: 1600, y: 300, to: brainScreen(BR.pfc), a: la * clamp((t - EV.go - 0.3) / 0.3) });
     F.labels.push({ text: '近路', x: 1180, y: 760, to: brainScreen(pathAt(SHORT, 0.45)), a: la * clamp((t - EV.go - 0.6) / 0.3), small: true });
     F.labels.push({ text: '远路', x: 640, y: 170, to: brainScreen(pathAt(LONG, 0.62)), a: la * clamp((t - EV.go - 0.9) / 0.3), small: true });
-    F.auraK = 0.8; F.bloom = 1.0 + 0.4 * (dD >= 0 ? Math.exp(-dD / 0.4) : 0);
+    F.auraK = 1.15; F.bloom = 1.0 + 0.4 * (dD >= 0 ? Math.exp(-dD / 0.4) : 0);
     // 大脑飞回、汇聚成愤怒的半身像
     if (leaving > 0) {
       W.g.position.set(0, 0, 0);
