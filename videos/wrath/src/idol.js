@@ -170,7 +170,7 @@ export function idolMaterial(sinHex, o = {}) {
       // 变色：保留灰色阶段的明暗结构，只把亮度映射成这一宗的颜色（暗部深色 → 亮部主色 → 高光接近白色）
       if (uRamp > 0.5) {
         float L = clamp(rampL/1.25, 0.0, 1.0);
-        vec3 dk = uSin*0.28, hi2 = mix(uSin, vec3(1.0), 0.8);
+        vec3 dk = uSin*0.22, hi2 = mix(uSin, vec3(1.0), 0.38);   // 亮部仍是这一宗的颜色，只有最亮的轮廓接近白色
         vec3 rc = L < 0.5 ? mix(dk, uSin, L/0.5) : mix(uSin, hi2, (L - 0.5)/0.5);
         col = mix(rc, uRimCol, rimK2);
       }

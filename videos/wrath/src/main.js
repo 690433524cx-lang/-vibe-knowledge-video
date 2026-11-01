@@ -26,7 +26,7 @@ export async function init() {
   outCtx = outCanvas.getContext('2d');
   initCore(glCanvas, { W, H: Hh, bolts: [] });
   window.K = K;
-  K.bloom.radius = 0.5; K.bloom.threshold = 0.5;   // 只让眼睛、光环、道具的亮点发光，辉光不盖在脸上
+  K.bloom.radius = 0.45; K.bloom.threshold = 0.72;   // 只让眼睛、光环、道具的亮点发光，辉光不盖在脸上
   const k = PREVIEW ? 0.5 : 1;
   // ---- 脸：中性闭眼（抽签的灰色脸）+ 每一宗的表情；全尺寸用于特写，轻量版用于那一排
   const obj = parseOBJ(await (await fetch('assets/canonical_face_model.obj')).text());
@@ -92,13 +92,13 @@ export function render(t) {
   S.spot.quaternion.copy(qn);
   S.chars?.forEach?.(() => {});
   for (const C of (SHOW.charsList?.() ?? [])) { C.aura.quaternion.copy(qn); C.rays.quaternion.copy(qn); }
-  K.bloom.strength = F.bloom;
+  K.bloom.strength = 0.6 * F.bloom;   // 辉光降到 60%，只让眼睛、闪电角、裂纹、光环这些亮点发光
   if (F.sparkCol) { K.sparks.material.uniforms.uColA.value.set(F.sparkCol); K.sparks.material.uniforms.uColB.value.set('#FFFFFF'); }
   updateSparks(t, F.bursts ?? []);
   fu.uCA.value = F.ca ? 0.002 : 0.0006; fu.uVig.value = 1.9; fu.uGlitch.value = 0; fu.uTime.value = t % TL;
   K.composer.render();
   BOXES.length = 0;
-  outCtx.setTransform(1, 0, 0, 1, 0, 0); outCtx.globalAlpha = 1; outCtx.filter = 'brightness(1.42)'; outCtx.drawImage(glCanvas, 0, 0); outCtx.filter = 'none';   // 整体提亮：主体更亮，近黑的背景仍然是近黑
+  outCtx.setTransform(1, 0, 0, 1, 0, 0); outCtx.globalAlpha = 1; outCtx.drawImage(glCanvas, 0, 0);
   // 甩镜头的运动模糊：沿运动方向叠几层位移的画面
   if (Math.abs(F.blur ?? 0) > 0.02) { const L = 90 * F.blur * K.scale; outCtx.save(); outCtx.globalCompositeOperation = 'lighter'; for (let j = 1; j <= 5; j++) { outCtx.globalAlpha = 0.16 * Math.abs(F.blur) * (1 - j / 6); outCtx.drawImage(glCanvas, -L * j / 5, 0); } outCtx.restore(); }
   outCtx.setTransform(K.scale, 0, 0, K.scale, 0, 0);
