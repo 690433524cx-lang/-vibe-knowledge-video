@@ -95,10 +95,10 @@ export function render(t) {
   K.bloom.strength = F.bloom;
   if (F.sparkCol) { K.sparks.material.uniforms.uColA.value.set(F.sparkCol); K.sparks.material.uniforms.uColB.value.set('#FFFFFF'); }
   updateSparks(t, F.bursts ?? []);
-  fu.uCA.value = F.ca ? 0.002 : 0.0006; fu.uVig.value = 1.45; fu.uGlitch.value = 0; fu.uTime.value = t % TL;
+  fu.uCA.value = F.ca ? 0.002 : 0.0006; fu.uVig.value = 1.9; fu.uGlitch.value = 0; fu.uTime.value = t % TL;
   K.composer.render();
   BOXES.length = 0;
-  outCtx.setTransform(1, 0, 0, 1, 0, 0); outCtx.globalAlpha = 1; outCtx.drawImage(glCanvas, 0, 0);
+  outCtx.setTransform(1, 0, 0, 1, 0, 0); outCtx.globalAlpha = 1; outCtx.filter = 'brightness(1.42)'; outCtx.drawImage(glCanvas, 0, 0); outCtx.filter = 'none';   // 整体提亮：主体更亮，近黑的背景仍然是近黑
   // 甩镜头的运动模糊：沿运动方向叠几层位移的画面
   if (Math.abs(F.blur ?? 0) > 0.02) { const L = 90 * F.blur * K.scale; outCtx.save(); outCtx.globalCompositeOperation = 'lighter'; for (let j = 1; j <= 5; j++) { outCtx.globalAlpha = 0.16 * Math.abs(F.blur) * (1 - j / 6); outCtx.drawImage(glCanvas, -L * j / 5, 0); } outCtx.restore(); }
   outCtx.setTransform(K.scale, 0, 0, K.scale, 0, 0);
