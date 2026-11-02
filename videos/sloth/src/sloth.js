@@ -290,25 +290,26 @@ const readT = s => 1.0 + 0.17 * charCount(s);
 
 // 全片的文字（钩子大字 + 字幕）。want = 想要的时间（会对齐到拍点，只往后延）；chain = 和前一条互相替换
 const TEXT_LIST = [
-  { id: 'A', kind: 'hook', text: '刷到这条，〔你〕抽中的是——', want: 0.1, exact: true, size: 64, chain: false },
-  { id: 'B', kind: 'hook', text: '你不是〔懒〕。', want: 1.5, size: 72 },
-  { id: 'C', kind: 'hook', text: '是你的大脑，把“明天的你”当成了〔陌生人〕。', want: 3.9, size: 64 },
-  { id: 'D', kind: 'sub', text: '研究发现：想到“十年后的自己”，大脑的反应像在想〔陌生人〕。', want: 8.7 },
-  { id: 'E', kind: 'sub', text: '所以把事情推给明天，就像〔推给了别人〕。', want: 13.3 },
-  { id: 'F', kind: 'sub', text: '大脑只占体重的〔2%〕，却耗掉约〔两成能量〕。', want: 17.382 },
-  { id: 'G', kind: 'sub', text: '所以它天生想〔省力〕，能躺就不想动。', want: 21.1 },
-  { id: 'H', kind: 'sub', text: '研究发现：拖延，常常不是〔时间问题〕，', want: 24.7 },
-  { id: 'I', kind: 'sub', text: '而是在躲开一种〔难受的感觉〕。', want: 28.4 },
-  { id: 'J', kind: 'sub', text: '先不碰它，心里就能〔舒服一会儿〕。', want: 31.5 },
-  { id: 'K', kind: 'sub', text: '所以那个总说“明天再说”的你——', want: 34.9 },
-  { id: 'L', kind: 'sub', text: '不是懒，只是还没〔准备好〕面对它。', want: 38.3 },
-  { id: 'M', kind: 'hook', text: '你最近在拖的〔那件事〕，是什么？', want: 41.7, size: 64, minD: 3.0 },
-  { id: 'N', kind: 'hook', text: '下一集：〔贪婪〕', want: 46.1, size: 56, key: GOLD },
+  // A：抽中那一拍，“——”后面弹出“懒惰”（大一号、青色、放大回弹 + 光晕）；阅读时间按补全后的整句算
+  { id: 'A', kind: 'hook', text: '刷到这条，〔你〕抽中的是——', suffix: '懒惰', want: 0.1, exact: true, size: 64 },
+  { id: 'B', kind: 'hook', text: '你不是〔懒〕。', want: 3.0, size: 72 },
+  { id: 'C', kind: 'hook', text: '是你的大脑，把“明天的你”当成了〔陌生人〕。', want: 5.45, size: 64 },
+  { id: 'D', kind: 'sub', text: '研究发现：想到“十年后的自己”，大脑的反应像在想〔陌生人〕。', want: 10.874 },
+  { id: 'E', kind: 'sub', text: '所以把事情推给明天，就像〔推给了别人〕。', want: 15.212 },
+  { id: 'F', kind: 'sub', text: '大脑只占体重的〔2%〕，却耗掉约〔两成能量〕。', want: 19.551 },
+  { id: 'G', kind: 'sub', text: '所以它天生想〔省力〕，能躺就不想动。', want: 22.8 },
+  { id: 'H', kind: 'sub', text: '研究发现：拖延，常常不是〔时间问题〕，', want: 26.058 },
+  { id: 'I', kind: 'sub', text: '而是在躲开一种〔难受的感觉〕。', want: 30.0 },
+  { id: 'J', kind: 'sub', text: '先不碰它，心里就能〔舒服一会儿〕。', want: 33.1 },
+  { id: 'K', kind: 'sub', text: '所以那个总说“明天再说”的你——', want: 36.904 },
+  { id: 'L', kind: 'sub', text: '不是懒，只是还没〔准备好〕面对它。', want: 39.9 },
+  { id: 'M', kind: 'hook', text: '你最近在拖的〔那件事〕，是什么？', want: 43.412, size: 64, minD: 3.0 },
+  { id: 'N', kind: 'hook', text: '下一集：〔贪婪〕', want: 48.292, size: 56, key: GOLD },
 ];
 function scheduleText() {
   let prevEnd = 0; const out = [];
   for (const o of TEXT_LIST) {
-    const minD = Math.max(readT(o.text), o.minD ?? 0);
+    const minD = Math.max(readT(o.text + (o.suffix ?? '')), o.minD ?? 0);
     let t0 = o.exact ? o.want : nb(o.want);
     if (o.chain !== false && t0 < prevEnd - 1e-3) t0 = beatAtOrAfter(prevEnd);
     const s = { ...o, t0, minD, size: o.size ?? 52 };
@@ -325,15 +326,17 @@ export function build(scene, beats, heads, audioEnv) {
   S = scene; BT = beats; B = beats.beats; TL = beats.duration; DN = beats.downbeats; BEAT = beats.beat; DROP = beats.drop;
   setAudio(audioEnv, beats);
   EV = {
-    scan0: 0.3, scanTurn: 0.8, pick: nb(1.3), wake: nb(3.9), step1: nd(4.4), step2: nd(6.5), trio: nd(8.0), cube: nd(13.3),
-    brain: nd(17.2), think: [], back: nd(24.7), end: nd(45.0),
+    scan0: 0.3, scanTurn: 0.8, pick: nb(1.3), step1: nd(6.5), step2: nd(8.7), trio: nd(10.9), cube: nd(15.2),
+    brain: nd(19.5), think: [], back: nd(26.0), end: nd(47.7),
   };
-  EV.hook = nb(1.5);
+  TXT = scheduleText();
+  EV.title = nextBeat(EV.pick);                                         // 亮相：大标题出现、打一个大哈欠
+  EV.wake = TX('B').t0;                                                  // “你不是懒。”：标题飞到左上角，同时猛地睁眼
+  EV.pull = TX('C').t0;                                                  // 镜头拉远，“明天的你”出现
   EV.cols = [1, 2, 3].map(k => B[B.indexOf(EV.trio) + k]);            // 三根柱子：在三个拍点上依次升起
   EV.yawn = nextBeat(EV.cube);                                          // 打哈欠（0.6 秒张开、0.4 秒合上）
-  EV.push = B[B.indexOf(EV.cube) + 3];                                  // 轻轻一推
+  EV.push = DROP;                                                        // 轻轻一推：正好在 drop 上
   EV.next = nextBeat(EV.end);                                           // 贪婪亮起
-  TXT = scheduleText();
   S.chars = SINS.map((sin, i) => makeChar(sin, i, heads));
   S.future = makeChar(SINS[SL], 8, heads); S.decade = makeChar(SINS[SL], 9, heads);
   S.extra = [S.future, S.decade];
@@ -365,14 +368,13 @@ function makeZs(n) {
 }
 // 什么时候飘 Z：抽中那一下一个；打瞌睡时每次点头到最低点一个；帽子盖住眼睛时连着三个
 function scheduleZ() {
-  const z = [{ t0: EV.pick + 0.12, s: 0.16 }, { t0: nb(2.9), s: 0.2 }];
+  const z = [{ t0: EV.pick + 0.12, s: 0.16 }, { t0: EV.title + 0.25, s: 0.18 }, { t0: EV.title + 0.75, s: 0.22 }, { t0: EV.title + 1.25, s: 0.2 }];
   for (const t0 of NODS()) z.push({ t0: t0 + 1.2, s: 0.18 + 0.05 * hash(t0) });
   return z.filter(o => o.t0 < TL - 2).sort((a, b) => a.t0 - b.t0);
 }
 // 打瞌睡：每两小节一次（从“明天的你”出现之后），头慢慢往下点约 8 度，再缓缓抬起
 const NODS = () => DN.filter((d, i) => d >= EV.step1 - 1e-3 && d < EV.brain - 2.4 && Math.round((d - EV.step1) / (4 * BEAT)) % 2 === 0);
 function nodAt(t) {
-  if (t >= EV.hook && t < EV.wake) return sine(clamp((t - EV.hook) / (EV.wake - EV.hook - 0.15)));                 // “你不是懒。”：一直慢慢往下点
   if (t >= EV.wake && t < EV.wake + 0.12) return 1 - outExpo((t - EV.wake) / 0.12);                                 // 被吓醒：猛地抬头
   for (const d of NODS()) { const u = (t - d) / (8 * BEAT); if (u >= 0 && u < 1) return u < 0.35 ? sine(u / 0.35) : u < 0.5 ? 1 : u < 0.85 ? 1 - sine((u - 0.5) / 0.35) : 0; }
   return 0;
@@ -417,8 +419,8 @@ function setCol(C, hex) { C.mats.forEach(m => m.uniforms.uSin.value.set(hex)); C
 
 export const subsList = () => TXT.map(s => ({ text: plain(s.text), t0: +s.t0.toFixed(3), t1: +s.t1.toFixed(3), minD: +s.minD.toFixed(3) }));
 export function events() {
-  const big = [['抽中懒惰', EV.pick], ['被吓醒、拉远', EV.wake], ['明天的你：浅青', EV.step1], ['明天的你：陌生人', EV.step2], ['三个半身像', EV.trio], ['那件事', EV.cube], ['粒子大脑', EV.brain], ['回到懒惰、荆棘', EV.back], ['结尾阵容', EV.end]];
-  const small = [...EV.cols.map((b, i) => [`柱子 ${i + 1}`, b]), ['打哈欠', EV.yawn], ['推方块', EV.push], ['贪婪亮起', EV.next]];
+  const big = [['抽中懒惰', EV.pick], ['标题飞到左上角、睁眼', EV.wake], ['拉远、明天的你', EV.pull], ['明天的你：浅青', EV.step1], ['明天的你：陌生人', EV.step2], ['三个半身像', EV.trio], ['那件事', EV.cube], ['粒子大脑', EV.brain], ['回到懒惰、荆棘', EV.back], ['结尾阵容', EV.end]];
+  const small = [['亮相：标题、哈欠', EV.title], ...EV.cols.map((b, i) => [`柱子 ${i + 1}`, b]), ['打哈欠', EV.yawn], ['推方块', EV.push], ['贪婪亮起', EV.next]];
   return [...big.map(([name, t]) => ({ name, t, kind: 'big' })), ...small.map(([name, t]) => ({ name, t, kind: 'small' }))];
 }
 export const charsList = () => S ? [...(S.chars ?? []), ...(S.extra ?? [])] : [];
@@ -437,7 +439,8 @@ export function frame(t) {
   S.zs.forEach(z => { z.g.visible = false; }); S.cube.g.visible = false;
   const W = S.chars[SL];
   let cam, subj = null;                                                     // subj：主体的世界坐标（高音的小星点、Z 都围着它）
-  F.corner = clamp((t - EV.pick - 0.25) / 0.3) * (1 - clamp((t - EV.end) / 0.25));
+  F.corner = clamp((t - EV.wake - 0.45) / 0.1) * (1 - clamp((t - EV.end) / 0.25));
+  F.title = t >= EV.title - 0.05 && t < EV.wake + 0.5 ? { a: clamp((t - EV.title) / 0.15), fly: outExpo(clamp((t - EV.wake) / 0.4)), pop: t - EV.title } : null;
 
   if (t < EV.pick) {
     // ---- 场景 1：第 0 帧七个彩色角色排成一排；扫描线从左扫到右、再扫回来，停在懒惰上
@@ -446,7 +449,7 @@ export function frame(t) {
     else if (t >= EV.scanTurn) sx = lerp(2000, X(SL), outExpo((t - EV.scanTurn) / (EV.pick - EV.scanTurn)));
     cam = heroLineup(t, F, AUD, i => sx == null ? 0 : 0.8 * Math.exp(-Math.pow((sx - X(i)) / 70, 2)));
     if (sx != null) F.scan = { x: sx, a: clamp((t - EV.scan0) / 0.06) };
-  } else if (t < EV.wake) {
+  } else if (t < EV.pull) {
     // ---- 抽中：镜头 0.25 秒猛地推到懒惰的脸（占画面高约 70%，居中偏右），其他角色被甩出画面；眼睛亮起，飘出一个 Z，一次柔和的冲击波
     const dt = t - EV.pick, k = outExpo(clamp(dt / 0.25));
     S.chars.forEach(O => {
@@ -456,7 +459,14 @@ export function frame(t) {
     });
     W.g.visible = true;
     setState(W, { lite: dt < 0.04, gray: false, eyes: 0.5 + 0.5 * outExpo(clamp(dt / 0.12)), halo: 0.85 + 0.15 * k, props: 1, scatter: 0, aud: AUD, pop: 0.6 * Math.exp(-dt / 0.25) });
+    // 亮相：慢慢打一个大哈欠（0.6 秒张开、停一下、0.4 秒合上），毛线帽往下滑一点；“你不是懒。”那一拍猛地睁眼、帽子弹回去
+    const yu = t - EV.title, yawn = yu < 0 ? 0 : yu < 0.6 ? sine(yu / 0.6) : yu < 1.0 ? 1 : yu < 1.4 ? 1 - sine((yu - 1.0) / 0.4) : 0;
+    if (yawn > 0.5) { W.gag.visible = true; W.col.visible = false; }
+    W.eyes.forEach(m => { m.material.uniforms.uInt.value *= 1 - 0.6 * yawn; });
     animate(W, t, 9, -9, true, AUD);
+    W.head.rotation.x -= 0.1 * yawn;                                         // 打哈欠时头往后仰一点
+    const hs = t < EV.wake ? 0.3 * sine(clamp((t - EV.title) / 1.2)) : 0.3 * (1 - outExpo(clamp((t - EV.wake) / 0.15)));
+    if (W.hat) W.hat.material.uniforms.uB.value = hs;
     const close = camAt(-0.30 * HW(3.7), 0.2, 3.7);
     cam = camLerp(lineupCam(t), live(close, t, EV.pick, 0), k);
     F.names = 1 - clamp(dt / 0.15); F.aired = F.names; F.series = 1 - clamp(dt / 0.08);
@@ -466,11 +476,11 @@ export function frame(t) {
     subj = [0, HEAD_C[1], 0];
   } else if (t < EV.trio) {
     // ---- 被吓醒：猛地睁眼，镜头拉远，懒惰移到画面左侧 1/3；右侧远处的雾里出现一个一模一样的“明天的你”
-    const dt = t - EV.wake, k = inOut(clamp(dt / 0.5));
+    const dt = t - EV.pull, k = inOut(clamp(dt / 0.5));
     W.g.visible = true;
     setState(W, { lite: false, gray: false, eyes: 1, halo: 1, props: 1, scatter: 0, aud: AUD }); animate(W, t, 9, -9, true, AUD);
     const D = 8.2, cx = 0.333 * HW(D);
-    const close = live(camAt(-0.30 * HW(3.7), 0.2, 3.7), t, EV.pick, 0), wide = live(camAt(cx, -0.35, D), t, EV.wake, cx);
+    const close = live(camAt(-0.30 * HW(3.7), 0.2, 3.7), t, EV.pick, 0), wide = live(camAt(cx, -0.35, D), t, EV.pull, cx);
     cam = camLerp(close, wide, k);
     // 明天的你：每个小节第一拍往远处退一步，颜色褪掉一层（青 → 浅青 → 灰），五官变模糊，帽子和围巾消失
     const U = S.future, s1 = inOut(clamp((t - EV.step1) / 1.4)), s2 = inOut(clamp((t - EV.step2) / 0.9));
@@ -487,7 +497,7 @@ export function frame(t) {
     // ---- 三个并排的半身像：现在的你（青）、十年后的你（变淡、没有帽子）、陌生人（灰）；头顶“大脑的反应”柱子在三个拍点上依次升起
     const dt = t - EV.trio, k = inOut(clamp(dt / 0.5));
     const D0 = 8.2, cx0 = 0.333 * HW(D0), D = 10.6, XS = [-2.9, 0, 2.9];
-    cam = camLerp(live(camAt(cx0, -0.35, D0), t, EV.wake, cx0), live(camAt(0, 0.05, D, 0.0), t, EV.trio, 0), k);
+    cam = camLerp(live(camAt(cx0, -0.35, D0), t, EV.pull, cx0), live(camAt(0, 0.05, D, 0.0), t, EV.trio, 0), k);
     W.g.visible = true; W.g.position.set(lerp(0, XS[0], k), 0, 0);
     setState(W, { lite: false, gray: false, eyes: 1, halo: 1, props: 1, scatter: 0, aud: AUD }); animate(W, t, 9, -9, true, AUD);
     const Dc = S.decade; Dc.g.visible = true; Dc.g.position.set(XS[1], 0, 0);
@@ -537,7 +547,7 @@ export function frame(t) {
   if (subj) ZS.forEach((z, i) => {
     const u = (t - z.t0) / 1.5; if (u < 0 || u >= 1) return;
     const o = S.zs[i % S.zs.length], hp = W.g.position;
-    o.g.visible = true; o.g.position.set(hp.x + 0.8 + 0.3 * u + 0.06 * Math.sin(u * 7), HEAD_C[1] + 0.7 + 0.55 * u, 0.25); o.g.rotation.z = -0.25 + 0.2 * Math.sin(u * 5);
+    o.g.visible = true; o.g.position.set(hp.x + 0.78 + 0.25 * u + 0.06 * Math.sin(u * 7), HEAD_C[1] + 0.42 + 0.42 * u, 0.25); o.g.rotation.z = -0.25 + 0.2 * Math.sin(u * 5);
     o.g.scale.setScalar(z.s * (0.6 + 0.6 * u)); o.g.quaternion.multiply(new THREE.Quaternion());
     o.m.uniforms.uBright.value = 1.1 * clamp(u / 0.15) * (1 - clamp((u - 0.6) / 0.4)); o.m.uniforms.uScatter.value = 0.6 * clamp((u - 0.55) / 0.45); o.m.uniforms.uScatterDist.value = 0.6;
   });
@@ -587,8 +597,8 @@ function drawSub2(t, ctx, s) {
   ctx.save(); ctx.translate(960, 965); ctx.scale(sc, sc); richText(ctx, s.text, 0, 0, 52, a, HI); ctx.restore();   // 基线约在画面高度 91%
 }
 function hookPos(s, t) {
-  if (s.id === 'A') { const k = outExpo(clamp((t - EV.pick) / 0.25)); return [lerp(960, 520, k), 905, 'center']; }   // 抽中后跟着镜头移到脸的左边
-  if (s.id === 'B') return [500, 480, 'center'];                         // 脸的左侧，不压脸
+  if (s.id === 'A') { const k = outExpo(clamp((t - EV.pick) / 0.25)); return [lerp(960, 90, k), 905, k > 0.5 ? 'left' : 'center']; }   // 抽中后跟着镜头移到脸的左边
+  if (s.id === 'B') return [470, 700, 'center'];                         // 脸的左侧，不压脸
   if (s.id === 'C') return [960, 120, 'center'];                         // 画面上方（拉远后人物在左、“明天的你”在右）
   if (s.id === 'N') return [960, 905, 'center'];
   return [960, 930, 'center'];
@@ -596,7 +606,32 @@ function hookPos(s, t) {
 function drawHook(t, ctx, s) {
   if (t < s.t0 || t > s.t1 + 0.12) return;
   const a = Math.min(clamp((t - s.t0) / 0.06), 1 - clamp((t - s.t1) / 0.12)), [x, y, al] = hookPos(s, t), sc = popScale(t - s.t0);
+  if (s.suffix && t >= EV.pick) {                                          // 抽中那一拍补全罪名：整句（含“懒惰”）一起排版
+    const sz2 = s.size + 8; ctx.save(); ctx.font = fs(900, s.size); const w1 = segs(s.text).reduce((p, [q]) => p + ctx.measureText(q).width, 0); ctx.font = fs(900, sz2); const w2 = ctx.measureText(s.suffix).width; ctx.restore();
+    const kk = outExpo(clamp((t - EV.pick) / 0.25)), x0 = al === 'left' ? x : x - (w1 + w2) / 2;
+    ctx.save(); ctx.translate(x0, y); richText(ctx, s.text, 0, 0, s.size, a, s.key ?? CY, { hook: true, align: 'left' }); ctx.restore();
+    const d = t - EV.pick, ps = d < 0.12 ? lerp(0.6, 1.25, outExpo(d / 0.12)) : d < 0.3 ? lerp(1.25, 1, sine((d - 0.12) / 0.18)) : 1;   // 放大回弹
+    ctx.save(); ctx.translate(x0 + w1 + w2 / 2, y); ctx.scale(ps, ps);
+    const glowK = Math.exp(-d / 0.35);
+    ctx.globalAlpha = a; ctx.font = fs(900, sz2); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round'; ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(2,10,12,0.92)'; ctx.strokeText(s.suffix, 0, 0);
+    ctx.shadowColor = CY; ctx.shadowBlur = 16 + 40 * glowK; ctx.fillStyle = CY; ctx.fillText(s.suffix, 0, 0); ctx.shadowBlur = 30 * glowK; ctx.fillText(s.suffix, 0, 0);
+    ctx.restore();
+    BOXES.push({ x0: x0 + w1, x1: x0 + w1 + w2, y0: y - sz2 * 0.6, y1: y + sz2 * 0.6, label: s.suffix, alpha: a });
+    return;
+  }
   ctx.save(); ctx.translate(x, y); ctx.scale(sc, sc); richText(ctx, s.text, 0, 0, s.size, a, s.key ?? CY, { hook: true, align: al }); ctx.restore();
+}
+// 大标题亮相：脸的左侧，两行（“七宗罪 · 第四宗” 36px 白色 80% + “懒惰” 170px Heavy 青色发光）；“你不是懒。”那一拍缩小飞到左上角
+function drawTitle2(ctx, t, T) {
+  const k = T.fly, a = T.a * (1 - clamp((k - 0.85) / 0.15));
+  if (a <= 0.003) return;
+  const cx = lerp(470, 140, k), cy = lerp(500, 58, k), sc = lerp(1, 0.17, k) * (T.pop < 0.3 ? popScale(T.pop) : 1);
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(sc, sc); ctx.globalAlpha = a; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = fs(700, 36); ctx.fillStyle = 'rgba(233,241,242,0.8)'; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 6; ctx.fillText('七宗罪 · 第四宗', 0, -125);
+  ctx.font = fs(900, 170); ctx.shadowColor = CY; ctx.shadowBlur = 40; ctx.fillStyle = CY; ctx.fillText('懒惰', 0, 10); ctx.shadowBlur = 14; ctx.fillStyle = '#5FD8EA'; ctx.fillText('懒惰', 0, 10);
+  ctx.restore();
+  if (k < 0.5) BOXES.push({ x0: cx - 180 * sc, x1: cx + 180 * sc, y0: cy - 150 * sc, y1: cy + 100 * sc, label: '懒惰（标题）', alpha: a });
 }
 // 标签：44px 白字，半透明暗色圆角底（内边距 10px），贴在物体旁边，不用长引线
 function drawTag(ctx, L) {
@@ -613,7 +648,8 @@ export function draw2D(t, ctx, F) {
   // 第 0 帧：上方“七宗罪 · 第四集”（和愤怒第 0 帧同一套）
   if (!window.COVER && F.series > 0.001) glowText('七宗罪 · 第四集', 960, 92, fs(700, 60), '#EEF8FA', { glow: 22, glowColor: '#FFFFFF', nobox: true, alpha: F.series });
   // 左上角常驻小字
-  if (!window.COVER && F.corner > 0.001) { ctx.save(); ctx.globalAlpha = 0.7 * F.corner; ctx.font = fs(700, 28); ctx.textBaseline = 'middle'; ctx.fillStyle = TXTW; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 6; ctx.fillText('七宗罪 · 04 / 07', 60, 58); ctx.restore(); }
+  if (!window.COVER && F.corner > 0.001) { ctx.save(); ctx.globalAlpha = 0.7 * F.corner; ctx.font = fs(700, 28); ctx.textBaseline = 'middle'; ctx.fillStyle = TXTW; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 6; ctx.fillText('七宗罪 · 04 / 07 · 懒惰', 60, 58); ctx.restore(); }
+  if (F.title) drawTitle2(ctx, t, F.title);
   // 名字（排成一排时，在肩膀下方，带暗色底）
   if (F.names > 0) S.chars.forEach(C => {
     const p = project([C.g.position.x, -1.78, 0]);

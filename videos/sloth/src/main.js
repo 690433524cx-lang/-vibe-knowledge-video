@@ -18,7 +18,7 @@ const C3 = h => new THREE.Color(h);
 
 export async function init() {
   BEATS = await (await fetch('beats_sloth.json')).json();
-  TL = 48.3; BEATS.duration = TL;
+  TL = 50.5; BEATS.duration = TL;
   setLoop(TL); SHARED.uLoop.value = TL;
   glCanvas = document.getElementById('gl'); outCanvas = document.getElementById('out');
   const W = PREVIEW ? FW / 2 : FW, Hh = PREVIEW ? FH / 2 : FH;
