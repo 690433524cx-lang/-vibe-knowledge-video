@@ -292,8 +292,8 @@ const readT = s => 1.0 + 0.17 * charCount(s);
 const TEXT_LIST = [
   // A：抽中那一拍，“——”后面弹出“懒惰”（大一号、青色、放大回弹 + 光晕）；阅读时间按补全后的整句算
   { id: 'A', kind: 'hook', text: '刷到这条，〔你〕抽中的是——', suffix: '懒惰', want: 0.1, exact: true, size: 64 },
-  { id: 'B', kind: 'hook', text: '你不是〔懒〕。', want: 3.0, size: 72 },
-  { id: 'C', kind: 'hook', text: '是你的大脑，把“明天的你”当成了〔陌生人〕。', want: 5.45, size: 64 },
+  { id: 'B', kind: 'hook', text: '你不是〔懒〕。', want: 4.366, size: 72 },
+  { id: 'C', kind: 'hook', text: '是你的大脑，把“明天的你”当成了〔陌生人〕。', want: 6.535, size: 64 },
   { id: 'D', kind: 'sub', text: '研究发现：想到“十年后的自己”，大脑的反应像在想〔陌生人〕。', want: 10.874 },
   { id: 'E', kind: 'sub', text: '所以把事情推给明天，就像〔推给了别人〕。', want: 15.212 },
   { id: 'F', kind: 'sub', text: '大脑只占体重的〔2%〕，却耗掉约〔两成能量〕。', want: 19.551 },
@@ -326,11 +326,16 @@ export function build(scene, beats, heads, audioEnv) {
   S = scene; BT = beats; B = beats.beats; TL = beats.duration; DN = beats.downbeats; BEAT = beats.beat; DROP = beats.drop;
   setAudio(audioEnv, beats);
   EV = {
-    scan0: 0.3, scanTurn: 0.8, pick: nb(1.3), step1: nd(6.5), step2: nd(8.7), trio: nd(10.9), cube: nd(15.2),
+    pick: nb(2.74), step1: nd(8.7), step2: nb(9.79), trio: nd(10.9), cube: nd(15.2),
     brain: nd(19.5), think: [], back: nd(26.0), end: nd(47.7),
   };
   TXT = scheduleText();
-  EV.title = nextBeat(EV.pick);                                         // 亮相：大标题出现、打一个大哈欠
+  EV.title = EV.pick + BEAT / 2;                                        // 亮相：抽中后半拍，大标题出现、打一个大哈欠
+  // 抽奖转盘：聚光灯一张脸一张脸地跳，每一跳都在节拍网格上（1/4 拍 → 1/2 拍 → 1 拍，越来越慢）；
+  // 从左到右、再从右往左，慢慢经过懒惰，假停在贪婪上半拍，再退回一格落在懒惰上（= 抽中）
+  { const q = BEAT / 4, g = n => B[0] + n * q;
+    EV.spots = [[2, 0], [3, 1], [4, 2], [5, 3], [6, 4], [7, 5], [8, 6], [9, 5], [10, 4], [11, 3], [12, 2], [14, 3], [18, 4], [20, 3]].map(([n, i]) => ({ t: g(n), i }));
+    EV.pick = EV.spots[EV.spots.length - 1].t; EV.fake = EV.spots[EV.spots.length - 2].t; }
   EV.wake = TX('B').t0;                                                  // “你不是懒。”：标题飞到左上角，同时猛地睁眼
   EV.pull = TX('C').t0;                                                  // 镜头拉远，“明天的你”出现
   EV.cols = [1, 2, 3].map(k => B[B.indexOf(EV.trio) + k]);            // 三根柱子：在三个拍点上依次升起
@@ -419,8 +424,8 @@ function setCol(C, hex) { C.mats.forEach(m => m.uniforms.uSin.value.set(hex)); C
 
 export const subsList = () => TXT.map(s => ({ text: plain(s.text), t0: +s.t0.toFixed(3), t1: +s.t1.toFixed(3), minD: +s.minD.toFixed(3) }));
 export function events() {
-  const big = [['抽中懒惰', EV.pick], ['标题飞到左上角、睁眼', EV.wake], ['拉远、明天的你', EV.pull], ['明天的你：浅青', EV.step1], ['明天的你：陌生人', EV.step2], ['三个半身像', EV.trio], ['那件事', EV.cube], ['粒子大脑', EV.brain], ['回到懒惰、荆棘', EV.back], ['结尾阵容', EV.end]];
-  const small = [['亮相：标题、哈欠', EV.title], ...EV.cols.map((b, i) => [`柱子 ${i + 1}`, b]), ['打哈欠', EV.yawn], ['推方块', EV.push], ['贪婪亮起', EV.next]];
+  const big = [['转盘落在懒惰（抽中）', EV.pick], ['标题飞到左上角、睁眼', EV.wake], ['拉远、明天的你', EV.pull], ['明天的你：浅青', EV.step1], ['三个半身像', EV.trio], ['那件事', EV.cube], ['粒子大脑', EV.brain], ['回到懒惰、荆棘', EV.back], ['结尾阵容', EV.end]];
+  const small = [['明天的你：陌生人（第 3 拍）', EV.step2], ...EV.spots.filter(o => Math.abs(o.t - nb(o.t)) < 0.01).map((o, k) => [`转盘落在第 ${o.i + 1} 格`, o.t]), ['亮相：标题、哈欠（半拍）', EV.title], ...EV.cols.map((b, i) => [`柱子 ${i + 1}`, b]), ['打哈欠', EV.yawn], ['推方块', EV.push], ['贪婪亮起', EV.next]];
   return [...big.map(([name, t]) => ({ name, t, kind: 'big' })), ...small.map(([name, t]) => ({ name, t, kind: 'small' }))];
 }
 export const charsList = () => S ? [...(S.chars ?? []), ...(S.extra ?? [])] : [];
@@ -444,11 +449,22 @@ export function frame(t) {
 
   if (t < EV.pick) {
     // ---- 场景 1：第 0 帧七个彩色角色排成一排；扫描线从左扫到右、再扫回来，停在懒惰上
-    let sx = null; const X = i => project([slotX(i), HEAD_C[1], 0])[0];
-    if (t >= EV.scan0 && t < EV.scanTurn) sx = lerp(-80, 2000, inOut((t - EV.scan0) / (EV.scanTurn - EV.scan0)));
-    else if (t >= EV.scanTurn) sx = lerp(2000, X(SL), outExpo((t - EV.scanTurn) / (EV.pick - EV.scanTurn)));
-    cam = heroLineup(t, F, AUD, i => sx == null ? 0 : 0.8 * Math.exp(-Math.pow((sx - X(i)) / 70, 2)));
-    if (sx != null) F.scan = { x: sx, a: clamp((t - EV.scan0) / 0.06) };
+    cam = heroLineup(t, F, AUD);
+    const j = lastIdx(EV.spots.map(o => o.t), t);
+    if (j >= 0) {
+      const cur = EV.spots[j], dt = t - cur.t, on = outExpo(clamp(dt / 0.05));
+      S.chars.forEach(O => {
+        const lit = O.i === cur.i ? on : 0, fade = O.i === cur.i ? 0 : 1;
+        const k = lit ? 1.7 : 0.5;                                            // 被照到的猛地亮起；其他角色同时变暗到 50%
+        O.mats.forEach(m => { m.uniforms.uDim.value *= lerp(1, k, O.i === cur.i ? on : 1); });
+        O.propMats.forEach(m => { m.uniforms.uBright.value *= O.i === cur.i ? 1 + 0.5 * on : 0.5; });
+        O.eyes.forEach(m => { m.material.uniforms.uInt.value *= O.i === cur.i ? 1 + 0.6 * on : 0.5; });
+        O.haloMats.forEach(m => { m.uniforms.uBright.value *= O.i === cur.i ? 1 + 1.2 * on : 0.5; });
+        if (O.i === cur.i) { O.rig.scale.multiplyScalar(1 + 0.12 * on); O.g.position.y += 0.1 * on + 0.12 * Math.sin(Math.PI * clamp(dt / 0.22)) * (dt < 0.22 ? 1 : 0); }   // 放大 12%、轻轻往上一弹
+      });
+      F.spot = { x: slotX(cur.i), a: on };
+      F.tick = { c: project([slotX(cur.i), -1.98, 0.2]), k: clamp(dt / 0.28), w: project([slotX(cur.i) + 0.5, -1.98, 0.2])[0] - project([slotX(cur.i), -1.98, 0.2])[0] };   // 脚下闪一下细光环（“嗒”）
+    }
   } else if (t < EV.pull) {
     // ---- 抽中：镜头 0.25 秒猛地推到懒惰的脸（占画面高约 70%，居中偏右），其他角色被甩出画面；眼睛亮起，飘出一个 Z，一次柔和的冲击波
     const dt = t - EV.pick, k = outExpo(clamp(dt / 0.25));
@@ -460,12 +476,12 @@ export function frame(t) {
     W.g.visible = true;
     setState(W, { lite: dt < 0.04, gray: false, eyes: 0.5 + 0.5 * outExpo(clamp(dt / 0.12)), halo: 0.85 + 0.15 * k, props: 1, scatter: 0, aud: AUD, pop: 0.6 * Math.exp(-dt / 0.25) });
     // 亮相：慢慢打一个大哈欠（0.6 秒张开、停一下、0.4 秒合上），毛线帽往下滑一点；“你不是懒。”那一拍猛地睁眼、帽子弹回去
-    const yu = t - EV.title, yawn = yu < 0 ? 0 : yu < 0.6 ? sine(yu / 0.6) : yu < 1.0 ? 1 : yu < 1.4 ? 1 - sine((yu - 1.0) / 0.4) : 0;
+    const yu = t - EV.title, yawn = yu < 0 ? 0 : yu < 0.6 ? sine(yu / 0.6) : yu < 0.85 ? 1 : yu < 1.25 ? 1 - sine((yu - 0.85) / 0.4) : 0;
     if (yawn > 0.5) { W.gag.visible = true; W.col.visible = false; }
     W.eyes.forEach(m => { m.material.uniforms.uInt.value *= 1 - 0.6 * yawn; });
     animate(W, t, 9, -9, true, AUD);
     W.head.rotation.x -= 0.1 * yawn;                                         // 打哈欠时头往后仰一点
-    const hs = t < EV.wake ? 0.3 * sine(clamp((t - EV.title) / 1.2)) : 0.3 * (1 - outExpo(clamp((t - EV.wake) / 0.15)));
+    const hs = t < EV.wake ? 0.3 * sine(clamp((t - EV.title) / 1.1)) : 0.3 * (1 - outExpo(clamp((t - EV.wake) / 0.15)));
     if (W.hat) W.hat.material.uniforms.uB.value = hs;
     const close = camAt(-0.30 * HW(3.7), 0.2, 3.7);
     cam = camLerp(lineupCam(t), live(close, t, EV.pick, 0), k);
@@ -559,7 +575,7 @@ export function frame(t) {
   }
   // 每小节第一拍镜头推 2%
   cam = { ...cam, pos: lerp3(cam.target, cam.pos, 1 - 0.02 * off) };
-  S.spot.material.uniforms.uInt.value = 0;
+  S.spot.material.uniforms.uInt.value = F.spot ? 0.22 * F.spot.a : 0; if (F.spot) { S.spot.position.set(F.spot.x, 2.2, 0.6); S.spot.material.uniforms.uCol.value.set('#DFFBFF'); }
   S.stars.forEach(s => { s.material.uniforms.uScale.value = K.scale; });
   for (const s of TXT) if (t >= s.t0 - 0.01 && t <= s.t1 + 0.12) (s.kind === 'sub' ? F.subs : F.hooks).push(s);
   F.cam = cam; F.kick = kick;
@@ -664,6 +680,7 @@ export function draw2D(t, ctx, F) {
     const g = ctx.createLinearGradient(x - 70, 0, x + 70, 0); g.addColorStop(0, 'rgba(43,200,224,0)'); g.addColorStop(0.5, 'rgba(120,225,240,0.35)'); g.addColorStop(1, 'rgba(43,200,224,0)');
     ctx.fillStyle = g; ctx.fillRect(x - 70, 140, 140, 760); ctx.fillStyle = 'rgba(225,250,255,0.95)'; ctx.fillRect(x - 1.5, 140, 3, 760); ctx.restore();
   }
+  if (F.tick && F.tick.k < 1) { const T2 = F.tick, r = T2.w * (0.6 + 0.6 * outExpo(T2.k)); ctx.save(); ctx.globalAlpha = 0.9 * (1 - T2.k); ctx.strokeStyle = '#CFF7FC'; ctx.lineWidth = 2; ctx.shadowColor = CY; ctx.shadowBlur = 10; ctx.beginPath(); ctx.ellipse(T2.c[0], T2.c[1], r, r * 0.22, 0, 0, TAU); ctx.stroke(); ctx.restore(); }
   // 大脑的反应：三根发光的竖柱
   if (F.cols) {
     for (const c of F.cols) { if (c.a <= 0) continue;
