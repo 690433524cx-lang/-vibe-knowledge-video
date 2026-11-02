@@ -26,7 +26,7 @@ async function segment(i, f0, f1, file, upto) {
 
 (async () => {
   const beats = JSON.parse(fs.readFileSync(path.join(__dirname, 'beats_sloth.json')));
-  const from = Number(arg('from', 0)), to = Number(arg('to', 50.5));
+  const from = Number(arg('from', 0)), to = Number(arg('to', 50.6));
   const name = arg('name', '懒惰_长版'), jobs = Number(arg('jobs', 4)), upto = arg('upto');
   const outDir = path.join(ROOT, 'out'), tmp = path.join(outDir, `tmp_${name}`);
   fs.mkdirSync(tmp, { recursive: true });
@@ -39,7 +39,7 @@ async function segment(i, f0, f1, file, upto) {
   const video = path.join(tmp, 'video.mp4');
   spawnSync('ffmpeg', ['-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', path.join(tmp, 'list.txt'), '-c', 'copy', video], { stdio: 'inherit' });
   const dur = n / FPS, out = path.join(outDir, `${name}.mp4`);
-  const TLv = 50.5, fade = to >= TLv - 1e-3 ? `,afade=t=out:st=${(TLv - 1 - from).toFixed(3)}:d=1` : '';
+  const TLv = 50.6, fade = to >= TLv - 1e-3 ? `,afade=t=out:st=${(TLv - 1 - from).toFixed(3)}:d=1` : '';
   const af = `atrim=start=${from}:end=${to},asetpts=PTS-STARTPTS${fade}`;   // 音乐从第 0 秒开始、不偏移；音乐比视频长，最后 1 秒淡出
   const r = spawnSync('ffmpeg', ['-v', 'error', '-y', '-i', video, '-i', path.join(__dirname, 'music.wav'), '-filter_complex', `[1:a]${af}[a]`, '-map', '0:v', '-map', '[a]',
     '-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k', '-ar', '44100', '-t', dur.toFixed(3), '-movflags', '+faststart', out], { stdio: 'inherit' });

@@ -18,7 +18,7 @@ const C3 = h => new THREE.Color(h);
 
 export async function init() {
   BEATS = await (await fetch('beats_sloth.json')).json();
-  TL = 50.5; BEATS.duration = TL;
+  TL = 50.6; BEATS.duration = TL;
   setLoop(TL); SHARED.uLoop.value = TL;
   glCanvas = document.getElementById('gl'); outCanvas = document.getElementById('out');
   const W = PREVIEW ? FW / 2 : FW, Hh = PREVIEW ? FH / 2 : FH;
@@ -107,4 +107,5 @@ export function render(t) {
   outCtx.setTransform(1, 0, 0, 1, 0, 0);
   if (!window.NO_GRAIN) { outCtx.save(); outCtx.globalAlpha = 0.035; outCtx.drawImage(grain[Math.floor((t % TL) * 30 + 0.5) % 4], 0, 0, K.W, K.H); outCtx.restore(); }
   window.LAST_BOXES = BOXES.slice();
+  window.LAST_SUBJ = F.subjBoxes ?? [];
 }
