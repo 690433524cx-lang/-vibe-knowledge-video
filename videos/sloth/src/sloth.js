@@ -99,8 +99,8 @@ function makeChar(sin, i, heads) {
     if (heads.wrathCracks) { const m = propMat('#FF7A3A', { bright: 2.8, size: 0.008, colHook: '{ b *= 0.8 + 0.5*sin(uTime*qw(7.0) + aExtra.y*1.7); col = mix(col, vec3(1.0, 0.85, 0.6), 0.35); }' }); C.cracks = pts(heads.wrathCracks, m, C.props, 31); C.propMats.push(m); }   // 脸上发光的裂纹
     C.horns = P(PR.lightningHorns(), { bright: 1.0, col: tone(sin.col, 0.3), posHook: '{ float id = aExtra.y; float on = step(0.35, fract(sin(floor(mod(uTime, ' + TL.toFixed(4) + ')*14.0 + id*3.7)*43.1)*91.7)); vis *= mix(1.0, on, step(0.5, mod(id, 3.0))); p *= 1.0 + uB*0.35; }' });
   } else if (sin.id === 'sloth') {
-    C.hat = P(PR.beanie(), { bright: 1.25, posHook: '{ p.y -= uB*0.32; p.z += uB*0.06; }', colHook: '{ float gl = dot(col, vec3(0.3, 0.59, 0.11)); col = aExtra.y > 0.5 ? vec3(0.62, 0.92, 0.97) : vec3(0.07, 0.36, 0.42); col = mix(col, vec3(gl), uGray); }' });
-    C.scarf = P(PR.scarf(), { bright: 0.95, colHook: '{ float gl = dot(col, vec3(0.3, 0.59, 0.11)); col = mix(vec3(0.1, 0.5, 0.57), vec3(0.62, 0.92, 0.97), 0.25*h1(aSeed*3.1)); col = mix(col, vec3(gl), uGray); }', posHook: '{ if (uL > 0.5 && aExtra.y > 0.5 && p.y < -1.08) vis = 0.0; }' }, rig);   // 排成一排时垂下的部分不超过肩膀
+    C.hat = P(PR.beanie(), { bright: 2.4, size: 0.0095, posHook: '{ p.y -= uB*0.32; p.z += uB*0.06; }', colHook: '{ float gl = dot(col, vec3(0.3, 0.59, 0.11)); col = aExtra.y > 0.5 ? vec3(0.72, 0.96, 0.99) : vec3(0.13, 0.56, 0.65); col = mix(col, vec3(gl), uGray); }' });
+    C.scarf = P(PR.scarf(), { bright: 1.9, size: 0.0095, colHook: '{ float gl = dot(col, vec3(0.3, 0.59, 0.11)); col = mix(vec3(0.16, 0.62, 0.7), vec3(0.72, 0.96, 0.99), 0.3*h1(aSeed*3.1)); col = mix(col, vec3(gl), uGray); }', posHook: '{ if (uL > 0.5 && aExtra.y > 0.5 && p.y < -1.08) vis = 0.0; }' }, rig);   // 排成一排时垂下的部分不超过肩膀
     C.zz = P(PR.zees(), { bright: 1.3, posHook: '{ float f = fract(uTime*floor(0.35*uLoop + 0.5)/uLoop + aExtra.y*0.33); p += vec3(0.08*sin(f*6.0 + aExtra.y), f*0.5, 0.0); vis *= uB*sin(3.14159*f); }' });
   } else if (sin.id === 'greed') {
     // 贪婪：金币像星环一样绕着头转（环面略倾斜），每枚金币正面朝镜头轻轻摆动，表面有一道扫过的金属反光
@@ -163,7 +163,7 @@ function setState(C, s) {
   // 灰色闭眼的脸：亮度提高到 2.5 倍，聚光灯从上方照着；变身后人物是画面里最亮的东西
   const c = C3(C.sin.col), luma = 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
   const base = s.gray ? (s.lite ? 6.2 : 6.0) :   // 灰色脸亮度提高 60%
-     (s.lite ? 3.0 : 5.6) * clamp(0.42 / luma, 0.7, 1.15);   // 亮度靠人物本身（亮部仍是红色）       // 按颜色的亮度补偿：绿色不过曝、紫色不发暗
+     (s.lite ? 3.0 : 4.8) * clamp(0.42 / luma, 0.7, 1.15);   // 亮度靠人物本身（亮部仍是红色）       // 按颜色的亮度补偿：绿色不过曝、紫色不发暗
   const live = s.gray ? 0 : 1;
   for (const m of C.mats) {
     m.uniforms.uDim.value = base * (1 - 0.15 * (s.inhale ?? 0)) * (1 + 0.2 * Math.max(0, kick)) * (1 + 0.9 * (s.pop ?? 0)) * Math.pow(s.shrink ?? 1, 2);   // 缩小时粒子挤在一起，按面积压暗，不过曝
@@ -178,7 +178,7 @@ function setState(C, s) {
   C.halo.visible = s.halo > 0.01 && sc < 1.2; C.halo.rotation.z = qw(0.35) * (a ? a.t : 0) + C.i;   // 光环一直慢慢转
   // 排成一排时光环缩小：直径不超过格子宽度的 85%、互不重叠，亮度降到 60%，外圈刻度不要
   C.halo.scale.setScalar((s.lite ? 0.42 : lerp(0.2, 1, s.halo)) * (1 - 0.3 * clamp(sc)) * (1 + (s.lite ? 0.04 : 0.1) * Math.max(0, kick)));
-  C.haloMats.forEach((m, j) => { m.uniforms.uBright.value = (j ? (s.lite ? 0 : 0.3) : 0.95 * (s.lite ? 0.6 : 1)) * s.halo * (1 + 0.5 * Math.max(0, kick)) * (1 - clamp(sc)); });
+  C.haloMats.forEach((m, j) => { m.uniforms.uBright.value = (j ? (s.lite ? 0 : 0.3) : 0.95 * (s.lite ? 0.6 : 1)) * s.halo * (1 + 1.0 * Math.max(0, kick)) * (1 - clamp(sc)); });
   C.aura.visible = !s.gray && sc < 1.5; C.rays.visible = !s.gray && !s.lite && sc < 1.5;   // 排成一排时不要放射光线（会越过格子）
   C.aura.material.uniforms.uInt.value = (s.lite ? 0.015 : 0.045) * (1 + 0.6 * Math.max(0, kick)) * (1 - clamp(sc / 1.5));
   C.aura.scale.setScalar((s.lite ? 0.27 : 0.62) * (1 + 0.08 * Math.max(0, kick)));   // 光晕半径不超过主体高度的 1.2 倍
@@ -330,12 +330,14 @@ export function build(scene, beats, heads, audioEnv) {
     brain: nd(19.5), back: nd(28.2), calm: nd(39.07), gaze: nd(43.4), end: nd(47.7),
   };
   TXT = scheduleText();
-  EV.title = EV.pick + BEAT / 2;                                        // 亮相：抽中后半拍，大标题出现、打一个大哈欠
   // 抽奖转盘：聚光灯一张脸一张脸地跳，每一跳都在节拍网格上（1/4 拍 → 1/2 拍 → 1 拍，越来越慢）；
   // 从左到右、再从右往左，慢慢经过懒惰，假停在贪婪上半拍，再退回一格落在懒惰上（= 抽中）
   { const q = BEAT / 4, g = n => B[0] + n * q;
     EV.spots = [[2, 0], [3, 1], [4, 2], [5, 3], [6, 4], [7, 5], [8, 6], [9, 5], [10, 4], [11, 3], [12, 2], [14, 3], [18, 4], [20, 3]].map(([n, i]) => ({ t: g(n), i }));
     EV.pick = EV.spots[EV.spots.length - 1].t; EV.fake = EV.spots[EV.spots.length - 2].t; }
+  EV.zoom = nextBeat(EV.pick);                                           // 光落在懒惰上停一拍（同时补全“——懒惰”），下一拍才推进特写
+  EV.title = EV.zoom;                                                    // 亮相：推进特写的同时出现大标题、打一个大哈欠
+  EV.yawns = [[EV.zoom + 0.1, 0.4, 0.2, 0.3], ...[nb(7.62), nb(13.58), nb(15.75), nb(31.48), nb(40.16), nb(43.95)].map(t0 => [t0, 0.6, 0.25, 0.4])];   // 每个有懒惰的场景至少一次哈欠
   EV.wake = TX('B').t0;                                                  // “你不是懒。”：标题飞到左上角，同时猛地睁眼
   EV.pull = TX('C').t0;                                                  // 镜头拉远，“明天的你”出现
   EV.cols = [1, 2, 3].map(k => B[B.indexOf(EV.trio) + k]);            // 三根柱子：在三个拍点上依次升起
@@ -350,7 +352,7 @@ export function build(scene, beats, heads, audioEnv) {
   S.spot = makeSpot();
   S.stars = [makeStars(14000, -22, 1.1, 11), makeStars(5000, -9, 1.7, 12)];   // 远景小、慢；前景大、快
   S.zs = makeZs(10);
-  S.cube = makeCube(); S.brain = makeBrain(); S.sand = makeSand(); S.thorns = makeThorns(); S.irises = makeIris(S.chars[SL].head);
+  window.__S = S; S.cube = makeCube(); S.brain = makeBrain(); S.sand = makeSand(); S.thorns = makeThorns(); S.irises = makeIris(S.chars[SL].head);
   ZS = scheduleZ();
 }
 
@@ -373,16 +375,16 @@ function makeZs(n) {
   }
   return out;
 }
-// 什么时候飘 Z：抽中那一下一个；打瞌睡时每次点头到最低点一个；帽子盖住眼睛时连着三个
+// 什么时候飘 Z：亮相时连着三个；之后每小节第一拍头顶飘一个（大脑场景从大脑上方飘）；帽子盖住眼睛时再连着三个
 function scheduleZ() {
-  const z = [{ t0: EV.pick + 0.12, s: 0.16 }, { t0: EV.title + 0.25, s: 0.18 }, { t0: EV.title + 0.75, s: 0.22 }, { t0: EV.title + 1.25, s: 0.2 }];
-  for (const t0 of NODS()) z.push({ t0: t0 + 1.2, s: 0.18 + 0.05 * hash(t0) });
-  z.push({ t0: EV.drain[4] + 0.35, s: 0.24, pos: [-1.0, 0.8, 0.3] });                          // 电量见底：大脑上方飘起一个 Z
+  const z = [{ t0: EV.zoom + 0.12, s: 0.18 }, { t0: EV.zoom + 0.55, s: 0.22 }, { t0: EV.zoom + 0.95, s: 0.2 }];
+  for (const d of DN) if (d >= EV.pull - 1e-3 && d < EV.gaze - 0.1) { const inBrain = d >= EV.brain - 0.5 && d < EV.back + 0.4; z.push({ t0: d + 0.05, s: 0.18 + 0.06 * hash(d), pos: inBrain ? [-1.0, 0.85, 0.3] : null }); }
+  z.push({ t0: EV.drain[4] + 0.35, s: 0.26, pos: [-1.0, 0.85, 0.3] });                          // 电量见底：大脑上方飘起一个 Z
   for (const d of [0, 0.35, 0.7]) z.push({ t0: EV.hatDown + d, s: 0.2 + 0.03 * d });            // 帽子盖住眼睛：连着三个 Z
   return z.filter(o => o.t0 < TL - 2).sort((a, b) => a.t0 - b.t0);
 }
 // 打瞌睡：每两小节一次（从“明天的你”出现之后），头慢慢往下点约 8 度，再缓缓抬起
-const NODS = () => DN.filter((d, i) => d >= EV.step1 - 1e-3 && d < EV.brain - 2.4 && Math.round((d - EV.step1) / (4 * BEAT)) % 2 === 0);
+const NODS = () => DN.filter((d, i) => d >= EV.pull - 1e-3 && d < EV.gaze - 2.0 && !(d > EV.brain - 4.6 && d < EV.back) && Math.round((d - EV.pull) / (4 * BEAT)) % 2 === 0);   // 每两小节一次（大脑场景除外）
 function nodAt(t) {
   if (t >= EV.wake && t < EV.wake + 0.12) return 1 - outExpo((t - EV.wake) / 0.12);                                 // 被吓醒：猛地抬头
   for (const d of NODS()) { const u = (t - d) / (8 * BEAT); if (u >= 0 && u < 1) return u < 0.35 ? sine(u / 0.35) : u < 0.5 ? 1 : u < 0.85 ? 1 - sine((u - 0.5) / 0.35) : 0; }
@@ -392,22 +394,23 @@ function nodAt(t) {
 // ------------------------------------------------------------ “那件事”：青白色的小方块，表面有细纹理
 function makeCube() {
   const pb = new PB(), R = n => hash(n * 1.37 + 0.41);
-  for (let i = 0; i < 26000; i++) {
+  for (let i = 0; i < 16000; i++) pb.add([R(i * 9) - 0.5, R(i * 9 + 1) - 0.5, R(i * 9 + 2) - 0.5], [0, 0, 1], R(i * 9 + 3), [0, 0, 0], [R(i * 9 + 4), 0, 0, 1], [0.45, 30]);   // 实心：里面也填满
+  for (let i = 0; i < 30000; i++) {
     const f = i % 6, a = R(i * 3) - 0.5, b = R(i * 3 + 1) - 0.5, ax = f >> 1, sg = f & 1 ? 0.5 : -0.5;
     const p = ax === 0 ? [sg, a, b] : ax === 1 ? [a, sg, b] : [a, b, sg];
     const edge = Math.max(Math.abs(a), Math.abs(b)) > 0.47, line = Math.abs(Math.sin(a * 40)) < 0.12 || Math.abs(Math.sin(b * 40)) < 0.12;
     pb.add(p, [0, 0, 1], R(i * 5), [0, 0, 0], [R(i * 7), f, 0, 1], [edge ? 1.6 : line ? 0.95 : 0.5, 30]);
   }
-  const m = propMat('#C8F6FC', { bright: 1.0, size: 0.012 }); m.uniforms.uAsm.value = 1;
+  const m = propMat('#BFF4FA', { bright: 1.0, size: 0.014 }); m.uniforms.uAsm.value = 1; m.uniforms.uFacing.value = 0;   // 每一面都亮（实心发光）
   const g = new THREE.Group(); K.scene.add(g); const p = new THREE.Points(pb.geometry(THREE), m); p.frustumCulled = false; p.renderOrder = 32; g.add(p); K.mats.push(m); g.visible = false;
-  const gl = new THREE.Mesh(new THREE.PlaneGeometry(3, 3), H.glowPlane(1)); gl.material.uniforms.uCol.value.set(CY); gl.renderOrder = 31; gl.position.z = -0.6; g.add(gl);
+  const gl = new THREE.Mesh(new THREE.PlaneGeometry(3.4, 3.4), H.glowPlane(0)); gl.material.uniforms.uCol.value.set(CY); gl.material.blending = THREE.AdditiveBlending; gl.material.transparent = true; gl.material.depthWrite = false;   // 周围一圈柔光（叠加，不挡背景） gl.renderOrder = 31; gl.position.z = -0.6; g.add(gl);
   return { g, m, glow: gl };
 }
 
 // ------------------------------------------------------------ 粒子大脑（侧面，沿用嫉妒/愤怒的大脑模型），青色
 function makeBrain() {
   const g = new THREE.Group(); g.position.set(-1.4, 0.05, 0); g.scale.setScalar(1.15); g.rotation.y = Math.PI; K.scene.add(g); g.visible = false;
-  const m = brainMaterial(CY); m.uniforms.uSeeX.value = 99; m.uniforms.uBright.value = 6.0; m.uniforms.uRegR.value = 0.02; m.uniforms.uSize.value = 0.014; m.uniforms.uHot.value.set('#CFF7FC');
+  const m = brainMaterial(CY); m.uniforms.uSeeX.value = 99; m.uniforms.uBright.value = 6.0; m.uniforms.uRegR.value = 0.02; m.uniforms.uSize.value = 0.019; m.uniforms.uMaxPx.value = 10; m.uniforms.uHot.value.set('#CFF7FC');
   pts(buildBrainSide(511, 1).geometry(THREE), m, g, 20);
   const glowM = new THREE.Mesh(new THREE.PlaneGeometry(5.5, 5.5), H.glowPlane(0.0)); glowM.material.uniforms.uCol.value.set(CY); glowM.position.set(-1.4, 0.05, -1.6); glowM.renderOrder = -15; glowM.visible = false; K.scene.add(glowM);
   return { g, m, glow: glowM };
@@ -438,7 +441,7 @@ function makeThorns() {
     let d = nrm.map((v, j) => v + (hash(s * 3.7 + j) - 0.5) * 0.9); const l = Math.hypot(...d); d = d.map(v => v / l);
     const len = 0.45 + 0.75 * hash(s * 5.3), sd = hash(s * 6.1);
     for (let i = 0; i < per; i++) {
-      const k = s * per + i, u = Math.pow(hash(k * 0.913), 0.8), ang = hash(k * 1.77) * TAU, r = 0.07 * (1 - u) * Math.sqrt(hash(k * 2.31));
+      const k = s * per + i, u = Math.pow(hash(k * 0.913), 0.8), ang = hash(k * 1.77) * TAU, r = 0.05 * Math.pow(1 - u, 1.5) * Math.sqrt(hash(k * 2.31));
       P.set([base[0] + Math.cos(ang) * r, base[1] + Math.sin(ang) * r, base[2] + Math.cos(ang + 1) * r * 0.7], k * 3); D.set(d, k * 3); A.set([u, sd, len, hash(k * 3.9)], k * 4);
     }
   }
@@ -449,12 +452,12 @@ function makeThorns() {
       void main(){ float u = aInfo.x, sd = aInfo.y, len = aInfo.z, rr = aInfo.w;
         vec3 d = normalize(aDir + vec3(-uLean*(0.6 + 0.8*sd), -0.1*uLean, 0.15*uLean));
         vec3 side = normalize(cross(d, vec3(0.0, 0.0, 1.0)) + vec3(1e-4));
-        float sq = (1.0 - uStill)*0.06*u*sin(u*7.0 - uT*2.4 + sd*17.0);   /* 缓慢蠕动 */
+        float sq = (1.0 - uStill)*0.09*u*sin(u*7.0 - uT*3.6 + sd*17.0) + (1.0 - uStill)*0.04*u*sin(uT*1.7 + sd*31.0);   /* 缓慢蠕动 */
         vec3 p = position + d*len*uGrow*u + side*sq;
         p += normalize(vec3(sin(rr*91.0), cos(rr*53.0), sin(rr*37.0)))*uMist*(0.6 + 1.6*rr);   /* 散成雾 */
-        vec4 mv = modelViewMatrix*vec4(p, 1.0); gl_Position = projectionMatrix*mv; gl_PointSize = (2.2 + 2.6*(1.0 - u))*uScale*(1.0 + 1.5*uMist);
+        vec4 mv = modelViewMatrix*vec4(p, 1.0); gl_Position = projectionMatrix*mv; gl_PointSize = (1.8 + 2.2*(1.0 - u))*uScale*(1.0 + 1.5*uMist);
         float b = uFade*(0.55 + 0.45*(1.0 - u))*(1.0 - 0.85*uMist)*step(u, 0.999);
-        vC = mix(vec3(0.06, 0.24, 0.27), vec3(0.02, 0.08, 0.09), u)*b; }`,
+        vC = mix(vec3(0.13, 0.46, 0.52), vec3(0.04, 0.15, 0.17), u)*b; }`,
     fragmentShader: `varying vec3 vC; void main(){ vec2 c = gl_PointCoord - 0.5; float d = length(c); if (d > 0.5) discard; gl_FragColor = vec4(vC*exp(-d*d*7.0), 1.0); }` });
   const p = new THREE.Points(g, m); p.frustumCulled = false; p.renderOrder = 31; p.visible = false; K.scene.add(p); return p;
 }
@@ -476,14 +479,14 @@ function pulse(t) {
   const list = B.filter((b, i) => i % 2 === 0);
   const j = lastIdx(list, t);
   for (let k = Math.max(0, j - 1); k <= j; k++) { if (k < 0) continue; const d = t - list[k]; if (d < 0 || d > 0.4) continue; v += Math.exp(-d * 13) * Math.cos(d * 26); }
-  return (t < DROP ? 0.67 : 1) * v;
+  return 0.833 * v;   // 每两拍放大 5% 再回弹
 }
 const LINEUP = { pos: [0, 0.25, 9.6], target: [0, -0.05, 0], fov: 35 };
 const lineupCam = t => orbit({ ...LINEUP, pos: [0, LINEUP.pos[1] + 0.06 * Math.sin(t * qw(1.7)), LINEUP.pos[2] - 0.18 * Math.sin(t * qw(1.1))] }, 0.03 * Math.sin(t * qw(1.9)), 0);
 const camAt = (x, y, d, ty = y) => ({ pos: [x, y + 0.08, d], target: [x, ty, 0], fov: 35 });
 const HW = d => Math.tan(17.5 * Math.PI / 180) * d * 16 / 9;   // 距离 d 处画面的半宽（世界单位）
 // 镜头永远在动：每个场景持续缓慢推近（每秒 1%）+ 轻微环绕（±3 度）
-const live = (c, t, t0, cx) => { const k = 1 - 0.01 * Math.max(0, t - t0); const p = lerp3(c.target, c.pos, k); return orbit({ ...c, pos: p }, 0.052 * Math.sin(t * qw(0.9)), cx); };
+const live = (c, t, t0, cx) => { const k = 1 - 0.015 * Math.max(0, t - t0); const p = lerp3(c.target, c.pos, k); return orbit({ ...c, pos: p }, 0.07 * Math.sin(t * qw(0.9)), cx); };   // 每秒推近 1.5%，环绕 ±4 度
 function heroLineup(t, F, AUD0, pop) {
   const AUD = { ...AUD0, mid: 0, low: 0 };
   S.chars.forEach(O => { O.g.visible = true; setState(O, { lite: true, gray: false, eyes: 1, halo: 0.85, props: 1, scatter: 0, aud: AUD, pop: pop ? pop(O.i) : 0 }); animate(O, t, 9, -9, true, AUD); });
@@ -495,7 +498,7 @@ function setCol(C, hex) { C.mats.forEach(m => m.uniforms.uSin.value.set(hex)); C
 export const subsList = () => TXT.map(s => ({ text: plain(s.text), t0: +s.t0.toFixed(3), t1: +s.t1.toFixed(3), minD: +s.minD.toFixed(3) }));
 export function events() {
   const big = [ ['标题飞到左上角、睁眼', EV.wake], ['拉远、明天的你', EV.pull], ['明天的你：浅青', EV.step1], ['三个半身像', EV.trio], ['那件事', EV.cube], ['粒子大脑', EV.brain], ['回到懒惰、荆棘', EV.back], ...EV.thornLab.map((d, i) => [`荆棘标签 ${i + 1}`, d]), ['帽子盖住眼睛', EV.hatDown], ['荆棘散开、方块变柔和', EV.calm], ['正面直视', EV.gaze], ['结尾阵容', EV.end]];
-  const small = [['转盘落在懒惰（抽中，按转盘设计落在拍点）', EV.pick], ['明天的你：陌生人（第 3 拍）', EV.step2], ...EV.spots.filter(o => Math.abs(o.t - nb(o.t)) < 0.01).map((o, k) => [`转盘落在第 ${o.i + 1} 格`, o.t]), ['亮相：标题、哈欠（半拍）', EV.title], ...EV.cols.map((b, i) => [`柱子 ${i + 1}`, b]), ['打哈欠', EV.yawn], ['推方块（drop）', EV.push], ...EV.drain.map((d, i) => [`电量掉一格 ${i + 1}`, d]), ['贪婪亮起', EV.next]];
+  const small = [['转盘退回一格落在懒惰（抽中）', EV.pick], ['推进到懒惰特写', EV.zoom], ['明天的你：陌生人（第 3 拍）', EV.step2], ...EV.spots.filter(o => Math.abs(o.t - nb(o.t)) < 0.01).map((o, k) => [`转盘落在第 ${o.i + 1} 格`, o.t]), ['亮相：标题、哈欠（半拍）', EV.title], ...EV.cols.map((b, i) => [`柱子 ${i + 1}`, b]), ['打哈欠', EV.yawn], ['推方块（drop）', EV.push], ...EV.drain.map((d, i) => [`电量掉一格 ${i + 1}`, d]), ['贪婪亮起', EV.next]];
   return [...big.map(([name, t]) => ({ name, t, kind: 'big' })), ...small.map(([name, t]) => ({ name, t, kind: 'small' }))];
 }
 export const charsList = () => S ? [...(S.chars ?? []), ...(S.extra ?? [])] : [];
@@ -507,7 +510,7 @@ export function frame(t) {
   const kick = pulse(t) * endK, low = env(t, 'low'), mid = env(t, 'mid'), high = env(t, 'high');
   const bb = beatInBar(t), after = t >= DROP;
   const off = bb.k === 0 ? Math.exp(-bb.d / 0.1) * endK : 0;                // 每小节第一拍：镜头推 2% + 轻微震动（3px，drop 之后 4px）
-  F.shake = off * (after ? 0.67 : 0.5);
+  F.shake = off * 0.5;                                                     // 3px
   const AUD = { kick, low, mid, high, t, endK };
   S.chars.forEach(O => { O.g.position.set(slotX(O.i), 0, 0); O.g.rotation.set(0, 0, 0); O.g.visible = false; animate(O, t, -9, -9, false, AUD); });
   S.extra.forEach(O => { O.g.visible = false; });
@@ -518,7 +521,7 @@ export function frame(t) {
   F.corner = clamp((t - EV.wake - 0.45) / 0.1) * (1 - clamp((t - EV.end) / 0.25));
   F.title = t >= EV.title - 0.05 && t < EV.wake + 0.5 ? { a: clamp((t - EV.title) / 0.15), fly: outExpo(clamp((t - EV.wake) / 0.4)), pop: t - EV.title } : null;
 
-  if (t < EV.pick) {
+  if (t < EV.zoom) {
     // ---- 场景 1：第 0 帧七个彩色角色排成一排；扫描线从左扫到右、再扫回来，停在懒惰上
     cam = heroLineup(t, F, AUD);
     const j = lastIdx(EV.spots.map(o => o.t), t);
@@ -533,12 +536,13 @@ export function frame(t) {
         O.haloMats.forEach(m => { m.uniforms.uBright.value *= O.i === cur.i ? 1 + 1.2 * on : 0.5; });
         if (O.i === cur.i) { O.rig.scale.multiplyScalar(1 + 0.12 * on); O.g.position.y += 0.1 * on + 0.12 * Math.sin(Math.PI * clamp(dt / 0.22)) * (dt < 0.22 ? 1 : 0); }   // 放大 12%、轻轻往上一弹
       });
-      F.spot = { x: slotX(cur.i), a: on };
+      const prev = EV.spots[Math.max(0, j - 1)], glide = cur.t === EV.pick ? outExpo(clamp(dt / 0.15)) : 1;   // 最后一步：光用 0.15 秒明显地往回移一格
+      F.spot = { x: lerp(slotX(prev.i), slotX(cur.i), glide), a: cur.t === EV.pick ? 1 : on };
       F.tick = { c: project([slotX(cur.i), -1.5, 0.2]), k: clamp(dt / 0.28), w: project([slotX(cur.i) + 0.5, -1.5, 0.2])[0] - project([slotX(cur.i), -1.5, 0.2])[0] };   // 脚下闪一下细光环（“嗒”）
     }
   } else if (t < EV.pull) {
     // ---- 抽中：镜头 0.25 秒猛地推到懒惰的脸（占画面高约 70%，居中偏右），其他角色被甩出画面；眼睛亮起，飘出一个 Z，一次柔和的冲击波
-    const dt = t - EV.pick, k = outExpo(clamp(dt / 0.25));
+    const dt = t - EV.zoom, k = outExpo(clamp(dt / 0.25));
     S.chars.forEach(O => {
       if (O === W) return; O.g.visible = k < 0.999;
       setState(O, { lite: true, gray: false, eyes: 1, halo: 0.85 * (1 - k), props: 1, scatter: 0, aud: AUD }); animate(O, t, 9, -9, true, AUD);
@@ -546,20 +550,16 @@ export function frame(t) {
     });
     W.g.visible = true;
     setState(W, { lite: dt < 0.04, gray: false, eyes: 0.5 + 0.5 * outExpo(clamp(dt / 0.12)), halo: 0.85 + 0.15 * k, props: 1, scatter: 0, aud: AUD, pop: 0.6 * Math.exp(-dt / 0.25) });
-    // 亮相：慢慢打一个大哈欠（0.6 秒张开、停一下、0.4 秒合上），毛线帽往下滑一点；“你不是懒。”那一拍猛地睁眼、帽子弹回去
-    const yu = t - EV.title, yawn = yu < 0 ? 0 : yu < 0.6 ? sine(yu / 0.6) : yu < 0.85 ? 1 : yu < 1.25 ? 1 - sine((yu - 0.85) / 0.4) : 0;
-    if (yawn > 0.5) { W.gag.visible = true; W.col.visible = false; }
-    W.eyes.forEach(m => { m.material.uniforms.uInt.value *= 1 - 0.6 * yawn; });
+    // 亮相：打一个大哈欠（见 yawnAt），毛线帽往下滑一点；“你不是懒。”那一拍猛地睁眼、帽子弹回去
     animate(W, t, 9, -9, true, AUD);
-    W.head.rotation.x -= 0.1 * yawn;                                         // 打哈欠时头往后仰一点
     const hs = t < EV.wake ? 0.3 * sine(clamp((t - EV.title) / 1.1)) : 0.3 * (1 - outExpo(clamp((t - EV.wake) / 0.15)));
     if (W.hat) W.hat.material.uniforms.uB.value = hs;
-    const close = camAt(-0.30 * HW(3.7), 0.2, 3.7);
-    cam = camLerp(lineupCam(t), live(close, t, EV.pick, 0), k);
+    const close = camAt(-0.33 * HW(3.7), 0.2, 3.7);
+    cam = camLerp(lineupCam(t), live(close, t, EV.zoom, 0), k);
     F.names = 1 - clamp(dt / 0.15); F.aired = F.names; F.series = 1 - clamp(dt / 0.08);
     if (dt < 0.5) F.shock = { c: project([0, HEAD_C[1], 0.3]), r: 0.55 * outExpo(dt / 0.5), a: 0.45 * (1 - dt / 0.5), col: HI };
     if (dt < 0.12) F.shake = Math.max(F.shake, 0.5 * (1 - dt / 0.12));
-    F.bursts.push({ t0: EV.pick, pos: [0, HEAD_C[1] + 0.5, 0.3], n: 30, speed: 0.8, life: 0.6, grav: -0.1, seed: 7, bright: 1.6 });
+    F.bursts.push({ t0: EV.zoom, pos: [0, HEAD_C[1] + 0.5, 0.3], n: 30, speed: 0.8, life: 0.6, grav: -0.1, seed: 7, bright: 1.6 });
     subj = [0, HEAD_C[1], 0];
   } else if (t < EV.trio) {
     // ---- 被吓醒：猛地睁眼，镜头拉远，懒惰移到画面左侧 1/3；右侧远处的雾里出现一个一模一样的“明天的你”
@@ -567,7 +567,7 @@ export function frame(t) {
     W.g.visible = true;
     setState(W, { lite: false, gray: false, eyes: 1, halo: 1, props: 1, scatter: 0, aud: AUD }); animate(W, t, 9, -9, true, AUD);
     const D = 8.2, cx = 0.333 * HW(D);
-    const close = live(camAt(-0.30 * HW(3.7), 0.2, 3.7), t, EV.pick, 0), wide = live(camAt(cx, -0.35, D), t, EV.pull, cx);
+    const close = live(camAt(-0.33 * HW(3.7), 0.2, 3.7), t, EV.zoom, 0), wide = live(camAt(cx, -0.35, D), t, EV.pull, cx);
     cam = camLerp(close, wide, k);
     // 明天的你：每个小节第一拍往远处退一步，颜色褪掉一层（青 → 浅青 → 灰），五官变模糊，帽子和围巾消失
     const U = S.future, s1 = inOut(clamp((t - EV.step1) / 1.4)), s2 = inOut(clamp((t - EV.step2) / 0.9));
@@ -583,8 +583,8 @@ export function frame(t) {
   } else if (t < EV.cube) {
     // ---- 三个并排的半身像：现在的你（青）、十年后的你（变淡、没有帽子）、陌生人（灰）；头顶“大脑的反应”柱子在三个拍点上依次升起
     const dt = t - EV.trio, k = inOut(clamp(dt / 0.5));
-    const D0 = 8.2, cx0 = 0.333 * HW(D0), D = 10.6, XS = [-2.9, 0, 2.9];
-    cam = camLerp(live(camAt(cx0, -0.35, D0), t, EV.pull, cx0), live(camAt(0, 0.05, D, 0.0), t, EV.trio, 0), k);
+    const D0 = 8.2, cx0 = 0.333 * HW(D0), D = 12, XS = [-2.9, 0, 2.9];
+    cam = camLerp(live(camAt(cx0, -0.35, D0), t, EV.pull, cx0), live(camAt(0, 0.35, D, 0.35), t, EV.trio, 0), k);
     W.g.visible = true; W.g.position.set(lerp(0, XS[0], k), 0, 0);
     setState(W, { lite: false, gray: false, eyes: 1, halo: 1, props: 1, scatter: 0, aud: AUD }); animate(W, t, 9, -9, true, AUD);
     const Dc = S.decade; Dc.g.visible = true; Dc.g.position.set(XS[1], 0, 0);
@@ -597,30 +597,31 @@ export function frame(t) {
     const la = clamp((dt - 0.45) / 0.25);
     ['现在的你', '十年后的你', '陌生人'].forEach((s, i) => { const p = project([XS[i], -1.72, 0.3]); F.labels.push({ text: s, x: p[0], y: p[1] + 40, a: la }); });
     // 柱子：现在的你最高最亮；十年后的你只有一半左右；陌生人和十年后的你差不多高
-    const H0 = [1.0, 0.5, 0.47], BR0 = [1.0, 0.55, 0.5];
-    F.cols = XS.map((x, i) => { const u = t - EV.cols[i], h = u < 0 ? 0 : outBack(clamp(u / 0.35)); const b = project([x, 1.38, 0]), tp = project([x, 1.38 + 1.75 * H0[i] * h, 0]); return { x: b[0], y0: b[1], y1: tp[1], a: clamp(u / 0.1) * (u >= 0 ? 1 : 0), br: BR0[i], flash: u >= 0 ? Math.exp(-u / 0.2) : 0 }; });
+    // 柱子底部对齐在头顶上方；最高一根（含弹跳）顶端离画面上缘至少 10%
+    const H0 = [1.0, 0.45, 0.4], BR0 = [1.0, 0.6, 0.55];
+    F.cols = XS.map((x, i) => { const u = t - EV.cols[i], h = u < 0 ? 0 : outBack(clamp(u / 0.4)); const b = project([x, 1.5, 0]), full = b[1] - 150;
+      return { x: b[0], y0: b[1], y1: b[1] - full * H0[i] * h - (u > 0.4 ? 4 * Math.sin(t * qw(3.0) + i * 2) : 0), a: clamp(u / 0.08) * (u >= 0 ? 1 : 0), br: BR0[i], flash: u >= 0 ? Math.exp(-u / 0.25) : 0 }; });
     F.colLabel = clamp((t - EV.cols[0]) / 0.25);
     subj = [W.g.position.x, HEAD_C[1], 0];
   } else if (t < EV.brain - 0.45) {
     // ---- 三个半身像散开，懒惰回到画面中央偏左；面前出现“那件事”。打一个哈欠，轻轻一推，方块滑向远处的灰色陌生人，停在它脚下
     const dt = t - EV.cube, k = inOut(clamp(dt / 0.5));
     const XS = [-2.9, 0, 2.9], D = 7.6, home = -1.35;
-    cam = camLerp(live(camAt(0, 0.05, 10.6, 0.0), t, EV.trio, 0), live(camAt(0, -0.3, D), t, EV.cube, 0), k);
+    cam = camLerp(live(camAt(0, 0.35, 12, 0.35), t, EV.trio, 0), live(camAt(0, -0.3, D), t, EV.cube, 0), k);
     W.g.visible = true; W.g.position.set(lerp(XS[0], home, k), 0, 0);
     // 哈欠：0.6 秒张开、0.4 秒合上（张嘴的脸和平常的脸交替显示）
-    const yu = t - EV.yawn, yawn = yu < 0 ? 0 : yu < 0.6 ? sine(yu / 0.6) : yu < 0.8 ? 1 : yu < 1.2 ? 1 - sine((yu - 0.8) / 0.4) : 0;
-    setState(W, { lite: false, gray: false, eyes: 1 - 0.5 * yawn, halo: 1, props: 1, scatter: 0, aud: AUD, gag: yawn > 0.5 }); animate(W, t, 9, -9, true, AUD);
+    setState(W, { lite: false, gray: false, eyes: 1, halo: 1, props: 1, scatter: 0, aud: AUD }); animate(W, t, 9, -9, true, AUD);
     const Dc = S.decade; if (k < 1) { Dc.g.visible = true; Dc.g.position.set(0, 0, 0); setState(Dc, { lite: false, gray: false, eyes: 0.55 * (1 - k), halo: 0, props: 1, scatter: 2.4 * k, aud: AUD }); setCol(Dc, '#6FB7C3'); Dc.mats.forEach(m => { m.uniforms.uDim.value *= 0.62 * (1 - k); }); if (Dc.hat) Dc.hat.visible = false; }
     const U = S.future, far = [4.2, -0.2, -9]; U.g.visible = true; U.g.position.set(...lerp3([XS[2], 0, 0], far, k));
     setState(U, { lite: false, gray: true, eyes: 0, halo: 0, props: 0, scatter: 0.02, aud: AUD }); animate(U, t, 9, -9, true, AUD); U.mats.forEach(m => { m.uniforms.uDim.value *= lerp(1, 0.7, k); });
     // 方块：先在懒惰面前聚起来，推的那一拍沿地面滑向远处的陌生人
-    const c0 = [home + 1.25, -1.55, 1.0], c1 = [far[0] - 0.1, far[1] - 2.45, far[2] + 0.4];
+    const c0 = [home + 1.3, -1.05, 0.8], c1 = [far[0] - 0.1, far[1] - 2.45, far[2] + 0.4];
     const pu = clamp((t - EV.push) / 1.7), sl = 1 - Math.pow(1 - pu, 3), ca = clamp((dt - 0.15) / 0.4);
     const cp = lerp3(c0, c1, sl); cp[1] += 0.05 * Math.sin(Math.PI * sl);
-    S.cube.g.visible = ca > 0; S.cube.g.position.set(...cp); S.cube.g.scale.setScalar(lerp(0.62, 0.5, sl) * (0.6 + 0.4 * outBack(ca)));
-    S.cube.g.rotation.set(0.35, 0.6 + 0.3 * sl + 0.1 * Math.sin(t * qw(0.8)), 0);
-    S.cube.m.uniforms.uScatter.value = 1.2 * (1 - ca); S.cube.m.uniforms.uBright.value = 2.2 * ca * (1 + 0.4 * Math.max(0, kick));
-    S.cube.glow.material.uniforms.uInt.value = 0.08 * ca; S.cube.glow.quaternion.copy(K.camera.quaternion);
+    S.cube.g.visible = ca > 0; S.cube.g.position.set(...cp); S.cube.g.scale.setScalar(lerp(0.5, 0.42, sl) * (0.6 + 0.4 * outBack(ca)));
+    S.cube.g.rotation.set(0.35, 0.6 + 0.3 * sl + 0.35 * t, 0);
+    S.cube.m.uniforms.uScatter.value = 1.2 * (1 - ca); S.cube.m.uniforms.uBright.value = 2.0 * ca * (1 + 0.4 * Math.max(0, kick)); setCubeCol('#8FE6F2');
+    S.cube.glow.material.uniforms.uInt.value = 0.13 * ca; S.cube.glow.quaternion.copy(K.camera.quaternion);
     const pd = t - EV.push; if (pd >= 0 && pd < 0.45) W.head.rotation.x += 0.12 * Math.sin(Math.PI * pd / 0.45);   // 用头轻轻一顶
     const cpp = project(cp), chw = project([cp[0] + 0.62 * S.cube.g.scale.x, cp[1], cp[2]])[0] - cpp[0]; F.labels.push({ text: '那件事', x: cpp[0] + chw + 30, y: cpp[1] - 70 * (1 - 0.6 * sl), a: ca * (1 - clamp((pu - 0.12) / 0.15)), align: 'left' });
     const sp = project([far[0], -1.75, far[2]]); F.labels.push({ text: '陌生人', x: sp[0], y: sp[1] + 30, a: clamp((dt - 0.5) / 0.3) * 0.9 * (1 - clamp((t - EV.push) / 0.2) * (1 - clamp((pu - 0.4) / 0.2))), small: true });
@@ -639,7 +640,7 @@ export function frame(t) {
     // 电量：每两拍掉一格（第 1、3 拍），掉的那一下大脑亮一下（像在思考）、一次小冲击波
     const lvl = 5 - EV.drain.filter(d => t >= d).length, last = EV.drain.filter(d => t >= d).pop();
     const think = last != null ? Math.exp(-(t - last) / 0.22) : 0, endD = EV.drain[EV.drain.length - 1], dead = clamp((t - endD - 0.1) / 0.8);
-    Bn.m.uniforms.uBright.value = 7.0 * (1 + 0.9 * think) * (1 - 0.65 * dead) * (1 + 0.15 * Math.max(0, kick));
+    Bn.m.uniforms.uBright.value = 11.2 * (1 + 0.6 * think) * (1 - 0.65 * dead) * (1 + 0.15 * Math.max(0, kick));
     Bn.glow.visible = true; Bn.glow.material.uniforms.uInt.value = (0.05 + 0.06 * think) * (1 - 0.7 * dead); Bn.glow.quaternion.copy(K.camera.quaternion);
     Bn.g.rotation.y = Math.PI + 0.12 * Math.sin(t * qw(0.7));
     S.sand.visible = dead > 0; S.sand.material.uniforms.uOn.value = dead * (1 - clamp((t - EV.back + 0.6) / 0.5)); S.sand.material.uniforms.uT.value = t - endD;
@@ -659,12 +660,13 @@ export function frame(t) {
     W.head.rotation.x += 0.05 * sk - 0.04 * hd; W.g.rotation.y = 0.12 * sk / 3;                       // 往后缩一点
     if (W.hat) W.hat.material.uniforms.uB.value = 0.3 * sk / 3 * (1 - hd) + 1.35 * hd;          // 把帽子往下拉一点 → 整个盖住
     W.eyes.forEach(m => { m.visible = m.visible && hd < 0.6; });
-    const cc = [1.75, -0.55, 0.2], ck = clamp((dt - 0.15) / 0.45);
-    S.cube.g.visible = true; S.cube.g.position.set(...cc); S.cube.g.scale.setScalar(1.45 * (0.5 + 0.5 * outBack(ck)));
-    S.cube.g.rotation.set(0.32, 0.55 + 0.08 * Math.sin(t * qw(0.6)), 0.05 * Math.sin(t * qw(0.9)));
-    S.cube.m.uniforms.uScatter.value = 1.4 * (1 - ck); S.cube.m.uniforms.uBright.value = 3.4 * ck * (1 + 0.3 * Math.max(0, kick)); setCubeCol('#C8F6FC');
-    S.cube.glow.material.uniforms.uInt.value = 0.04 * ck; S.cube.glow.quaternion.copy(K.camera.quaternion);
-    const T = S.thorns; T.visible = true; T.material.uniforms.uGrow.value = clamp(dt / 0.8) * (0.32 + 0.22 * sk) * (1 + 0.03 * Math.sin(t * qw(1.3)));
+    const cc = [1.55, -0.45, 0.2], ck = clamp((dt - 0.15) / 0.45);
+    S.cube.g.visible = true; S.cube.g.position.set(...cc); S.cube.g.scale.setScalar(1.6 * (0.5 + 0.5 * outBack(ck)));   // 约占画面高度 40%
+    S.cube.g.rotation.set(0.32, 0.55 + 0.25 * t, 0.05 * Math.sin(t * qw(0.9)));
+    S.cube.m.uniforms.uScatter.value = 1.4 * (1 - ck); S.cube.m.uniforms.uBright.value = 2.4 * ck * (1 + 0.3 * Math.max(0, kick)); setCubeCol('#BFF4FA');
+    S.cube.glow.material.uniforms.uInt.value = 0.1 * ck; S.cube.glow.quaternion.copy(K.camera.quaternion);
+    const T = S.thorns; T.visible = true; T.position.copy(S.cube.g.position); T.scale.setScalar(S.cube.g.scale.x);   // 荆棘从方块表面长出来
+    T.material.uniforms.uGrow.value = clamp(dt / 0.8) * (0.32 + 0.22 * sk) * (1 + (1 - hd) * 0.1 * Math.sin(t * qw(2.6)));   // 持续伸缩
     T.material.uniforms.uLean.value = 0.25 + 0.2 * sk; T.material.uniforms.uFade.value = ck; T.material.uniforms.uT.value = t; T.material.uniforms.uStill.value = hd;
     const cs = project(cc), cre = project([cc[0] + 0.62 * S.cube.g.scale.x, cc[1], cc[2]])[0];
     ['怕做不好', '没有头绪', '太累了'].forEach((s, i) => { const d = t - EV.thornLab[i]; if (d < 0) return; F.labels.push({ text: s, x: Math.max(1665, cre + 30), y: cs[1] - 150 + 150 * i, a: clamp(d / 0.12), align: 'left', pop: d }); });
@@ -680,13 +682,12 @@ export function frame(t) {
     W.g.rotation.y = 0.12 * (1 - u);
     if (W.hat) W.hat.material.uniforms.uB.value = 1.35 * (1 - up);
     W.eyes.forEach(m => { m.visible = m.visible && up > 0.5; m.material.uniforms.uInt.value *= 0.75; });
-    W.mats.forEach(m => { m.uniforms.uDim.value *= lerp(1, 0.8, inOut(clamp((t - EV.gaze + 1.2) / 1.2))); });   // 推近到脸之前先压暗一点
-    const T = S.thorns; T.visible = fog < 1; T.material.uniforms.uFade.value = 1 - fog; T.material.uniforms.uMist.value = fog; T.material.uniforms.uT.value = t; T.material.uniforms.uStill.value = 1 - fog;
+    const T = S.thorns; T.visible = fog < 1; T.position.copy(S.cube.g.position); T.scale.setScalar(S.cube.g.scale.x); T.material.uniforms.uFade.value = 1 - fog; T.material.uniforms.uMist.value = fog; T.material.uniforms.uT.value = t; T.material.uniforms.uStill.value = 1 - fog;
     T.material.uniforms.uGrow.value = 0.98 + 0.2 * fog;
-    const cs = lerp(1.45, 0.55, inOut(clamp(dt / 1.6))), cp = lerp3([1.75, -0.55, 0.2], [px + 1.5, -1.25, 0.9], inOut(u));
-    S.cube.g.visible = true; S.cube.g.position.set(...cp); S.cube.g.scale.setScalar(cs); S.cube.g.rotation.set(0.32, 0.55 + 0.25 * u, 0);
-    setCubeCol(hexs(C3('#C8F6FC').lerp(C3('#A8F0FA'), fog))); S.cube.m.uniforms.uBright.value = lerp(3.4, 2.0, fog); S.cube.m.uniforms.uScatter.value = 0.03 * fog;   // 变柔和
-    S.cube.glow.material.uniforms.uInt.value = 0.04 + 0.03 * fog; S.cube.glow.quaternion.copy(K.camera.quaternion);
+    const cs = lerp(1.6, 0.6, inOut(clamp(dt / 1.6))), cp = lerp3([1.55, -0.45, 0.2], [px + 1.5, -1.25, 0.9], inOut(u));
+    S.cube.g.visible = true; S.cube.g.position.set(...cp); S.cube.g.scale.setScalar(cs); S.cube.g.rotation.set(0.32, 0.55 + 0.25 * t, 0);
+    setCubeCol(hexs(C3('#C8F6FC').lerp(C3('#A8F0FA'), fog))); S.cube.m.uniforms.uBright.value = lerp(2.4, 3.0, fog); S.cube.m.uniforms.uScatter.value = 0.03 * fog;   // 变柔和
+    S.cube.glow.material.uniforms.uInt.value = 0.1 + 0.03 * fog; S.cube.glow.quaternion.copy(K.camera.quaternion);
     subj = [px, HEAD_C[1], 0];
   } else if (t < EV.end) {
     // ---- 场景 6：正面直视镜头，脸在画面上方约 60%；眼睛是两团清楚的青光（虹膜圆环 + 瞳孔），嘴角放松
@@ -696,12 +697,12 @@ export function frame(t) {
     W.g.visible = true; W.g.position.set(lerp(-0.9, 0, k), 0, 0);
     setState(W, { lite: false, gray: false, eyes: 1, halo: 1, props: 1, scatter: 0, aud: AUD }); animate(W, t, 9, -9, true, AUD);
     W.head.rotation.set(0.04 * (1 - k), 0.05 * (1 - k) * Math.sin(t * qw(1.6)), 0);
-    W.mats.forEach(m => { m.uniforms.uDim.value *= lerp(0.8, 0.68, k); });   // 特写时脸压暗一点：亮于 240 的像素不超过 0.3%
+    
     if (W.hat) W.hat.material.uniforms.uB.value = 0;
     S.irises.forEach(o => { o.visible = k > 0.02; o.material.uniforms.uBright.value = 1.25 * k; });
     W.eyes.forEach(m => { m.scale.y = 1; m.position.y = FACE.eyeR[1]; m.material.uniforms.uInt.value *= 1 - 0.75 * k; });
     W.eyeHalo.forEach(m => { m.material.uniforms.uInt.value *= 1 - 0.5 * k; });
-    const ca = 1 - clamp(dt / 0.4); S.cube.g.visible = ca > 0; S.cube.g.position.set(-0.9 + 1.5, -1.25, 0.9); S.cube.g.scale.setScalar(0.55); S.cube.m.uniforms.uScatter.value = 1.5 * (1 - ca); S.cube.m.uniforms.uBright.value = 1.1 * ca;
+    const ca = 1 - clamp(dt / 0.4); S.cube.g.visible = ca > 0; S.cube.g.position.set(-0.9 + 1.5, -1.25, 0.9); S.cube.g.scale.setScalar(0.55); S.cube.m.uniforms.uScatter.value = 1.5 * (1 - ca); S.cube.m.uniforms.uBright.value = 3.0 * ca;
     subj = [W.g.position.x, HEAD_C[1], 0];
   } else {
     // ---- 场景 7：下集预告。懒惰缩小回到那一排；其他六个角色从两侧飞回。傲慢、嫉妒、愤怒、懒惰彩色睁眼（已播出），贪婪、暴食、色欲灰色闭眼
@@ -726,8 +727,14 @@ export function frame(t) {
     }
     subj = null;
   }
+  // 打哈欠（嘴张成椭圆）：张开、停一下、合上
+  if (W.g.visible && !W.st?.lite && t >= EV.zoom && t < EV.end) {
+    let yw = 0; for (const [t0, a, h, c] of EV.yawns) { const u = t - t0; if (u >= 0 && u < a + h + c) yw = u < a ? sine(u / a) : u < a + h ? 1 : 1 - sine((u - a - h) / c); }
+    if (yw > 0.5 && !W.st.gray) { W.gag.visible = true; W.col.visible = false; }
+    W.eyes.forEach(m => { m.material.uniforms.uInt.value *= 1 - 0.6 * yw; }); W.head.rotation.x -= 0.1 * yw; W.mats.forEach(m => { m.uniforms.uDim.value *= 1 - 0.22 * yw; });   // 张嘴时嘴里的粒子很密，压暗一点
+  }
   // 打瞌睡（头往下点约 8 度）
-  if (W.g.visible && t >= EV.pick) W.head.rotation.x += 0.14 * nodAt(t);
+  if (W.g.visible && t >= EV.zoom && t < EV.gaze) W.head.rotation.x += 0.14 * nodAt(t);
   // 刚被吓醒：眼睛睁圆 1.5 秒，再慢慢回到半睁
   if (W.g.visible && t < EV.gaze) { const wu = t - EV.wake, open = wu < 0 ? 0 : wu < 1.5 ? 1 : 1 - clamp((wu - 1.5) / 0.6); W.eyes.forEach(m => { m.scale.y = lerp(0.4, 1, open); m.position.y = lerp(FACE.eyeR[1] - 0.012, FACE.eyeR[1], open); m.material.uniforms.uInt.value *= 1 + 0.5 * open; }); }
   // 头顶飘出的 Z
@@ -749,9 +756,11 @@ export function frame(t) {
   S.spot.material.uniforms.uInt.value = F.spot ? 0.22 * F.spot.a : 0; if (F.spot) { S.spot.position.set(F.spot.x, 2.2, 0.6); S.spot.material.uniforms.uCol.value.set('#DFFBFF'); }
   S.stars.forEach(s => { s.material.uniforms.uScale.value = K.scale; });
   for (const s of TXT) if (t >= s.t0 - 0.01 && t <= s.t1 + 0.12) (s.kind === 'sub' ? F.subs : F.hooks).push(s);
+  // 离镜头越近，脸的粒子挤得越密：按镜头距离压暗，保证亮于 240 的像素不超过 0.3%
+  if (W.g.visible && !W.st?.lite) { const dd = Math.hypot(cam.pos[0] - W.g.position.x, cam.pos[1] - W.g.position.y, cam.pos[2] - W.g.position.z), f = lerp(0.6, 1, clamp((dd - 3.4) / 5)); W.mats.forEach(m => { m.uniforms.uDim.value *= f; }); }
   // 给检查用：主体的脸（含帽子）和道具在屏幕上的范围（用这一帧的镜头投影）
   F.subjBoxes = [];
-  if (W.g.visible && t >= EV.pick && t < EV.end) { const hp = W.g.position, a2 = project([hp.x - 0.62, HEAD_C[1] + 0.95, hp.z + 0.2]), b2 = project([hp.x + 0.62, HEAD_C[1] - 0.82, hp.z + 0.2]); F.subjBoxes.push({ name: '懒惰的脸和帽子', x0: a2[0], y0: a2[1], x1: b2[0], y1: b2[1] }); }
+  if (W.g.visible && t >= EV.zoom && t < EV.end) { const hp = W.g.position, a2 = project([hp.x - 0.62, HEAD_C[1] + 0.95, hp.z + 0.2]), b2 = project([hp.x + 0.62, HEAD_C[1] - 0.82, hp.z + 0.2]); F.subjBoxes.push({ name: '懒惰的脸和帽子', x0: a2[0], y0: a2[1], x1: b2[0], y1: b2[1] }); }
   if (S.cube.g.visible) { const c = S.cube.g.position, r = 0.62 * S.cube.g.scale.x, a2 = project([c.x - r, c.y + r, c.z]), b2 = project([c.x + r, c.y - r, c.z]); F.subjBoxes.push({ name: '那件事', x0: a2[0], y0: a2[1], x1: b2[0], y1: b2[1] }); }
   F.cam = cam; F.kick = kick;
   return F;
@@ -788,7 +797,7 @@ function drawSub2(t, ctx, s) {
   ctx.save(); ctx.translate(960, 965); ctx.scale(sc, sc); richText(ctx, s.text, 0, 0, 52, a, HI); ctx.restore();   // 基线约在画面高度 91%
 }
 function hookPos(s, t) {
-  if (s.id === 'A') { const k = outExpo(clamp((t - EV.pick) / 0.12)); return [lerp(960, 60, k), 905, k > 0.5 ? 'left' : 'center']; }   // 抽中后跟着镜头移到脸的左边
+  if (s.id === 'A') { const k = outExpo(clamp((t - EV.zoom + 0.12) / 0.12)); return [lerp(960, 60, k), 905, k > 0.5 ? 'left' : 'center']; }   // 抽中后跟着镜头移到脸的左边
   if (s.id === 'B') return [470, 700, 'center'];                         // 脸的左侧，不压脸
   if (s.id === 'C') return [960, 120, 'center'];                         // 画面上方（拉远后人物在左、“明天的你”在右）
   if (s.id === 'N') return [960, 905, 'center'];
@@ -883,12 +892,13 @@ export function draw2D(t, ctx, F) {
   // 大脑的反应：三根发光的竖柱
   if (F.cols) {
     for (const c of F.cols) { if (c.a <= 0) continue;
-      ctx.save(); ctx.globalAlpha = c.a; const w = 48, g = ctx.createLinearGradient(0, c.y0, 0, c.y1);
-      g.addColorStop(0, `rgba(43,200,224,${0.55 * c.br})`); g.addColorStop(1, `rgba(168,240,250,${0.9 * c.br})`);
+      ctx.save(); ctx.globalAlpha = c.a; const w = 144, g = ctx.createLinearGradient(0, c.y0, 0, c.y1);
+      g.addColorStop(0, `rgba(43,200,224,${0.75 * c.br})`); g.addColorStop(1, `rgba(150,230,242,${0.95 * c.br})`);
       ctx.shadowColor = CY; ctx.shadowBlur = 18 * c.br + 20 * c.flash; ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(c.x - w / 2, Math.min(c.y1, c.y0 - 2), w, Math.max(2, c.y0 - c.y1), 8); ctx.fill();
-      ctx.fillStyle = `rgba(239,255,255,${0.7 * c.br})`; ctx.fillRect(c.x - w / 2 + 4, c.y1 + 2, w - 8, 3);
-      ctx.restore(); }
-    if (F.colLabel > 0) { const c = F.cols[0]; drawTag(ctx, { text: '大脑的反应', x: c.x - 40, y: c.y0 - 26, a: F.colLabel, align: 'right' }); }
+      ctx.restore();
+      ctx.save(); ctx.globalAlpha = c.a; const dg = ctx.createRadialGradient(c.x, c.y1, 0, c.x, c.y1, 30); dg.addColorStop(0, 'rgba(239,255,255,0.95)'); dg.addColorStop(0.35, 'rgba(168,240,250,0.8)'); dg.addColorStop(1, 'rgba(43,200,224,0)');
+      ctx.fillStyle = dg; ctx.beginPath(); ctx.arc(c.x, c.y1, 30 * (1 + 0.4 * c.flash), 0, TAU); ctx.fill(); ctx.restore(); }   // 顶端发光的小圆点
+    if (F.colLabel > 0) { const c = F.cols[0]; drawTag(ctx, { text: '大脑的反应', x: c.x - 72 - 30, y: c.y0 - 30, a: F.colLabel, align: 'right' }); }   // 在三根柱子左侧
   }
   if (F.battery && F.battery.a > 0.01) drawBattery(ctx, F.battery);
   for (const L of F.labels) { if (L.pop != null && L.pop < 0.25) { const sc = popScale(L.pop); ctx.save(); ctx.translate(L.x, L.y); ctx.scale(sc, sc); drawTag(ctx, { ...L, x: 0, y: 0 }); ctx.restore(); } else drawTag(ctx, L); }

@@ -153,25 +153,25 @@ export function beanie(k = 1) {
   const tilt = 0.28, ct = Math.cos(tilt), st = Math.sin(tilt);
   const T = p => { const x = p[0], y = p[1] - 0.25; return [x * ct - y * st, x * st + y * ct + 0.25, p[2]]; };   // 整顶往画面左边歪
   // 帽身：从翻边往上的软圆顶，越往上越向一侧耷拉（帽尖垂到一边）
-  for (let i = 0; i < N(42000); i++) {
+  for (let i = 0; i < N(62000); i++) {
     const v = Math.pow(R(), 0.8), a = R() * TAU;
-    const r = 0.6 * Math.sqrt(Math.max(0.02, 1 - v * v * 0.85)) * (1 + 0.04 * Math.sin(a * 3 + v * 4));
+    const r = 0.55 * Math.sqrt(Math.max(0.02, 1 - v * v * 0.85)) * (1 + 0.04 * Math.sin(a * 3 + v * 4));   // 收紧，贴住头（不再像耳罩）
     const droop = 0.32 * v * v;                                             // 帽尖往右边软塌下来
     const x = Math.cos(a) * r * (1 - 0.15 * v) + droop * 0.9, y = 0.36 + v * 0.5 - droop * 0.55, z = -0.1 + Math.sin(a) * r * 0.95;
     const knit = Math.abs(Math.sin(a * 22 + Math.sin(v * 40) * 0.6)) < 0.3 ? 1 : 0;   // 竖条罗纹
     P(pb, R, T([x, y, z]), knit ? 0.9 : 0.45, v, 0);
   }
   // 粗翻边：一圈厚厚的罗纹带（外表面 + 上下两道亮边）
-  for (let i = 0; i < N(20000); i++) {
+  for (let i = 0; i < N(30000); i++) {
     const a = R() * TAU, v = R(), rib = Math.abs(Math.sin(a * 36)) < 0.35;
-    const r = 0.635 + 0.03 * Math.sin(Math.PI * v), edge = v < 0.06 || v > 0.94;
+    const r = 0.565 + 0.03 * Math.sin(Math.PI * v), edge = v < 0.06 || v > 0.94;
     P(pb, R, T([Math.cos(a) * r, 0.22 + v * 0.17, -0.1 + Math.sin(a) * r * 0.95]), edge ? 1.2 : rib ? 0.95 : 0.5, v, 1);
   }
   // 毛线球：耷拉的帽尖上一团毛茸茸的球
   const tip = T([0.32 * 0.9 + 0.06, 0.36 + 0.5 - 0.32 * 0.55 + 0.05, -0.1]);
-  for (let i = 0; i < N(5000); i++) {
+  for (let i = 0; i < N(9000); i++) {
     const d = [R() * 2 - 1, R() * 2 - 1, R() * 2 - 1], l = Math.hypot(...d); if (l > 1 || l < 0.05) continue;
-    const r = 0.13 * Math.pow(R(), 0.25) * (1 + 0.25 * (R() - 0.5));
+    const r = 0.19 * Math.pow(R(), 0.25) * (1 + 0.25 * (R() - 0.5));   // 大毛线球
     P(pb, R, [tip[0] + d[0] / l * r, tip[1] + d[1] / l * r, tip[2] + d[2] / l * r], 0.6 + 0.6 * R(), 0, 2);
   }
   return pb;
@@ -180,7 +180,7 @@ export function scarf(k = 1) {
   const R = rng(42), pb = new PB(), N = n => Math.round(n * k);
   // 绕脖子的一圈：粗粗的管子（管半径 0.11），表面有织纹，软软地起伏
   for (let i = 0; i < N(42000); i++) {
-    const a = R() * TAU, b = R() * TAU, tube = 0.11 * (1 + 0.08 * Math.sin(a * 5));
+    const a = R() * TAU, b = R() * TAU, tube = 0.14 * (1 + 0.08 * Math.sin(a * 5));   // 粗而软
     const rr = 0.4 + tube * Math.cos(b), y = -0.8 + tube * Math.sin(b) + 0.05 * Math.sin(a * 2 + 0.6);
     const knit = Math.abs(Math.sin(a * 48 + Math.sin(b * 3) * 1.2)) < 0.3, stripe = Math.abs(Math.sin(a * 6)) > 0.93;
     const front = Math.sin(a) > -0.3 ? 1 : 0.35;
