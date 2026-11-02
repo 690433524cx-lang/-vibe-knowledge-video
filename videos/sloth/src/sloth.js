@@ -680,6 +680,7 @@ export function frame(t) {
     W.g.rotation.y = 0.12 * (1 - u);
     if (W.hat) W.hat.material.uniforms.uB.value = 1.35 * (1 - up);
     W.eyes.forEach(m => { m.visible = m.visible && up > 0.5; m.material.uniforms.uInt.value *= 0.75; });
+    W.mats.forEach(m => { m.uniforms.uDim.value *= lerp(1, 0.8, inOut(clamp((t - EV.gaze + 1.2) / 1.2))); });   // 推近到脸之前先压暗一点
     const T = S.thorns; T.visible = fog < 1; T.material.uniforms.uFade.value = 1 - fog; T.material.uniforms.uMist.value = fog; T.material.uniforms.uT.value = t; T.material.uniforms.uStill.value = 1 - fog;
     T.material.uniforms.uGrow.value = 0.98 + 0.2 * fog;
     const cs = lerp(1.45, 0.55, inOut(clamp(dt / 1.6))), cp = lerp3([1.75, -0.55, 0.2], [px + 1.5, -1.25, 0.9], inOut(u));
@@ -695,7 +696,7 @@ export function frame(t) {
     W.g.visible = true; W.g.position.set(lerp(-0.9, 0, k), 0, 0);
     setState(W, { lite: false, gray: false, eyes: 1, halo: 1, props: 1, scatter: 0, aud: AUD }); animate(W, t, 9, -9, true, AUD);
     W.head.rotation.set(0.04 * (1 - k), 0.05 * (1 - k) * Math.sin(t * qw(1.6)), 0);
-    W.mats.forEach(m => { m.uniforms.uDim.value *= lerp(1, 0.68, k); });   // 特写时脸压暗一点：亮于 240 的像素不超过 0.3%
+    W.mats.forEach(m => { m.uniforms.uDim.value *= lerp(0.8, 0.68, k); });   // 特写时脸压暗一点：亮于 240 的像素不超过 0.3%
     if (W.hat) W.hat.material.uniforms.uB.value = 0;
     S.irises.forEach(o => { o.visible = k > 0.02; o.material.uniforms.uBright.value = 1.25 * k; });
     W.eyes.forEach(m => { m.scale.y = 1; m.position.y = FACE.eyeR[1]; m.material.uniforms.uInt.value *= 1 - 0.75 * k; });
