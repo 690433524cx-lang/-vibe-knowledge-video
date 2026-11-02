@@ -75,7 +75,7 @@ export function render(t) {
   // 背景：近黑色的深空；只有人物身后有一团颜色光晕（在 show.js 里），雾只留很淡的一层
   const fc = C3(F.auraCol), kk = F.auraK * 0.35;
   const fu = K.final.uniforms;
-  const nb = { b: C3('#0A0303'),   // 背景近黑 #0A0303，红色只在主体身后
+  const nb = { b: C3(window.COVER_BG ?? '#0A0303'),   // 背景近黑 #0A0303，红色只在主体身后
       // 背景保持深色，但不要那么黑
      d: fc.clone().multiplyScalar(0.012 * kk), m: fc.clone().multiplyScalar(0.02 * kk), h: fc.clone().lerp(C3('#FFFFFF'), 0.3).multiplyScalar(0.03 * kk) };   // 背景不能整屏红雾
   ['b', 'd', 'm', 'h'].forEach(x => { fu['uN0' + x].value.copy(nb[x]); fu['uN1' + x].value.copy(nb[x]); });

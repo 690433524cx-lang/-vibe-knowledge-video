@@ -574,6 +574,13 @@ export function frame(t) {
   S.spot.material.uniforms.uInt.value = 0;
   S.stars.forEach(s => { s.material.uniforms.uScale.value = K.scale; });
   for (const s of SUBS) if (t >= s.t0 - 0.01 && t <= s.t1 + 0.12) F.subs.push({ text: s.text, t0: s.t0, t1: s.t1, size: s.size, pop: s.t0, col: s.size === 64 ? RED : HI });
+  if (window.COVER_SIN != null) {                                            // 封面：只留指定的那一宗，完整彩色，站在愤怒的位置（其余角色和特效都不画）
+    const O = S.chars[window.COVER_SIN];
+    S.chars.forEach(o => { o.g.visible = o === O; if (o.cracks && o !== O) o.cracks.visible = false; });
+    O.g.position.set(slotX(WR), 0, 0);
+    setState(O, { lite: false, gray: false, eyes: 1, halo: 1, props: 1, scatter: 0, aud: AUD }); animate(O, t, 9, -9, true, AUD);
+    F.auraCol = O.sin.col; F.bursts = []; F.bolts = []; F.labels = []; F.ground = []; F.shock = null; F.scan = null; F.aired = 0; F.names = 0;
+  }
   F.cam = cam; F.kick = kick;
   return F;
 }
