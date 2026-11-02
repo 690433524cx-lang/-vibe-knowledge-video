@@ -644,7 +644,7 @@ export function frame(t) {
     const think = last != null ? Math.exp(-(t - last) / 0.22) : 0, endD = EV.drain[EV.drain.length - 1], dead = clamp((t - endD - 0.1) / 0.8);
     Bn.m.uniforms.uBright.value = 11.2 * (1 + 0.6 * think) * (1 - 0.65 * dead) * (1 + 0.15 * Math.max(0, kick));
     Bn.glow.visible = true; Bn.glow.material.uniforms.uInt.value = (0.05 + 0.06 * think) * (1 - 0.7 * dead); Bn.glow.quaternion.copy(K.camera.quaternion);
-    Bn.g.rotation.y = Math.PI + 0.12 * Math.sin(t * qw(0.7));
+    Bn.g.rotation.y = Math.PI + 0.22 * Math.sin(t * qw(1.5)); Bn.g.rotation.x = 0.08 * Math.sin(t * qw(1.9)); Bn.g.scale.setScalar(1.15 * (1 + 0.05 * Math.max(0, kick)) * (1 + 0.04 * think)); Bn.g.position.y = 0.05 + 0.05 * Math.sin(t * qw(2.3));   // 大脑也在动：转动、呼吸、每两拍放大
     S.sand.visible = dead > 0; S.sand.material.uniforms.uOn.value = dead * (1 - clamp((t - EV.back + 0.6) / 0.5)); S.sand.material.uniforms.uT.value = t - endD;
     const ba = clamp((t - EV.brain - 0.1) / 0.3) * (1 - clamp((t - EV.back + 0.35) / 0.3));
     F.battery = { a: ba, lvl, drop: last != null ? clamp((t - last) / 0.18) : 1, empty: lvl === 0 ? t - endD : -1 };
@@ -755,7 +755,8 @@ export function frame(t) {
   }
   // 每小节第一拍镜头推 2%
   const bk = bb.k >= 0 ? Math.exp(-bb.d / 0.18) * endK : 0;                // 每一拍镜头再轻轻顶一下（1.2%），跟着节奏呼吸
-  cam = { ...cam, pos: lerp3(cam.target, cam.pos, 1 - 0.02 * off - 0.012 * bk) };
+  cam = { ...cam, pos: lerp3(cam.target, cam.pos, 1 - 0.02 * off - 0.03 * bk) };
+  { const hx = 0.085 * Math.sin(t * qw(5.1)) * endK, hy = 0.06 * Math.sin(t * qw(4.3) + 1) * endK; cam = { ...cam, pos: [cam.pos[0] + hx, cam.pos[1] + hy, cam.pos[2]], target: [cam.target[0] + hx, cam.target[1] + hy, cam.target[2]] }; }   // 镜头轻微手持漂移
   S.spot.material.uniforms.uInt.value = F.spot ? 0.22 * F.spot.a : 0; if (F.spot) { S.spot.position.set(F.spot.x, 2.2, 0.6); S.spot.material.uniforms.uCol.value.set('#DFFBFF'); }
   S.stars.forEach(s => { s.material.uniforms.uScale.value = K.scale; });
   for (const s of TXT) if (t >= s.t0 - 0.01 && t <= s.t1 + 0.12) (s.kind === 'sub' ? F.subs : F.hooks).push(s);
