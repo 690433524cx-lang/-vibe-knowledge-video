@@ -163,7 +163,7 @@ function setState(C, s) {
   // 灰色闭眼的脸：亮度提高到 2.5 倍，聚光灯从上方照着；变身后人物是画面里最亮的东西
   const c = C3(C.sin.col), luma = 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
   const base = s.gray ? (s.lite ? 6.2 : 6.0) :   // 灰色脸亮度提高 60%
-     (s.lite ? 3.0 : 5.0) * clamp(0.42 / luma, 0.7, 1.15);   // 亮度靠人物本身（亮部仍是红色）       // 按颜色的亮度补偿：绿色不过曝、紫色不发暗
+     (s.lite ? 3.0 : 5.6) * clamp(0.42 / luma, 0.7, 1.15);   // 亮度靠人物本身（亮部仍是红色）       // 按颜色的亮度补偿：绿色不过曝、紫色不发暗
   const live = s.gray ? 0 : 1;
   for (const m of C.mats) {
     m.uniforms.uDim.value = base * (1 - 0.15 * (s.inhale ?? 0)) * (1 + 0.2 * Math.max(0, kick)) * (1 + 0.9 * (s.pop ?? 0)) * Math.pow(s.shrink ?? 1, 2);   // 缩小时粒子挤在一起，按面积压暗，不过曝
@@ -494,8 +494,8 @@ function setCol(C, hex) { C.mats.forEach(m => m.uniforms.uSin.value.set(hex)); C
 
 export const subsList = () => TXT.map(s => ({ text: plain(s.text), t0: +s.t0.toFixed(3), t1: +s.t1.toFixed(3), minD: +s.minD.toFixed(3) }));
 export function events() {
-  const big = [['转盘落在懒惰（抽中）', EV.pick], ['标题飞到左上角、睁眼', EV.wake], ['拉远、明天的你', EV.pull], ['明天的你：浅青', EV.step1], ['三个半身像', EV.trio], ['那件事', EV.cube], ['粒子大脑', EV.brain], ['回到懒惰、荆棘', EV.back], ...EV.thornLab.map((d, i) => [`荆棘标签 ${i + 1}`, d]), ['帽子盖住眼睛', EV.hatDown], ['荆棘散开、方块变柔和', EV.calm], ['正面直视', EV.gaze], ['结尾阵容', EV.end]];
-  const small = [['明天的你：陌生人（第 3 拍）', EV.step2], ...EV.spots.filter(o => Math.abs(o.t - nb(o.t)) < 0.01).map((o, k) => [`转盘落在第 ${o.i + 1} 格`, o.t]), ['亮相：标题、哈欠（半拍）', EV.title], ...EV.cols.map((b, i) => [`柱子 ${i + 1}`, b]), ['打哈欠', EV.yawn], ['推方块（drop）', EV.push], ...EV.drain.map((d, i) => [`电量掉一格 ${i + 1}`, d]), ['贪婪亮起', EV.next]];
+  const big = [ ['标题飞到左上角、睁眼', EV.wake], ['拉远、明天的你', EV.pull], ['明天的你：浅青', EV.step1], ['三个半身像', EV.trio], ['那件事', EV.cube], ['粒子大脑', EV.brain], ['回到懒惰、荆棘', EV.back], ...EV.thornLab.map((d, i) => [`荆棘标签 ${i + 1}`, d]), ['帽子盖住眼睛', EV.hatDown], ['荆棘散开、方块变柔和', EV.calm], ['正面直视', EV.gaze], ['结尾阵容', EV.end]];
+  const small = [['转盘落在懒惰（抽中，按转盘设计落在拍点）', EV.pick], ['明天的你：陌生人（第 3 拍）', EV.step2], ...EV.spots.filter(o => Math.abs(o.t - nb(o.t)) < 0.01).map((o, k) => [`转盘落在第 ${o.i + 1} 格`, o.t]), ['亮相：标题、哈欠（半拍）', EV.title], ...EV.cols.map((b, i) => [`柱子 ${i + 1}`, b]), ['打哈欠', EV.yawn], ['推方块（drop）', EV.push], ...EV.drain.map((d, i) => [`电量掉一格 ${i + 1}`, d]), ['贪婪亮起', EV.next]];
   return [...big.map(([name, t]) => ({ name, t, kind: 'big' })), ...small.map(([name, t]) => ({ name, t, kind: 'small' }))];
 }
 export const charsList = () => S ? [...(S.chars ?? []), ...(S.extra ?? [])] : [];
@@ -622,7 +622,7 @@ export function frame(t) {
     S.cube.m.uniforms.uScatter.value = 1.2 * (1 - ca); S.cube.m.uniforms.uBright.value = 2.2 * ca * (1 + 0.4 * Math.max(0, kick));
     S.cube.glow.material.uniforms.uInt.value = 0.08 * ca; S.cube.glow.quaternion.copy(K.camera.quaternion);
     const pd = t - EV.push; if (pd >= 0 && pd < 0.45) W.head.rotation.x += 0.12 * Math.sin(Math.PI * pd / 0.45);   // 用头轻轻一顶
-    const cpp = project(cp); F.labels.push({ text: '那件事', x: cpp[0] + 44 + 40 * (1 - sl), y: cpp[1] - 70 * (1 - 0.6 * sl), a: ca * (1 - clamp((pu - 0.12) / 0.15)), align: 'left' });
+    const cpp = project(cp), chw = project([cp[0] + 0.62 * S.cube.g.scale.x, cp[1], cp[2]])[0] - cpp[0]; F.labels.push({ text: '那件事', x: cpp[0] + chw + 30, y: cpp[1] - 70 * (1 - 0.6 * sl), a: ca * (1 - clamp((pu - 0.12) / 0.15)), align: 'left' });
     const sp = project([far[0], -1.75, far[2]]); F.labels.push({ text: '陌生人', x: sp[0], y: sp[1] + 30, a: clamp((dt - 0.5) / 0.3) * 0.9 * (1 - clamp((t - EV.push) / 0.2) * (1 - clamp((pu - 0.4) / 0.2))), small: true });
     subj = [W.g.position.x, HEAD_C[1], 0];
   } else if (t < EV.back) {
@@ -639,7 +639,7 @@ export function frame(t) {
     // 电量：每两拍掉一格（第 1、3 拍），掉的那一下大脑亮一下（像在思考）、一次小冲击波
     const lvl = 5 - EV.drain.filter(d => t >= d).length, last = EV.drain.filter(d => t >= d).pop();
     const think = last != null ? Math.exp(-(t - last) / 0.22) : 0, endD = EV.drain[EV.drain.length - 1], dead = clamp((t - endD - 0.1) / 0.8);
-    Bn.m.uniforms.uBright.value = 6.0 * (1 + 0.9 * think) * (1 - 0.65 * dead) * (1 + 0.15 * Math.max(0, kick));
+    Bn.m.uniforms.uBright.value = 7.0 * (1 + 0.9 * think) * (1 - 0.65 * dead) * (1 + 0.15 * Math.max(0, kick));
     Bn.glow.visible = true; Bn.glow.material.uniforms.uInt.value = (0.05 + 0.06 * think) * (1 - 0.7 * dead); Bn.glow.quaternion.copy(K.camera.quaternion);
     Bn.g.rotation.y = Math.PI + 0.12 * Math.sin(t * qw(0.7));
     S.sand.visible = dead > 0; S.sand.material.uniforms.uOn.value = dead * (1 - clamp((t - EV.back + 0.6) / 0.5)); S.sand.material.uniforms.uT.value = t - endD;
@@ -659,15 +659,15 @@ export function frame(t) {
     W.head.rotation.x += 0.05 * sk - 0.04 * hd; W.g.rotation.y = 0.12 * sk / 3;                       // 往后缩一点
     if (W.hat) W.hat.material.uniforms.uB.value = 0.3 * sk / 3 * (1 - hd) + 1.35 * hd;          // 把帽子往下拉一点 → 整个盖住
     W.eyes.forEach(m => { m.visible = m.visible && hd < 0.6; });
-    const cc = [2.0, -0.55, 0.2], ck = clamp((dt - 0.15) / 0.45);
+    const cc = [1.75, -0.55, 0.2], ck = clamp((dt - 0.15) / 0.45);
     S.cube.g.visible = true; S.cube.g.position.set(...cc); S.cube.g.scale.setScalar(1.45 * (0.5 + 0.5 * outBack(ck)));
     S.cube.g.rotation.set(0.32, 0.55 + 0.08 * Math.sin(t * qw(0.6)), 0.05 * Math.sin(t * qw(0.9)));
     S.cube.m.uniforms.uScatter.value = 1.4 * (1 - ck); S.cube.m.uniforms.uBright.value = 3.4 * ck * (1 + 0.3 * Math.max(0, kick)); setCubeCol('#C8F6FC');
     S.cube.glow.material.uniforms.uInt.value = 0.04 * ck; S.cube.glow.quaternion.copy(K.camera.quaternion);
     const T = S.thorns; T.visible = true; T.material.uniforms.uGrow.value = clamp(dt / 0.8) * (0.32 + 0.22 * sk) * (1 + 0.03 * Math.sin(t * qw(1.3)));
     T.material.uniforms.uLean.value = 0.25 + 0.2 * sk; T.material.uniforms.uFade.value = ck; T.material.uniforms.uT.value = t; T.material.uniforms.uStill.value = hd;
-    const cs = project(cc);
-    ['怕做不好', '没有头绪', '太累了'].forEach((s, i) => { const d = t - EV.thornLab[i]; if (d < 0) return; F.labels.push({ text: s, x: 1640, y: cs[1] - 150 + 150 * i, a: clamp(d / 0.12), align: 'left', pop: d }); });
+    const cs = project(cc), cre = project([cc[0] + 0.62 * S.cube.g.scale.x, cc[1], cc[2]])[0];
+    ['怕做不好', '没有头绪', '太累了'].forEach((s, i) => { const d = t - EV.thornLab[i]; if (d < 0) return; F.labels.push({ text: s, x: Math.max(1665, cre + 30), y: cs[1] - 150 + 150 * i, a: clamp(d / 0.12), align: 'left', pop: d }); });
     subj = [W.g.position.x, HEAD_C[1], W.g.position.z];
   } else if (t < EV.gaze) {
     // ---- 场景 5：只是还没准备好。荆棘像雾一样散开，方块缩小、变柔和（浅青色）；懒惰慢慢把帽子往上推，眼睛慢慢睁开，镜头缓慢推近到脸
@@ -682,7 +682,7 @@ export function frame(t) {
     W.eyes.forEach(m => { m.visible = m.visible && up > 0.5; m.material.uniforms.uInt.value *= 0.75; });
     const T = S.thorns; T.visible = fog < 1; T.material.uniforms.uFade.value = 1 - fog; T.material.uniforms.uMist.value = fog; T.material.uniforms.uT.value = t; T.material.uniforms.uStill.value = 1 - fog;
     T.material.uniforms.uGrow.value = 0.98 + 0.2 * fog;
-    const cs = lerp(1.45, 0.55, inOut(clamp(dt / 1.6))), cp = lerp3([2.0, -0.55, 0.2], [px + 1.5, -1.25, 0.9], inOut(u));
+    const cs = lerp(1.45, 0.55, inOut(clamp(dt / 1.6))), cp = lerp3([1.75, -0.55, 0.2], [px + 1.5, -1.25, 0.9], inOut(u));
     S.cube.g.visible = true; S.cube.g.position.set(...cp); S.cube.g.scale.setScalar(cs); S.cube.g.rotation.set(0.32, 0.55 + 0.25 * u, 0);
     setCubeCol(hexs(C3('#C8F6FC').lerp(C3('#A8F0FA'), fog))); S.cube.m.uniforms.uBright.value = lerp(3.4, 2.0, fog); S.cube.m.uniforms.uScatter.value = 0.03 * fog;   // 变柔和
     S.cube.glow.material.uniforms.uInt.value = 0.04 + 0.03 * fog; S.cube.glow.quaternion.copy(K.camera.quaternion);
@@ -695,7 +695,7 @@ export function frame(t) {
     W.g.visible = true; W.g.position.set(lerp(-0.9, 0, k), 0, 0);
     setState(W, { lite: false, gray: false, eyes: 1, halo: 1, props: 1, scatter: 0, aud: AUD }); animate(W, t, 9, -9, true, AUD);
     W.head.rotation.set(0.04 * (1 - k), 0.05 * (1 - k) * Math.sin(t * qw(1.6)), 0);
-    W.mats.forEach(m => { m.uniforms.uDim.value *= lerp(1, 0.74, k); });   // 特写时脸压暗一点：亮于 240 的像素不超过 0.3%
+    W.mats.forEach(m => { m.uniforms.uDim.value *= lerp(1, 0.68, k); });   // 特写时脸压暗一点：亮于 240 的像素不超过 0.3%
     if (W.hat) W.hat.material.uniforms.uB.value = 0;
     S.irises.forEach(o => { o.visible = k > 0.02; o.material.uniforms.uBright.value = 1.25 * k; });
     W.eyes.forEach(m => { m.scale.y = 1; m.position.y = FACE.eyeR[1]; m.material.uniforms.uInt.value *= 1 - 0.75 * k; });
@@ -787,7 +787,7 @@ function drawSub2(t, ctx, s) {
   ctx.save(); ctx.translate(960, 965); ctx.scale(sc, sc); richText(ctx, s.text, 0, 0, 52, a, HI); ctx.restore();   // 基线约在画面高度 91%
 }
 function hookPos(s, t) {
-  if (s.id === 'A') { const k = outExpo(clamp((t - EV.pick) / 0.25)); return [lerp(960, 90, k), 905, k > 0.5 ? 'left' : 'center']; }   // 抽中后跟着镜头移到脸的左边
+  if (s.id === 'A') { const k = outExpo(clamp((t - EV.pick) / 0.12)); return [lerp(960, 60, k), 905, k > 0.5 ? 'left' : 'center']; }   // 抽中后跟着镜头移到脸的左边
   if (s.id === 'B') return [470, 700, 'center'];                         // 脸的左侧，不压脸
   if (s.id === 'C') return [960, 120, 'center'];                         // 画面上方（拉远后人物在左、“明天的你”在右）
   if (s.id === 'N') return [960, 905, 'center'];
@@ -847,7 +847,7 @@ function drawBattery(ctx, B2) {
     ctx.globalAlpha = B2.a * (going ? 1 - B2.drop : 1); ctx.fillStyle = going ? '#DFFBFF' : CY; ctx.shadowBlur = going ? 30 : 14;
     ctx.beginPath(); ctx.roundRect(x - w / 2 + 12, yb - ch + 6, w - 24, ch - 10, 6); ctx.fill();
   }
-  if (B2.empty >= 0) { const fl = [0.5, 1.0].reduce((m, s) => Math.max(m, Math.exp(-Math.pow((B2.empty - s) / 0.08, 2))), 0); ctx.globalAlpha = B2.a * fl; ctx.fillStyle = DK; ctx.shadowColor = DK; ctx.shadowBlur = 20; ctx.beginPath(); ctx.roundRect(x - w / 2 + 8, y0 + 8, w - 16, y1 - y0 - 16, 10); ctx.fill(); }
+  if (B2.empty >= 0) { const fl = [0.5, 1.0].reduce((m, s) => Math.max(m, Math.exp(-Math.pow((B2.empty - s) / 0.08, 2))), 0); if (fl > 0.01) ctx.globalAlpha = B2.a * fl; ctx.fillStyle = DK; ctx.shadowColor = DK; ctx.shadowBlur = 20; ctx.beginPath(); ctx.roundRect(x - w / 2 + 8, y0 + 8, w - 16, y1 - y0 - 16, 10); if (fl > 0.01) ctx.fill(); }
   // 小人形
   ctx.globalAlpha = B2.a; ctx.shadowBlur = 6; ctx.strokeStyle = 'rgba(168,240,250,0.75)'; ctx.lineWidth = 2.5;
   const hx = x, hy = 165;
