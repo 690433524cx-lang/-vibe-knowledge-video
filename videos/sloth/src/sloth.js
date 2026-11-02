@@ -463,7 +463,7 @@ export function frame(t) {
         if (O.i === cur.i) { O.rig.scale.multiplyScalar(1 + 0.12 * on); O.g.position.y += 0.1 * on + 0.12 * Math.sin(Math.PI * clamp(dt / 0.22)) * (dt < 0.22 ? 1 : 0); }   // 放大 12%、轻轻往上一弹
       });
       F.spot = { x: slotX(cur.i), a: on };
-      F.tick = { c: project([slotX(cur.i), -1.98, 0.2]), k: clamp(dt / 0.28), w: project([slotX(cur.i) + 0.5, -1.98, 0.2])[0] - project([slotX(cur.i), -1.98, 0.2])[0] };   // 脚下闪一下细光环（“嗒”）
+      F.tick = { c: project([slotX(cur.i), -1.5, 0.2]), k: clamp(dt / 0.28), w: project([slotX(cur.i) + 0.5, -1.5, 0.2])[0] - project([slotX(cur.i), -1.5, 0.2])[0] };   // 脚下闪一下细光环（“嗒”）
     }
   } else if (t < EV.pull) {
     // ---- 抽中：镜头 0.25 秒猛地推到懒惰的脸（占画面高约 70%，居中偏右），其他角色被甩出画面；眼睛亮起，飘出一个 Z，一次柔和的冲击波
