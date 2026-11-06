@@ -762,6 +762,7 @@ export function frame(t) {
   for (const s of TXT) if (t >= s.t0 - 0.01 && t <= s.t1 + 0.12) (s.kind === 'sub' ? F.subs : F.hooks).push(s);
   // 离镜头越近，脸的粒子挤得越密：按镜头距离压暗，保证亮于 240 的像素不超过 0.3%
   if (W.g.visible && !W.st?.lite) { const dd = Math.hypot(cam.pos[0] - W.g.position.x, cam.pos[1] - W.g.position.y, cam.pos[2] - W.g.position.z), f = lerp(0.6, 1, clamp((dd - 3.4) / 5)); W.mats.forEach(m => { m.uniforms.uDim.value *= f; }); }
+  if (window.COVER && W.g.visible) { W.mats.forEach(m => { m.uniforms.uDim.value *= 1.35; }); W.propMats.forEach(m => { m.uniforms.uBright.value *= 1.3; }); }   // 封面：主体亮一点（和前三集封面一致）
   // 给检查用：主体的脸（含帽子）和道具在屏幕上的范围（用这一帧的镜头投影）
   F.subjBoxes = [];
   if (W.g.visible && t >= EV.zoom && t < EV.end) { const hp = W.g.position, a2 = project([hp.x - 0.62, HEAD_C[1] + 0.95, hp.z + 0.2]), b2 = project([hp.x + 0.62, HEAD_C[1] - 0.82, hp.z + 0.2]); F.subjBoxes.push({ name: '懒惰的脸和帽子', x0: a2[0], y0: a2[1], x1: b2[0], y1: b2[1] }); }
@@ -877,7 +878,7 @@ export function draw2D(t, ctx, F) {
   if (!window.COVER && F.series > 0.001) glowText('七宗罪 · 第四集', 960, 92, fs(700, 60), '#EEF8FA', { glow: 22, glowColor: '#FFFFFF', nobox: true, alpha: F.series });
   // 左上角常驻小字
   if (!window.COVER && F.corner > 0.001) { ctx.save(); ctx.globalAlpha = 0.7 * F.corner; ctx.font = fs(700, 28); ctx.textBaseline = 'middle'; ctx.fillStyle = TXTW; ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 6; ctx.fillText('七宗罪 · 04 / 07 · 懒惰', 60, 58); ctx.restore(); }
-  if (F.title) drawTitle2(ctx, t, F.title);
+  if (F.title && !window.COVER) drawTitle2(ctx, t, F.title);
   // 名字（排成一排时，在肩膀下方，带暗色底）
   if (F.names > 0) S.chars.forEach(C => {
     const p = project([C.g.position.x, -1.78, 0]);
@@ -905,11 +906,11 @@ export function draw2D(t, ctx, F) {
     if (F.colLabel > 0) { const c = F.cols[0]; drawTag(ctx, { text: '大脑的反应', x: c.x - 72 - 30, y: c.y0 - 30, a: F.colLabel, align: 'right' }); }   // 在三根柱子左侧
   }
   if (F.battery && F.battery.a > 0.01) drawBattery(ctx, F.battery);
-  for (const L of F.labels) { if (L.pop != null && L.pop < 0.25) { const sc = popScale(L.pop); ctx.save(); ctx.translate(L.x, L.y); ctx.scale(sc, sc); drawTag(ctx, { ...L, x: 0, y: 0 }); ctx.restore(); } else drawTag(ctx, L); }
+  if (!window.COVER) for (const L of F.labels) { if (L.pop != null && L.pop < 0.25) { const sc = popScale(L.pop); ctx.save(); ctx.translate(L.x, L.y); ctx.scale(sc, sc); drawTag(ctx, { ...L, x: 0, y: 0 }); ctx.restore(); } else drawTag(ctx, L); }
   if (F.aired4 > 0) [0, 1, 2, 3].forEach(i => { const C = S.chars[i], p = project([C.g.position.x, 1.18, 0]); glowText('已播出', p[0], p[1], fs(700, 24), tone(C.sin.col, 0.4), { alpha: F.aired4, glow: 10, glowColor: C.sin.col }); });
   if (F.goldRing && F.goldRing.a > 0) { const G2 = F.goldRing, r = 120 + 14 * Math.exp(-G2.k / 0.3); ctx.save(); ctx.globalAlpha = G2.a * (0.75 + 0.25 * Math.exp(-G2.k / 0.4)); ctx.strokeStyle = '#FFD27A'; ctx.lineWidth = 3; ctx.shadowColor = GOLD; ctx.shadowBlur = 22; ctx.beginPath(); ctx.arc(G2.c[0], G2.c[1], r, 0, TAU); ctx.stroke(); ctx.restore(); }
   if (F.nextTag && F.nextTag.a > 0) glowText('下一集', F.nextTag.x, F.nextTag.y, fs(700, 28), '#FFD27A', { alpha: F.nextTag.a, glow: 12, glowColor: GOLD });
-  for (const s of F.hooks) drawHook(t, ctx, s);
+  if (!window.COVER) for (const s of F.hooks) drawHook(t, ctx, s);   // 封面截图时不画钩子大字、标签
   if (!window.COVER) for (const s of F.subs) drawSub2(t, ctx, s);
   if (F.shock) { ctx.save(); ctx.globalAlpha = F.shock.a; ctx.strokeStyle = F.shock.col; ctx.lineWidth = lerp(5, 1, 1 - F.shock.a / 0.45); ctx.shadowColor = CY; ctx.shadowBlur = 14; ctx.beginPath(); ctx.arc(F.shock.c[0], F.shock.c[1], F.shock.r * 1920, 0, TAU); ctx.stroke(); ctx.restore(); }
 }

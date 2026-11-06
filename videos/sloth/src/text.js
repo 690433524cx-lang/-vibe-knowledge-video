@@ -25,6 +25,7 @@ const sctx = scratch.getContext('2d');
 const METAL = {
   pride: { stops: ['#FFFFFF', '#E9D5FF', '#A78BFA', '#6D28D9'], at: [0, 0.38, 0.7, 1], stroke: null, thick: null, period: 3 },
   prideC: { stops: ['#FFFFFF', '#E9D5FF', '#A78BFA', '#6D28D9'], at: [0, 0.35, 0.68, 1], stroke: '#E9D5FF', thick: '#0E0418', period: 2.5 },   // 只给封面用
+  sloth: { stops: ['#F0FFFF', '#A8F0FA', '#2BC8E0', '#06323A'], at: [0, 0.35, 0.68, 1], stroke: '#A8F0FA', thick: '#020A0C', period: 2.5 },   // 只给封面用
   wrath: { stops: ['#FFF1EC', '#FFB4A6', '#FF3B30', '#3A0505'], at: [0, 0.35, 0.68, 1], stroke: '#FFB4A6', thick: '#140303', period: 2.5 },   // 只给封面用
   envy: { stops: ['#F0FFF5', '#A7F3C9', '#3DDC84', '#0B3A22'], at: [0, 0.35, 0.68, 1], stroke: '#A7F3C9', thick: '#03140B', period: 2.5 },
 };
