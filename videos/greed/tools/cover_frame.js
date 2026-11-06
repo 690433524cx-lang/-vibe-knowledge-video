@@ -1,14 +1,15 @@
-// 《七宗罪》第四集·懒惰 4:5 竖版封面（1080×1350），排版和前三集的系列封面一致
+// 《七宗罪》第五集·贪婪 4:5 竖版封面（1080×1350），排版和前三集的系列封面一致
 // 上方间隔小字“七 宗 罪 · 第 X 集”，中间光环里的脸，下方金属渐变大字和两行问句
 // 用法：node tools/cover_frame.js 输出.jpg [秒] [相机JSON]   （window.COVER=1 时片中的字幕、标题、左上角小字都不画）
 const fs = require('fs');
 const { openBrowser, openPage } = require('./page');
 (async () => {
   // 三集共用同一套版式：node tools/cover_frame.js 输出.jpg [wrath|envy|pride] [秒]
-  const [out, sin = 'sloth', t = '6.4'] = process.argv.slice(2);
+  const [out, sin = 'greed', t = '3.9'] = process.argv.slice(2);
   const SIN = {
     pride: { i: 0, ep: '一', name: '傲慢', col: '#A24BFF', hi: '#C9A6FF', core: '#E9D5FF', bg: '#07030B', metal: 'prideC', l1: '为什么，几乎没有人', l2: '觉得自己傲慢？' },
     envy:  { i: 1, ep: '二', name: '嫉妒', col: '#2BE36B', hi: '#8FF0B5', core: '#D8FFE6', bg: '#030A05', metal: 'envy', l1: '别人过得好的时候，', l2: '为什么心里会疼？' },
+    greed: { i: null, ep: '五', name: '贪婪', col: '#FFC23D', hi: '#FFE7A3', core: '#FFF1CC', bg: '#0A0803', metal: 'greed', l1: '为什么最开心的时候，', l2: '是等快递的时候？', cam: { pos: [0, -0.5, 7.4], target: [0, -0.62, 0], fov: 35 }, cx: 0 },
     sloth: { i: null, ep: '四', name: '懒惰', col: '#2BC8E0', hi: '#A8F0FA', core: '#CFF7FC', bg: '#03080A', metal: 'sloth', l1: '总说“明天再说”的你，', l2: '真的是懒吗？', cam: { pos: [0, -0.5, 7.0], target: [0, -0.62, 0], fov: 35 }, cx: 0 },
     wrath: { i: null, ep: '三', name: '愤怒', col: '#FF2A2A', hi: '#FF9A88', core: '#FFB4A6', bg: '#0A0303', metal: 'wrath', l1: '你吼得最凶的那个人，', l2: '为什么偏偏是最亲的人？' },
   }[sin];
