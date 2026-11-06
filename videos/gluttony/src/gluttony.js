@@ -711,7 +711,7 @@ export function frame(t) {
     const su = t - EV.seven; if (su >= 0 && su < 0.6) { const pz = Math.sin(Math.PI * clamp(su / 0.6)); c = { ...c, pos: lerp3(c.target, c.pos, 1 - 0.16 * pz) }; }   // “7”：镜头快速推到脸再弹回
     cam = c;
     if (dt < 0.5) F.shock = { c: project([0, HEAD_C[1], 0.3]), r: 0.08 + 0.5 * outExpo(dt / 0.5), a: 0.6 * (1 - dt / 0.5), col: HI };
-    if (dt < 0.25) F.flash = { c: project([0, HEAD_C[1], 0.3]), a: 0.45 * Math.exp(-dt / 0.12), r: 520 };
+    if (dt < 0.25) F.flash = { c: project([0, HEAD_C[1], 0.3]), a: 0.28 * Math.exp(-dt / 0.12), r: 520 };
     if (dt < 0.15) F.shake = Math.max(F.shake, 1 - dt / 0.15);
     F.bursts.push({ t0: EV.change, pos: [0, HEAD_C[1], 0.4], n: 120, speed: 1.6, life: 0.7, grav: -0.2, seed: 5, bright: 1.6 });
     // 计数：1–6，第七口一个巨大的“7”砸下来
@@ -727,7 +727,7 @@ export function frame(t) {
     const dt = t - EV.wide, k = inOut(clamp(dt / 0.4)), D = 7.4, cx = 0.333 * HW(D); full = true;
     cam = camLerp(live(close, t, EV.change, 0), live(camAt(cx, -0.3, D), t, EV.wide, cx), k);
     W.g.visible = true; W.g.position.set(0, 0, 0);
-    setState(W, { lite: false, gray: false, eyes: 1, halo: 1, props: 1, scatter: 0, aud: AUD }); animate(W, t, 9, -9, true, AUD);
+    setState(W, { lite: false, gray: false, eyes: 1, halo: 1, props: 1, scatter: 0, aud: AUD }); animate(W, t, 9, -9, true, AUD); W.mats.forEach(m => { m.uniforms.uDim.value *= 0.86; });   // 拉远时脸的亮度不冲高
     F.signal = { p: sig(t), a: clamp((dt - 0.4) / 0.25), x: project([0.72, 0, 0.5])[0], hx: 0 };
     F.timer = { c: [cx * 0 + 1450, 470], n: EV.ticks.filter(b => t >= b).length, a: clamp((dt - 0.15) / 0.3) };
     subj = [0, HEAD_C[1], 0];
