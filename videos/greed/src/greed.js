@@ -669,17 +669,17 @@ export function frame(t) {
     const n = EV.steps.filter(b => t >= b - 1e-4).length, N = EV.steps.length, pr = n / N, del = t - EV.deliver, got = del >= 0;
     W.g.visible = true; W.g.position.set(0, 0, 0);
     setState(W, { lite: false, gray: false, eyes: 1, halo: 1, props: 1, scatter: 0, aud: AUD, gag: !got && pr > 0.5, calm: got ? 1 : 0, coinEye: 0 }); animate(W, t, 9, -9, true, AUD);
-    W.eyes.forEach(m => { m.material.uniforms.uInt.value *= got ? 0.32 : 0.45 + 0.25 * pr * pr; }); W.mats.forEach(m => { m.uniforms.uDim.value *= !got && pr > 0.5 ? 0.86 : 1; });   // 咧嘴笑的脸粒子更密，压暗一点           // 越接近终点眼睛越亮；到了就暗下来
+    W.eyes.forEach(m => { m.material.uniforms.uInt.value *= got ? 0.32 : 0.45 + 0.25 * pr * pr; }); W.mats.forEach(m => { m.uniforms.uDim.value *= pr > 0.5 ? 0.84 : 1; });   // 咧嘴笑的脸粒子更密，压暗一点           // 越接近终点眼睛越亮；到了就暗下来
     if (got) W.head.rotation.x += 0.06 * Math.exp(-del / 0.4);                                              // 愣一下
     // 快递盒
     const bx = cx + 0.5 * HW(D), by = -0.45, ca = clamp((dt - 0.1) / 0.45), op = got ? outBack(clamp(del / 0.3)) : 0;
     S.box.g.visible = true; S.box.g.position.set(bx, by + (n > 0 ? 0.04 * Math.exp(-(t - EV.steps[n - 1]) / 0.12) : 0), 0.2);
     S.box.g.scale.setScalar(0.95 * (0.6 + 0.4 * outBack(ca)) * (1 + 0.05 * Math.max(0, kick))); S.box.g.rotation.set(0.32, 0.6 + 0.3 * Math.sin(t * qw(0.9)), 0.04 * Math.sin(t * qw(2.0)));
-    const bu = S.box.m.uniforms; bu.uScatter.value = 1.3 * (1 - ca); bu.uBright.value = 5.5 * ca * (1 + 0.3 * Math.max(0, kick)); bu.uOpen.value = op;
+    const bu = S.box.m.uniforms; bu.uScatter.value = 1.3 * (1 - ca); bu.uBright.value = 5.5 * ca * (1 + 0.3 * Math.max(0, kick)) * (got ? 0.72 : 1); bu.uOpen.value = op;   // 打开时盒盖朝向镜头，压暗一点
     S.box.glow.material.uniforms.uInt.value = (0.08 + 0.05 * pr) * ca + (got ? 0.12 * Math.exp(-del / 0.35) : 0); S.box.glow.quaternion.copy(K.camera.quaternion);
-    if (got && del < 0.6) { F.shock = { c: project([bx, by + 0.3, 0.2]), r: 0.05 + 0.2 * outExpo(del / 0.6), a: 0.7 * (1 - del / 0.6), col: HI }; F.flash = { c: project([bx, by + 0.5, 0.2]), a: 0.55 * Math.exp(-del / 0.18), r: 260 }; }
+    if (got && del < 0.6) { F.shock = { c: project([bx, by + 0.3, 0.2]), r: 0.05 + 0.2 * outExpo(del / 0.6), a: 0.7 * (1 - del / 0.6), col: HI }; F.flash = { c: project([bx, by + 0.5, 0.2]), a: 0.4 * Math.exp(-del / 0.18), r: 260 }; }
     if (got && del < 0.15) F.shake = Math.max(F.shake, 1 - del / 0.15);
-    F.bursts.push({ t0: EV.deliver, pos: [bx, by + 0.55, 0.3], n: 140, speed: 1.6, life: 0.9, grav: -0.6, seed: 11, bright: 2.4 });
+    F.bursts.push({ t0: EV.deliver, pos: [bx, by + 0.55, 0.3], n: 140, speed: 1.6, life: 0.9, grav: -0.6, seed: 11, bright: 1.5 });
     // 进度条（盒子下方）和兴奋度柱（盒子上方）
     const pb = project([bx, by - 0.95, 0.2]), pt = project([bx, by + 0.85, 0.2]);
     F.prog = { x: pb[0], y: pb[1], n: got ? N : n, N, pop: n > 0 ? t - EV.steps[n - 1] : 9, a: ca, done: got, dd: del };
@@ -731,10 +731,10 @@ export function frame(t) {
     // 彩票
     const tk = S.ticket, ta = clamp((dt - 0.3) / 0.4);
     tk.g.visible = ta > 0 && wu < 0.6; tk.g.position.set(XS[0] + 1.45, -0.12 + 0.04 * Math.sin(t * qw(2.0)), 1.0); tk.g.scale.setScalar(1.0); tk.g.rotation.set(-0.15, -0.35 + 0.08 * Math.sin(t * qw(1.3)), 0.1 * Math.sin(t * qw(1.1)));
-    tk.m.uniforms.uScatter.value = 1.2 * (1 - ta) + (won ? 2.5 * outExpo(clamp(wu / 0.5)) : 0); tk.m.uniforms.uBright.value = 5.2 * ta * (won ? 1 + 0.6 * Math.exp(-wu / 0.15) : 1) * (1 + 0.3 * Math.max(0, kick)); tk.glow.material.uniforms.uInt.value = 0.12 * ta; tk.glow.quaternion.copy(K.camera.quaternion);
+    tk.m.uniforms.uScatter.value = 1.2 * (1 - ta) + (won ? 2.5 * outExpo(clamp(wu / 0.5)) : 0); tk.m.uniforms.uBright.value = 5.2 * ta * (won ? 1 + 0.2 * Math.exp(-wu / 0.15) : 1) * (1 + 0.3 * Math.max(0, kick)); tk.glow.material.uniforms.uInt.value = 0.12 * ta; tk.glow.quaternion.copy(K.camera.quaternion);
     if (won && wu < 0.6) { const c = project([XS[0] + 1.45, -0.12, 1.0]); F.shock = { c, r: 0.05 + 0.22 * outExpo(wu / 0.6), a: 0.75 * (1 - wu / 0.6), col: HI }; F.flash = { c, a: 0.35 * Math.exp(-wu / 0.2), r: 330 }; }
     if (won && wu < 0.15) F.shake = Math.max(F.shake, 1 - wu / 0.15);
-    F.bursts.push({ t0: EV.win, pos: [XS[0] + 1.45, -0.12, 1.0], n: 180, speed: 1.9, life: 1.0, grav: -0.5, seed: 21, bright: 2.4 });
+    F.bursts.push({ t0: EV.win, pos: [XS[0] + 1.45, -0.12, 1.0], n: 180, speed: 1.9, life: 1.0, grav: -0.5, seed: 21, bright: 1.6 });
     // 快乐柱：中奖那一拍冲到最高（过冲），之后每两拍往下滑一截，最后和“普通人”差不多高
     const hW = won ? Math.max(0.4, (0.12 + 0.88 * outBack(clamp(wu / 0.35))) - 0.2 * sl) : 0.28, hU = 0.38;
     const la = clamp((dt - 0.4) / 0.3);
