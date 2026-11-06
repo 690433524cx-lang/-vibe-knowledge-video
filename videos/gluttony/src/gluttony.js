@@ -988,7 +988,7 @@ export function draw2D(t, ctx, F) {
     const c0 = F.hcols[0]; drawTag(ctx, { text: '快乐', x: c0.x - 55 - 28, y: c0.y0 - 40, a: c0.a, align: 'right' });
   }
   if (F.dark > 0) { ctx.save(); ctx.fillStyle = `rgba(0,0,0,${F.dark})`; ctx.fillRect(0, 0, 1920, 1080); ctx.restore(); }   // 吸气：画面暗一点
-  if (F.count && F.count.n > 0) {                                           // 右上方的计数：1–6（120px），第七口一个巨大的“7”（240px）
+  if (F.count && F.count.n > 0 && !window.COVER) {                                           // 右上方的计数：1–6（120px），第七口一个巨大的“7”（240px）
     const C4 = F.count, big = C4.big, size = big ? 240 : 120, u = C4.pop, sc = big ? (u < 0.18 ? lerp(2.2, 0.92, outExpo(u / 0.18)) : u < 0.35 ? lerp(0.92, 1, sine((u - 0.18) / 0.17)) : 1) : (u < 0.1 ? lerp(0.6, 1.2, u / 0.1) : u < 0.25 ? lerp(1.2, 1, sine((u - 0.1) / 0.15)) : 1);
     const fade = 1 - clamp((F.countFade ?? 0)); ctx.save(); ctx.translate(big ? 1812 : 1745, big ? 260 : 230); ctx.scale(sc, sc); ctx.globalAlpha = fade; ctx.font = fs(900, size); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.lineJoin = 'round'; ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(14,6,2,0.9)'; ctx.strokeText(String(C4.n), 0, 0); ctx.shadowColor = CY; ctx.shadowBlur = big ? 40 : 22; ctx.fillStyle = CY; ctx.fillText(String(C4.n), 0, 0); ctx.restore();
