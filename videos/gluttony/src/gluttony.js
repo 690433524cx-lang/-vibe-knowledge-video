@@ -130,7 +130,7 @@ function makeChar(sin, i, heads) {
         vec3 mouth = vec3(0.0, -0.3, 0.45); float k = clamp(uB*2.4 - c*0.2, 0.0, 1.0);   // 一个接一个被吸进嘴里
         if (uL > 0.5) { vis *= (c < 0.5 || abs(c - 2.0) < 0.5) ? 1.0 : 0.0; float sd = c < 0.5 ? -1.0 : 1.0; home = vec3(sd*0.52, 0.02 + 0.07*sin(uTime*qw(1.3) + c), 0.3 + 0.06*cos(uTime*qw(1.3) + c)); k = 0.0; }   /* 排成一排：只留碗和鸡腿，贴着头两侧 */
         p = mix(home, mouth, k*k) + p*mix(1.55, 0.62, uL)*(1.0 - 0.8*k); vis *= 1.0 - smoothstep(0.85, 1.0, k); vis *= step(0.5, uL); }` }, rig);   /* 只在排成一排时显示（和前几集一样） */
-    C.feast = P(feastPB(), { bright: 4.6, size: 0.012,
+    C.feast = P(feastPB(), { bright: 5.4, size: 0.0125,
       uniforms: { uE: { value: [0, 0, 0, 0, 0, 0, 0] }, uR: { value: [1, 1, 1, 1, 1, 1, 1] }, uShow6: { value: 0 }, uPhase: { value: 0 }, uKick: { value: 0 } },
       uniformDecl: 'uniform float uE[7]; uniform float uR[7]; uniform float uShow6, uPhase, uKick;',
       posHook: `{
@@ -191,7 +191,7 @@ function setState(C, s) {
   // 灰色闭眼的脸：亮度提高到 2.5 倍，聚光灯从上方照着；变身后人物是画面里最亮的东西
   const c = C3(C.sin.col), luma = 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
   const base = s.gray ? (s.lite ? 6.2 : 6.0) :   // 灰色脸亮度提高 60%
-     (s.lite ? 3.0 : 4.8 * (C.sin.id === 'greed' ? 1.12 : 1)) * clamp(0.42 / luma, 0.7, 1.15);   // 金色亮度高，按亮度补偿会压得太暗：贪婪特写再提一点   // 亮度靠人物本身（亮部仍是红色）       // 按颜色的亮度补偿：绿色不过曝、紫色不发暗
+     (s.lite ? 3.0 : 4.8 * (C.sin.id === 'greed' ? 1.12 : C.sin.id === 'gluttony' ? 1.15 : 1)) * clamp(0.42 / luma, 0.7, 1.15);   // 金色亮度高，按亮度补偿会压得太暗：贪婪特写再提一点   // 亮度靠人物本身（亮部仍是红色）       // 按颜色的亮度补偿：绿色不过曝、紫色不发暗
   const live = s.gray ? 0 : 1;
   for (const m of C.mats) {
     m.uniforms.uDim.value = base * (1 - 0.15 * (s.inhale ?? 0)) * (1 + 0.2 * Math.max(0, kick)) * (1 + 0.9 * (s.pop ?? 0)) * Math.pow(s.shrink ?? 1, 2);   // 缩小时粒子挤在一起，按面积压暗，不过曝
@@ -323,7 +323,7 @@ const TEXT_LIST = [
   { id: 'A', kind: 'hook', text: '刷到这条，你的〔出厂设置〕是——', suffix: '暴食', want: 0.1, exact: true, size: 64, chain: false, endAt: 2 },
   { id: 'S1', kind: 'sub', text: '暴食说：我就尝〔一口〕。', want: 3.452, size: 56, chain: false, endAt: 5 },
   { id: 'S2', kind: 'hook', text: '——这是今晚的〔第七口〕。', want: 8.477, size: 64, chain: false, endAt: 'card' },
-  { id: 'K', kind: 'sub', text: '出厂设置：吃饱的信号，要〔晚到约20分钟〕。', want: 10.152, size: 56, chain: false, endAt: 'card' },
+  { id: 'K', kind: 'sub', text: '出厂设置：吃饱的信号，要〔晚到约20分钟〕。', want: 10.152, size: 56, chain: false, endAt: 10 },   // 进入结尾卡后这句知识继续留在下方（第 7–9 小节），一共显示到结尾卡结束
   { id: 'N', kind: 'hook', text: '下一集：〔色欲〕', want: 17.27, size: 56, key: GOLD, chain: false, endAt: 'fin' },
 ];
 function scheduleText() {
@@ -771,7 +771,7 @@ export function frame(t) {
     u.uShow6.value = t >= EV.seven - 0.65 && t < EV.seven + 0.2 ? 1 : 0; u.uPhase.value = 0.45 * t; u.uKick.value = Math.max(0, kick);
     const last = EV.eats.filter(e => e.t <= t + 0.12).pop(), d = last ? t - last.t : 9;
     const chew = d > -0.12 && d < 0.1;
-    if (chew && !W.st?.calm) { W.gag.visible = true; W.col.visible = false; if (W.calm) W.calm.visible = false; }
+    if (chew && !W.st?.calm) { W.gag.visible = true; W.col.visible = false; if (W.calm) W.calm.visible = false; W.mats.forEach(m => { m.uniforms.uDim.value *= 0.82; }); }   // 张大嘴时粒子更密，压暗一点
     const puff = d >= 0 ? Math.exp(-d / 0.25) * (d < 1 ? 1 : 0) : 0;
     W.head.scale.set(1.08 + 0.07 * puff, 1, 1 + 0.03 * puff);                // 圆一点的脸，吃完腮帮鼓一下
     W.eyes.forEach(m => { m.scale.y = Math.min(m.scale.y, 1 - 0.55 * Math.max(puff, chew ? 1 : 0)); m.material.uniforms.uInt.value *= 0.8; });
