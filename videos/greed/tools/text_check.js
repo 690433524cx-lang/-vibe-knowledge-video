@@ -11,13 +11,14 @@ const { openBrowser, openPage } = require('./page');
   const hits = new Map(); let n = 0;
   for (let t = 0; t < TL; t += 0.1) {
     const r = await page.evaluate(t => { window.render(t); return { b: window.LAST_BOXES, s: window.LAST_SUBJ }; }, t); n++;
-    for (const b of r.b) for (const s of r.s) {
+    for (const b of r.b) if (b.alpha > 0.3 && (b.x0 < -2 || b.x1 > 1922 || b.y0 < -2 || b.y1 > 1082)) { const k = `出画：${b.label}`; if (!hits.has(k)) hits.set(k, []); hits.get(k).push(t.toFixed(1)); }   // 柱子和标签必须完整在画面内
+    for (const b of r.b) for (const s of r.s) { if (b.label === '#柱子') continue;
       const ix = Math.min(b.x1, s.x1) - Math.max(b.x0, s.x0), iy = Math.min(b.y1, s.y1) - Math.max(b.y0, s.y0);
       if (ix > 6 && iy > 6 && b.alpha > 0.3) { const k = `${b.label} × ${s.name}`; if (!hits.has(k)) hits.set(k, []); hits.get(k).push(t.toFixed(1)); }
     }
   }
   await browser.close(); srv.close();
-  console.log(`[${hits.size ? '失败' : '通过'}] 文字压主体：检查 ${n} 帧（每 0.1 秒），${hits.size ? '' : '没有文字压到主体的脸、帽子或那件事'}`);
+  console.log(`[${hits.size ? '失败' : '通过'}] 文字压主体：检查 ${n} 帧（每 0.1 秒），${hits.size ? '' : '没有文字压到主体的脸、快递盒、彩票；所有柱子和标签都在画面内'}`);
   for (const [k, v] of hits) console.log(`  ${k}：${v.length} 帧（${v[0]}–${v[v.length - 1]} 秒）`);
   process.exit(hits.size ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(2); });

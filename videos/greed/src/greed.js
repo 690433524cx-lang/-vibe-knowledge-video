@@ -114,13 +114,13 @@ function makeChar(sin, i, heads) {
         float c = aExtra.y, a = c*2.39996 + uPhase, th = 0.05 + 0.006*uC;
         float rr = (1.02 + 0.24*h1(c*3.1) + th*(h1(c*5.3) - 0.5)*2.0)*(1.0 + 0.08*uKick)*(1.0 + 1.6*uLoose*h1(c*9.1));
         float spin = 0.55*sin(uTime*qw(1.7) + c*1.3); vec3 q = vec3(p.x*cos(spin) + p.z*sin(spin), p.y, -p.x*sin(spin) + p.z*cos(spin));
-        vec3 orbit = vec3(cos(a)*rr*1.08, 0.08 - sin(a)*rr*0.72 + (h1(c*7.3) - 0.5)*th, sin(a)*rr*0.55 - 0.1);   /* 前半圈从下巴下面经过 */
+        vec3 orbit = vec3(cos(a)*rr*1.08, 0.08 - sin(a)*rr*0.72 + (h1(c*7.3) - 0.5)*th, sin(a)*rr*0.55 - 0.1 - uLoose*1.2*h1(c*6.1));   /* 前半圈从下巴下面经过 */
         vec3 chest = vec3(cos(a)*(0.5 + 0.12*h1(c*3.1)), -1.05 + 0.12*sin(a) + 0.06*(h1(c*7.3) - 0.5), 0.35 + sin(a)*0.22);   /* 搂进怀里 */
         orbit = mix(orbit, chest, uTight);
         vec3 far = normalize(h3(c*1.7) - 0.5)*4.0 + vec3(0.0, 0.5, 0.0);
         if (uL > 0.5) { float a2 = c/8.0*6.28318 + uTime*qw(0.55); orbit = vec3(cos(a2)*0.6, 0.1 - sin(a2)*0.12, sin(a2)*0.3 - 0.05); q *= 0.5; vis *= step(c, 7.5); p = orbit + q; }   /* 排成一排：贴着头的一小圈，最多 8 枚 */
         else { float k = c >= uC0 ? clamp(uFly*1.5 - h1(c*2.3)*0.5, 0.0, 1.0) : 1.0; k = k*k*(3.0 - 2.0*k); p = mix(far, orbit, k) + q*(1.0 - 0.35*uTight); vis *= step(c, uC - 0.5); vis *= 1.0 - smoothstep(0.55, 1.0, uLoose*h1(c*4.4)*1.4); } }`,
-      colHook: '{ float gl = exp(-pow(aExtra.x - 1.3*sin(uTime*qw(2.2) + aExtra.y*0.7), 2.0)*10.0); col = mix(col, vec3(1.0, 0.97, 0.85), gl*0.8); b *= (0.75 + 1.4*gl)*(0.85 + 0.5*uMid); }' });
+      colHook: '{ float gl = exp(-pow(aExtra.x - 1.3*sin(uTime*qw(2.2) + aExtra.y*0.7), 2.0)*10.0); col = mix(col, vec3(1.0, 0.97, 0.85), gl*0.8); b *= (0.75 + 1.4*gl)*(0.85 + 0.5*uMid)*(1.0 - 0.78*uTight); }' });
     { const cm = C.coins.material.uniforms; cm.uColA.value.set('#FFE7A3'); cm.uColB.value.set('#E8A82A'); cm.uFacing.value = 0; }   // 实心的金色古钱
     C.eyeShapes = [FACE.eyeR, FACE.eyeL].map(e => { const m = propMat('#FFD25A', { bright: 1.3, size: 0.008 }); const o = pts(PR.coinEye(1.6).geometry(THREE), m, head, 47); o.position.set(e[0], e[1], e[2] + 0.03); o.scale.setScalar(1.25); return o; });
   } else if (sin.id === 'gluttony') {
@@ -357,6 +357,11 @@ export function build(scene, beats, heads, audioEnv) {
   EV.steps = B.filter(b => b > EV.pull + 0.05 && b < EV.deliver - 0.05);   // 进度条：每个拍点往前走一格
   EV.batches = [{ t: EV.zoom, n: 8 }, ...DN.filter(d => d >= EV.pull - 1e-3 && d < EV.end && Math.round((d - EV.pull) / (4 * BEAT)) % 2 === 0).map(d => ({ t: d, n: d >= DROP - 1e-3 ? 6 : 3 }))];   // 每两小节飞来几枚金币（drop 之后翻倍）
   EV.cols = [];
+  EV.peak = DROP;                                                        // 折线冲到最高点“快要得到”、奖励回路爆亮：对准 drop
+  EV.got = nd(19.5);                                                     // “真得到了”：折线迅速往下掉
+  { const j = DN.indexOf(EV.lotto); EV.win = DN[j + 1]; const b = B.indexOf(EV.win); EV.slides = [B[b + 2], B[b + 4], B[b + 6]]; }   // 彩票中奖；之后每两拍快乐柱往下滑一截
+  { const j = DN.indexOf(EV.scale); EV.tip = DN[j + 1]; EV.hug = DN[j + 2]; }   // 天平倾斜；把金币往怀里搂
+  { const j = DN.indexOf(EV.loose); EV.lsteps = [DN[j + 1], DN[j + 2]]; }       // 金币环松开一圈、再一圈
   EV.next = TX('N').t0;                                                  // 贪婪亮起（和“下一集：贪婪”同一拍）
   { const i0 = B.indexOf(nd(21.7)); EV.drain = [0, 2, 4, 6, 8].map(k => B[i0 + k]); }   // 电量：每两拍掉一格
   { const j = DN.indexOf(EV.back); EV.thornLab = [DN[j + 1], DN[j + 2], DN[j + 3]]; EV.hatDown = DN[j + 4]; }   // 三个标签：每个小节第一拍一个
@@ -366,7 +371,7 @@ export function build(scene, beats, heads, audioEnv) {
   S.spot = makeSpot();
   S.stars = [makeStars(14000, -22, 1.1, 11), makeStars(11000, -9, 2.0, 12)];   // 远景小、慢；前景大、快
   S.zs = makeZs(10);
-  window.__S = S; S.box = makeBox(); S.cube = makeCube(); S.brain = makeBrain(); S.sand = makeSand(); S.thorns = makeThorns(); S.irises = makeIris(S.chars[SL].head);
+  window.__S = S; S.box = makeBox(); S.ticket = makeTicket(); S.scale = makeScale(); S.cube = makeCube(); S.brain = makeBrain(); S.sand = makeSand(); S.thorns = makeThorns(); S.irises = makeIris(S.chars[SL].head);
   ZS = scheduleZ();
 }
 
@@ -409,8 +414,8 @@ function nodAt(t) {
 // ------------------------------------------------------------ 快递盒：实心发光的粒子立方体，顶面和侧面有胶带十字纹，侧面一个小箭头图标；uOpen：盒盖翻开
 function makeBox() {
   const pb = new PB(), R = n => hash(n * 1.37 + 0.91);
-  for (let i = 0; i < 14000; i++) pb.add([R(i * 9) - 0.5, R(i * 9 + 1) - 0.5, R(i * 9 + 2) - 0.5], [0, 0, 1], R(i * 9 + 3), [0, 0, 0], [R(i * 9 + 4), 0, 0, 1], [0.4, 30]);
-  for (let i = 0; i < 32000; i++) {
+  for (let i = 0; i < 34000; i++) pb.add([R(i * 9) - 0.5, R(i * 9 + 1) - 0.5, R(i * 9 + 2) - 0.5], [0, 0, 1], R(i * 9 + 3), [0, 0, 0], [R(i * 9 + 4), 0, 0, 1], [0.55, 30]);   // 实心
+  for (let i = 0; i < 40000; i++) {
     const f = i % 6, a = R(i * 3) - 0.5, b = R(i * 3 + 1) - 0.5, ax = f >> 1, sg = f & 1 ? 0.5 : -0.5;
     const p = ax === 0 ? [sg, a, b] : ax === 1 ? [a, sg, b] : [a, b, sg];
     const edge = Math.max(Math.abs(a), Math.abs(b)) > 0.47, tape = ax === 1 ? (Math.abs(a) < 0.07 || Math.abs(b) < 0.07) : Math.abs(ax === 0 ? b : a) < 0.07;
@@ -431,7 +436,54 @@ function coinState(W, t, AUD, o = {}) {
   let cnt = 14, last = null, prev = 14; for (const b of EV.batches) { if (t >= b.t - 1e-4) { prev = cnt; cnt += b.n; last = b; } }
   cnt = Math.min(64, cnt + (o.extra ?? 0)); if (o.max != null) cnt = Math.min(cnt, o.max);
   u.uC.value = cnt; u.uC0.value = last ? Math.min(prev, cnt) : 0; u.uFly.value = last ? clamp((t - last.t) / 0.7) : 1;
+  u.uBright.value *= o.dim ?? 1;
   u.uKick.value = Math.max(0, AUD.kick); u.uPhase.value = 0.5236 * t * (o.spin ?? 1) + (o.phase ?? 0); u.uTight.value = o.tight ?? 0; u.uLoose.value = o.loose ?? 0; u.uMid.value = AUD.mid;
+}
+// ------------------------------------------------------------ 奖励回路：从中脑（大脑中部深处）到前方的奖励区（大脑模型的局部坐标）
+const REWARD = [[0.05, -0.42, -0.15], [-0.18, -0.32, -0.17], [-0.42, -0.18, -0.2], [-0.66, -0.02, -0.22], [-0.9, 0.16, -0.22]];
+// ------------------------------------------------------------ 彩票：发光的粒子卡片（亮边、锯齿边、一排号码圆圈）
+function makeTicket() {
+  const pb = new PB(), R = n => hash(n * 2.71 + 0.33), W2 = 0.62, H2 = 0.36;
+  for (let i = 0; i < 16000; i++) { const x = (R(i * 3) - 0.5) * 2 * W2, y = (R(i * 3 + 1) - 0.5) * 2 * H2, edge = Math.abs(x) > W2 - 0.03 || Math.abs(y) > H2 - 0.03;
+    const circ = [0, 1, 2, 3, 4, 5].some(c => { const cx = -0.42 + c * 0.17, cy = -0.06; const d = Math.hypot(x - cx, y - cy); return Math.abs(d - 0.06) < 0.012; });
+    const band = Math.abs(y - 0.2) < 0.04 && Math.abs(x) < 0.45;
+    pb.add([x, y, (R(i * 3 + 2) - 0.5) * 0.02], [0, 0, 1], R(i * 5), [0, 0, 0], [R(i * 7), 0, 0, 1], [edge ? 1.6 : circ ? 1.7 : band ? 1.3 : 0.45, 30]); }
+  const m = propMat('#FFE7A3', { bright: 1.0, size: 0.012 }); m.uniforms.uAsm.value = 1; m.uniforms.uFacing.value = 0;
+  const g = new THREE.Group(); K.scene.add(g); const p = new THREE.Points(pb.geometry(THREE), m); p.frustumCulled = false; p.renderOrder = 33; g.add(p); K.mats.push(m); g.visible = false;
+  const gl = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 2.4), H.glowPlane(0)); gl.material.uniforms.uCol.value.set(CY); gl.material.blending = THREE.AdditiveBlending; gl.material.transparent = true; gl.material.depthWrite = false; gl.renderOrder = 31; gl.position.z = -0.3; g.add(gl);
+  return { g, m, glow: gl };
+}
+// ------------------------------------------------------------ 天平：底座 + 立柱 + 横梁（可以倾斜）+ 两个吊盘（左：一小堆金币；右：暗色、裂开的金币堆）
+function makeScale() {
+  const R = n => hash(n * 1.91 + 0.57);
+  const mk = (hex, bright, size) => { const m = propMat(hex, { bright: 1, size }); m.uniforms.uAsm.value = 1; m.uniforms.uFacing.value = 0; m.baseB = bright; K.mats.push(m); return m; };
+  const cloud = (fill, m, parent, order = 30) => { const pb = new PB(); fill(pb); const p = new THREE.Points(pb.geometry(THREE), m); p.frustumCulled = false; p.renderOrder = order; parent.add(p); return p; };
+  const add = (pb, p, br, n) => pb.add(p, [0, 0, 1], R(n), [0, 0, 0], [R(n + 1), 0, 0, 1], [br, 30]);
+  const g = new THREE.Group(); K.scene.add(g); g.visible = false;
+  const mG = mk('#FFC23D', 2.9, 0.016), mDark = mk('#8A6624', 2.2, 0.015), mPile = mk('#FFD86A', 2.6, 0.014);
+  cloud(pb => { let n = 0;
+    for (let i = 0; i < 16000; i++) { const a = R(n++) * TAU, r = 0.1 * Math.sqrt(R(n++)); add(pb, [Math.cos(a) * r, -1.35 + 2.55 * R(n++), Math.sin(a) * r], r > 0.085 ? 1.4 : 0.7, n++); }   // 立柱
+    for (let i = 0; i < 7000; i++) { const a = R(n++) * TAU, r = 0.55 * Math.sqrt(R(n++)); add(pb, [Math.cos(a) * r, -1.35 + 0.05 * R(n++), Math.sin(a) * r * 0.6], r > 0.5 ? 1.5 : 0.6, n++); }   // 底座
+    for (let i = 0; i < 1500; i++) { const a = R(n++) * TAU, b = R(n++) * TAU; add(pb, [0.09 * Math.cos(a) * Math.cos(b), 1.22 + 0.09 * Math.sin(b), 0.09 * Math.sin(a) * Math.cos(b)], 1.6, n++); }   // 顶上的轴
+  }, mG, g);
+  const pivot = new THREE.Group(); pivot.position.y = 1.2; g.add(pivot);
+  const beam = new THREE.Group(); pivot.add(beam);
+  cloud(pb => { let n = 0; for (let i = 0; i < 18000; i++) { const x = (R(n++) - 0.5) * 3.1, y = (R(n++) - 0.5) * 0.14, z = (R(n++) - 0.5) * 0.12, edge = Math.abs(y) > 0.06 || Math.abs(z) > 0.05; add(pb, [x, y, z], edge ? 1.3 : 0.7, n++); } }, mG, beam);
+  const pans = [0, 1].map(side => {
+    const pg = new THREE.Group(); pivot.add(pg);
+    cloud(pb => { let n = 100 + side * 99;
+      for (let s = 0; s < 3; s++) { const a = s / 3 * TAU + 0.5, ex = Math.cos(a) * 0.42, ez = Math.sin(a) * 0.25; for (let i = 0; i < 900; i++) { const u = R(n++); add(pb, [ex * u, -0.95 * u, ez * u], 1.1, n++); } }   // 三根吊绳
+      for (let i = 0; i < 10000; i++) { const a = R(n++) * TAU, r = 0.46 * Math.sqrt(R(n++)); add(pb, [Math.cos(a) * r, -0.95 - 0.06 * (r / 0.46) ** 2 * -1, Math.sin(a) * r * 0.55], r > 0.42 ? 1.5 : 0.65, n++); }   // 盘子
+    }, mG, pg);
+    cloud(pb => { let n = 900 + side * 77;
+      for (let c = 0; c < (side ? 22 : 8); c++) { const cx = (R(n++) - 0.5) * (side ? 0.62 : 0.45), cy = -0.86 + (side ? 0.06 + 0.36 * R(n++) * (1 - Math.abs(cx)) : 0.05 + 0.14 * R(n++)), cz = (R(n++) - 0.5) * 0.25;
+        for (let i = 0; i < 520; i++) { const a = R(n++) * TAU, r = 0.11 * Math.sqrt(R(n++)); if (Math.max(Math.abs(Math.cos(a) * r), Math.abs(Math.sin(a) * r)) < 0.028) continue;
+          const crack = side && Math.abs(Math.sin(a * 3 + c) * r - 0.01) < 0.006;                       // 右盘：裂开的纹
+          add(pb, [cx + Math.cos(a) * r, cy + 0.015 * Math.sin(a), cz + Math.sin(a) * r * 0.5], r > 0.075 ? 1.4 : crack ? 0.2 : 0.75, n++); } }
+    }, side ? mDark : mPile, pg, 31);
+    return pg;
+  });
+  return { g, beam, pans, mats: [mG, mDark, mPile] };
 }
 // ------------------------------------------------------------ “那件事”：青白色的小方块，表面有细纹理
 function makeCube() {
@@ -454,7 +506,7 @@ function makeBrain() {
   const g = new THREE.Group(); g.position.set(-1.4, 0.05, 0); g.scale.setScalar(1.15); g.rotation.y = Math.PI; K.scene.add(g); g.visible = false;
   const m = brainMaterial(CY); m.uniforms.uSeeX.value = 99; m.uniforms.uBright.value = 6.0; m.uniforms.uRegR.value = 0.02; m.uniforms.uSize.value = 0.019; m.uniforms.uMaxPx.value = 10; m.uniforms.uHot.value.set('#CFF7FC');
   pts(buildBrainSide(511, 1).geometry(THREE), m, g, 20);
-  const glowM = new THREE.Mesh(new THREE.PlaneGeometry(5.5, 5.5), H.glowPlane(0.0)); glowM.material.uniforms.uCol.value.set(CY); glowM.position.set(-1.4, 0.05, -1.6); glowM.renderOrder = -15; glowM.visible = false; K.scene.add(glowM);
+  const glowM = new THREE.Mesh(new THREE.PlaneGeometry(5.5, 5.5), H.glowPlane(0.0)); glowM.material.uniforms.uCol.value.set(CY); glowM.material.blending = THREE.AdditiveBlending; glowM.material.transparent = true; glowM.material.depthWrite = false; glowM.position.set(-1.4, 0.05, -1.6); glowM.renderOrder = -15; glowM.visible = false; K.scene.add(glowM);
   return { g, m, glow: glowM };
 }
 const brainAsm = k => { const u = S.brain.m.uniforms; u.uScatter.value = 2.2 * (1 - k); u.uScatterDist.value = 1.4; u.uAlpha.value = clamp(k * 1.5); S.brain.g.visible = k > 0.001; };
@@ -539,8 +591,11 @@ function setCol(C, hex) { C.mats.forEach(m => m.uniforms.uSin.value.set(hex)); C
 
 export const subsList = () => TXT.map(s => ({ text: plain(s.text), t0: +s.t0.toFixed(3), t1: +s.t1.toFixed(3), minD: +s.minD.toFixed(3) }));
 export function events() {
-  const big = [ ['标题飞到左上角、睁眼', EV.wake], ['拉远、明天的你', EV.pull], ['明天的你：浅青', EV.step1], ['三个半身像', EV.trio], ['那件事', EV.cube], ['粒子大脑', EV.brain], ['回到懒惰、荆棘', EV.back], ...EV.thornLab.map((d, i) => [`荆棘标签 ${i + 1}`, d]), ['帽子盖住眼睛', EV.hatDown], ['荆棘散开、方块变柔和', EV.calm], ['正面直视', EV.gaze], ['结尾阵容', EV.end]];
-  const small = [['转盘退回一格落在懒惰（抽中）', EV.pick], ['推进到懒惰特写', EV.zoom], ['明天的你：陌生人（第 3 拍）', EV.step2], ...EV.spots.filter(o => Math.abs(o.t - nb(o.t)) < 0.01).map((o, k) => [`转盘落在第 ${o.i + 1} 格`, o.t]), ['亮相：标题、哈欠（半拍）', EV.title], ...EV.cols.map((b, i) => [`柱子 ${i + 1}`, b]), ['打哈欠', EV.yawn], ['推方块（drop）', EV.push], ...EV.drain.map((d, i) => [`电量掉一格 ${i + 1}`, d]), ['贪婪亮起', EV.next]];
+  const big = [['标题飞到左上角、拉远、快递盒出现', EV.pull], ['快递到达、盒子打开（兴奋度猛掉）', EV.deliver], ['粒子大脑', EV.brain], ['“快要得到”最高点、奖励回路爆亮（drop）', EV.peak],
+    ['“真得到了”折线下掉', EV.got], ['两个半身像、彩票', EV.lotto], ['彩票中奖', EV.win], ['天平', EV.scale], ['天平倾斜', EV.tip], ['把金币往怀里搂', EV.hug], ['天平散开、金币环还缠着', EV.loose],
+    ...EV.lsteps.map((d, i) => [`金币环松开 ${i + 1}`, d]), ['正面直视', EV.gaze], ['结尾阵容', EV.end]];
+  const small = [['转盘退回一格落在贪婪（抽中）', EV.pick], ['推进到贪婪特写（按转盘模板落在拍点）', EV.zoom], ...EV.spots.filter(o => Math.abs(o.t - nb(o.t)) < 0.01 && o.t < EV.pick).map(o => [`转盘落在第 ${o.i + 1} 格`, o.t]), ...EV.steps.map((b, i) => [`进度条第 ${i + 1} 格`, b]),
+    ...EV.slides.map((d, i) => [`快乐柱下滑 ${i + 1}`, d]), ['暴食亮起', EV.next]];
   return [...big.map(([name, t]) => ({ name, t, kind: 'big' })), ...small.map(([name, t]) => ({ name, t, kind: 'small' }))];
 }
 export const charsList = () => S ? [...(S.chars ?? []), ...(S.extra ?? [])] : [];
@@ -556,7 +611,7 @@ export function frame(t) {
   const AUD = { kick, low, mid, high, t, endK };
   S.chars.forEach(O => { O.g.position.set(slotX(O.i), 0, 0); O.g.rotation.set(0, 0, 0); O.g.visible = false; animate(O, t, -9, -9, false, AUD); });
   S.extra.forEach(O => { O.g.visible = false; });
-  S.zs.forEach(z => { z.g.visible = false; }); S.cube.g.visible = false; S.box.g.visible = false;
+  S.zs.forEach(z => { z.g.visible = false; }); S.cube.g.visible = false; S.box.g.visible = false; S.ticket.g.visible = false; S.scale.g.visible = false; S.chars.forEach(O => O.g.scale.setScalar(1));
   S.brain.g.visible = false; S.brain.glow.visible = false; S.sand.visible = false; S.thorns.visible = false; S.irises.forEach(o => { o.visible = false; });
   const W = S.chars[SL];
   let cam, subj = null;                                                     // subj：主体的世界坐标（高音的小星点、Z 都围着它）
@@ -600,7 +655,7 @@ export function frame(t) {
     if (W.hat) W.hat.material.uniforms.uB.value = hs;
     const close = camAt(-0.33 * HW(3.7), 0.2, 3.7);
     cam = camLerp(lineupCam(t), live(close, t, EV.zoom, 0), k);
-    F.names = 1 - clamp(dt / 0.15); F.aired = F.names; F.series = 1 - clamp(dt / 0.08);
+    F.names = 1 - clamp(dt / 0.015); F.aired = F.names;   // 推进那一拍名字立刻消失（角色被甩出画面） F.series = 1 - clamp(dt / 0.08);
     if (dt < 0.5) F.shock = { c: project([W.g.position.x, HEAD_C[1], 0.3]), r: 0.55 * outExpo(dt / 0.5), a: 0.45 * (1 - dt / 0.5), col: HI };
     if (dt < 0.12) F.shake = Math.max(F.shake, 0.5 * (1 - dt / 0.12));
     F.bursts.push({ t0: EV.zoom, pos: [0, HEAD_C[1] + 0.5, 0.3], n: 30, speed: 0.8, life: 0.6, grav: -0.1, seed: 7, bright: 1.6 });
@@ -608,7 +663,7 @@ export function frame(t) {
   } else if (t < EV.brain - 0.45) {
     // ---- 场景 2：等快递的快乐。镜头拉远，贪婪在画面左侧 1/3（约 55% 高）；右侧发光的快递盒，下面进度条“运输中”每拍走一格，上面“兴奋度”柱越涨越快
     //      到达那一拍：“已送达”，盒子砰地打开（金光、火花、冲击波、震动）；兴奋度猛掉到约 1/3 并晃一下，笑容一下子收住、眼睛暗下来
-    const dt = t - EV.pull, k = inOut(clamp(dt / 0.5)), D = 8.2, cx = 0.333 * HW(D);
+    const dt = t - EV.pull, k = inOut(clamp(dt / 0.32)), D = 8.2, cx = 0.333 * HW(D);
     const close = live(camAt(-0.33 * HW(3.7), 0.2, 3.7), t, EV.zoom, 0), wide = live(camAt(cx, -0.35, D), t, EV.pull, cx);
     cam = camLerp(close, wide, k);
     const n = EV.steps.filter(b => t >= b - 1e-4).length, N = EV.steps.length, pr = n / N, del = t - EV.deliver, got = del >= 0;
@@ -631,87 +686,116 @@ export function frame(t) {
     const e0 = Math.pow(pr, 1.7), fall = got ? 0.33 + 0.67 * Math.exp(-del / 0.09) + 0.1 * Math.exp(-del / 0.35) * Math.sin(del * 24) : e0;
     F.excite = { x: pt[0], y0: pt[1], top: 140, e: got ? fall : e0 * (1 + 0.04 * (n > 0 ? Math.exp(-(t - EV.steps[n - 1]) / 0.15) : 0)), a: ca, hit: got ? Math.exp(-del / 0.3) : 0 };
     subj = [0, HEAD_C[1], 0];
-  } else if (t < EV.back) {
-    // ---- 场景 3：大脑天生爱省电。所有粒子飞散，汇聚成青色的粒子大脑（侧面，占画面高约 60%，偏左）；右侧电池（5 格）+ 小人形（大脑亮一小块）
+  } else if (t < EV.lotto) {
+    // ---- 场景 3：多巴胺爱的是“快得到”。快递盒和兴奋度柱化成粒子，汇聚成金色粒子大脑（侧面、偏左、约 55% 高）
+    //      奖励回路从中脑一节一节亮到前方；右侧折线：一路往上，在“快要得到”（drop）冲到最高，到“真得到了”迅速往下掉
     const t0 = EV.brain - 0.45, dt = t - t0, k = clamp(dt / 0.45);
-    const camB = live(camAt(0, 0.0, 5.4), t, EV.brain, 0);
-    cam = camLerp(live(camAt(0, -0.3, 7.6), t, EV.cube, 0), camB, inOut(clamp(dt / 0.5)));
-    if (dt < 0.6) {                                                           // 上一个场景的主体化成粒子飞走（和大脑的汇聚重叠，主体不会消失）
-      const out = clamp(dt / 0.45); W.g.visible = out < 1; W.g.position.set(-1.35, 0, 0);
-      setState(W, { lite: false, gray: false, eyes: 1 - out, halo: 1 - out, props: 1, scatter: 2.4 * outExpo(out), aud: AUD }); animate(W, t, 9, -9, true, AUD);
+    const D = 5.8, camB = live(camAt(0.2, 0.0, D), t, EV.brain, 0.2);
+    cam = camLerp(live(camAt(0.333 * HW(8.2), -0.35, 8.2), t, EV.pull, 0.333 * HW(8.2)), camB, inOut(clamp(dt / 0.5)));
+    if (dt < 0.6) {                                                           // 上一个场景化成粒子飞走（和大脑的汇聚重叠，主体不会消失）
+      const out = clamp(dt / 0.45); W.g.visible = out < 1; W.g.position.set(0, 0, 0);
+      setState(W, { lite: false, gray: false, eyes: 1 - out, halo: 1 - out, props: 1, scatter: 2.4 * outExpo(out), aud: AUD, calm: 1 }); animate(W, t, 9, -9, true, AUD);
       W.mats.forEach(m => { m.uniforms.uDim.value *= 1 - 0.7 * out; });
+      const bx = 0.333 * HW(8.2) + 0.5 * HW(8.2); S.box.g.visible = out < 1; S.box.g.position.set(bx, -0.45, 0.2); S.box.g.scale.setScalar(0.95); S.box.m.uniforms.uScatter.value = 2.4 * outExpo(out); S.box.m.uniforms.uBright.value = 5.5 * (1 - out); S.box.m.uniforms.uOpen.value = 1; S.box.glow.material.uniforms.uInt.value = 0;
     }
     const Bn = S.brain; Bn.g.visible = true; brainAsm(outExpo(k));
-    // 电量：每两拍掉一格（第 1、3 拍），掉的那一下大脑亮一下（像在思考）、一次小冲击波
-    const lvl = 5 - EV.drain.filter(d => t >= d).length, last = EV.drain.filter(d => t >= d).pop();
-    const think = last != null ? Math.exp(-(t - last) / 0.22) : 0, endD = EV.drain[EV.drain.length - 1], dead = clamp((t - endD - 0.1) / 0.8);
-    Bn.m.uniforms.uBright.value = 11.2 * (1 + 0.6 * think) * (1 - 0.65 * dead) * (1 + 0.15 * Math.max(0, kick));
-    Bn.glow.visible = true; Bn.glow.material.uniforms.uInt.value = (0.05 + 0.06 * think) * (1 - 0.7 * dead); Bn.glow.quaternion.copy(K.camera.quaternion);
-    Bn.g.rotation.y = Math.PI + 0.22 * Math.sin(t * qw(1.5)); Bn.g.rotation.x = 0.08 * Math.sin(t * qw(1.9)); Bn.g.scale.setScalar(1.15 * (1 + 0.05 * Math.max(0, kick)) * (1 + 0.04 * think)); Bn.g.position.y = 0.05 + 0.05 * Math.sin(t * qw(2.3));   // 大脑也在动：转动、呼吸、每两拍放大
-    S.sand.visible = dead > 0; S.sand.material.uniforms.uOn.value = dead * (1 - clamp((t - EV.back + 0.6) / 0.5)); S.sand.material.uniforms.uT.value = t - endD;
-    const ba = clamp((t - EV.brain - 0.1) / 0.3) * (1 - clamp((t - EV.back + 0.35) / 0.3));
-    F.battery = { a: ba, lvl, drop: last != null ? clamp((t - last) / 0.18) : 1, empty: lvl === 0 ? t - endD : -1 };
-    if (last != null && t - last < 0.45) F.shock = { c: [1500, 575], r: 0.06 + 0.12 * outExpo((t - last) / 0.45), a: 0.4 * (1 - (t - last) / 0.45), col: HI };
+    const pk = t - EV.peak, gt = t - EV.got, flare = pk >= 0 ? Math.exp(-pk / 0.35) : 0, dim = gt >= 0 ? clamp(gt / 0.5) : 0;
+    Bn.m.uniforms.uBright.value = 8.6 * (1 + 0.45 * flare) * (1 - 0.3 * dim) * (1 + 0.15 * Math.max(0, kick));
+    Bn.glow.visible = true; Bn.glow.material.uniforms.uInt.value = (0.05 + 0.1 * flare) * (1 - 0.5 * dim); Bn.glow.quaternion.copy(K.camera.quaternion);
+    Bn.g.rotation.y = Math.PI + 0.2 * Math.sin(t * qw(1.5)); Bn.g.rotation.x = 0.07 * Math.sin(t * qw(1.9)); Bn.g.scale.setScalar(1.05 * (1 + 0.05 * Math.max(0, kick)) * (1 + 0.04 * flare)); Bn.g.position.y = 0.05 + 0.05 * Math.sin(t * qw(2.3));
+    // 奖励回路：一节一节亮起（每拍一节），最高点爆亮，得到后迅速变暗
+    Bn.g.updateMatrixWorld(true);
+    const lit = clamp((t - EV.brain - 0.3) / (EV.peak - EV.brain - 0.3));
+    F.path = { pts: REWARD.map(p => { const v = new THREE.Vector3(...p); Bn.g.localToWorld(v); return project(v.toArray()); }), lit, flare, dim, a: clamp((t - EV.brain) / 0.3) * (1 - clamp((t - EV.lotto + 0.45) / 0.3)) };
+    // 折线（右侧）：从左往右画出来
+    const ca = clamp((t - EV.brain - 0.2) / 0.3) * (1 - clamp((t - EV.lotto + 0.45) / 0.3));
+    const u = t < EV.peak ? 0.72 * clamp((t - EV.brain - 0.4) / (EV.peak - EV.brain - 0.4)) : t < EV.got ? 0.72 + 0.2 * clamp((t - EV.peak) / (EV.got - EV.peak)) : 0.92 + 0.08 * clamp((t - EV.got) / 1.0);
+    F.chart = { u, a: ca, flare, gt };
+    // “所以刚到手的东西，很快就不香了。”：画面右上角飞进刚才那个快递盒，光一点点暗下去
+    const fu = t - TX('F').t0;
+    if (fu >= 0) { const cx2 = camB.target[0]; const bp = lerp3([cx2 + 1.6, 2.6, 0.5], [cx2 + 0.1, 1.3, 0.3], outExpo(clamp(fu / 0.6))); S.box.g.visible = true; S.box.g.position.set(...bp); S.box.g.scale.setScalar(0.42); S.box.g.rotation.set(0.32, 0.6 + 0.4 * t, 0.1);
+      S.box.m.uniforms.uScatter.value = 0; S.box.m.uniforms.uOpen.value = 1; S.box.m.uniforms.uBright.value = lerp(2.4, 0.5, clamp((fu - 0.4) / 2.6)) * (1 - clamp((t - EV.lotto + 0.45) / 0.3)); S.box.glow.material.uniforms.uInt.value = lerp(0.1, 0.0, clamp(fu / 2.6)); S.box.glow.quaternion.copy(K.camera.quaternion); }
     subj = [-1.4, 0.1, 0];
-  } else if (t < EV.calm) {
-    // ---- 场景 4：拖延，是在躲一种感觉。大脑的粒子汇聚回懒惰（左侧，约 60% 高）；右侧“那件事”回来了，三倍大，渗出暗色荆棘
-    const dt = t - EV.back, k = clamp(dt / 0.5), D = 7.4;
-    cam = camLerp(live(camAt(0, 0.0, 5.4), t, EV.brain, 0), live(camAt(0, -0.4, D), t, EV.back, 0), inOut(k));
-    if (k < 1) { const Bn = S.brain; Bn.g.visible = true; brainAsm(1 - outExpo(k)); Bn.m.uniforms.uBright.value = 2.1; }
-    const steps = EV.thornLab.filter(d => t >= d).length, sk = EV.thornLab.reduce((a, d) => a + outExpo(clamp((t - d) / 0.4)), 0);   // 每亮一个标签，荆棘伸长一点
-    const hd = outExpo(clamp((t - EV.hatDown) / 0.5));                      // 第三个标签之后的下一个小节第一拍：帽子整个滑下来盖住眼睛
-    W.g.visible = true; W.g.position.set(-2.45 - 0.0 * sk, 0, -0.28 * sk);
-    setState(W, { lite: false, gray: false, eyes: 1 - hd, halo: 1, props: 1, scatter: 2.2 * (1 - outExpo(k)), aud: AUD }); animate(W, t, 9, -9, true, AUD);
-    W.head.rotation.x += 0.05 * sk - 0.04 * hd; W.g.rotation.y = 0.12 * sk / 3;                       // 往后缩一点
-    if (W.hat) W.hat.material.uniforms.uB.value = 0.3 * sk / 3 * (1 - hd) + 1.35 * hd;          // 把帽子往下拉一点 → 整个盖住
-    W.eyes.forEach(m => { m.visible = m.visible && hd < 0.6; });
-    const cc = [1.55, -0.45, 0.2], ck = clamp((dt - 0.15) / 0.45);
-    S.cube.g.visible = true; S.cube.g.position.set(...cc); S.cube.g.scale.setScalar(1.6 * (0.5 + 0.5 * outBack(ck)));   // 约占画面高度 40%
-    S.cube.g.rotation.set(0.32, 0.55 + 0.25 * t, 0.05 * Math.sin(t * qw(0.9)));
-    S.cube.m.uniforms.uScatter.value = 1.4 * (1 - ck); S.cube.m.uniforms.uBright.value = 2.4 * ck * (1 + 0.3 * Math.max(0, kick)); setCubeCol('#BFF4FA');
-    S.cube.glow.material.uniforms.uInt.value = 0.1 * ck; S.cube.glow.quaternion.copy(K.camera.quaternion);
-    const T = S.thorns; T.visible = true; T.position.copy(S.cube.g.position); T.scale.setScalar(S.cube.g.scale.x);   // 荆棘从方块表面长出来
-    T.material.uniforms.uGrow.value = clamp(dt / 0.8) * (0.32 + 0.22 * sk) * (1 + (1 - hd) * 0.1 * Math.sin(t * qw(2.6)));   // 持续伸缩
-    T.material.uniforms.uLean.value = 0.25 + 0.2 * sk; T.material.uniforms.uFade.value = ck; T.material.uniforms.uT.value = t; T.material.uniforms.uStill.value = hd;
-    const cs = project(cc), cre = project([cc[0] + 0.62 * S.cube.g.scale.x, cc[1], cc[2]])[0];
-    ['怕做不好', '没有头绪', '太累了'].forEach((s, i) => { const d = t - EV.thornLab[i]; if (d < 0) return; F.labels.push({ text: s, x: Math.max(1665, cre + 30), y: cs[1] - 150 + 150 * i, a: clamp(d / 0.12), align: 'left', pop: d }); });
-    subj = [W.g.position.x, HEAD_C[1], W.g.position.z];
+  } else if (t < EV.scale) {
+    // ---- 场景 4：中了彩票，也不会一直快乐。大脑化成粒子，汇聚成两个半身像：左边贪婪“中奖的人”，右边灰色“普通人”；头顶各一根“快乐”柱
+    const dt = t - EV.lotto, k = clamp(dt / 0.5), D = 9.6, XS = [-2.3, 2.3], BS = 0.85;
+    cam = camLerp(live(camAt(0.2, 0.0, 5.8), t, EV.brain, 0.2), live(camAt(0, 0.35, D, 0.35), t, EV.lotto, 0), inOut(k));
+    if (k < 1) { const Bn = S.brain; Bn.g.visible = true; brainAsm(1 - outExpo(k)); Bn.m.uniforms.uBright.value = 7; }
+    const wu = t - EV.win, won = wu >= 0, sl = EV.slides.reduce((a, d) => a + outBack(clamp((t - d) / 0.4)), 0);
+    W.g.visible = true; W.g.position.set(XS[0], 0, 0);
+    setState(W, { lite: false, gray: false, eyes: 1, halo: 1, props: 1, scatter: 2.2 * (1 - outExpo(k)), aud: AUD, gag: won && sl < 2.5, coinEye: won && wu < 1.0 ? 1 : 0, shrink: BS }); animate(W, t, 9, -9, true, AUD);
+    const U = S.future; U.g.visible = true; U.g.position.set(XS[1], 0, 0);
+    setState(U, { lite: false, gray: true, eyes: 0, halo: 0, props: 0, scatter: 2.2 * (1 - outExpo(clamp((dt - 0.1) / 0.5))), aud: AUD, shrink: BS }); animate(U, t, 9, -9, true, AUD); U.mats.forEach(m => { m.uniforms.uDim.value *= 0.62; });
+    U.head.rotation.x += 0.06 * Math.sin(t * qw(2.4)); U.rig.rotation.z += 0.04 * Math.sin(t * qw(1.8));
+    F.coin = { extra: won ? 12 : 0, loose: 0.55 * clamp(sl / 3), dim: 0.75 };                                       // 中奖：一大团金币；之后一枚枚飘走
+    // 彩票
+    const tk = S.ticket, ta = clamp((dt - 0.3) / 0.4);
+    tk.g.visible = ta > 0 && wu < 0.6; tk.g.position.set(XS[0] + 1.45, -0.12 + 0.04 * Math.sin(t * qw(2.0)), 1.0); tk.g.scale.setScalar(1.0); tk.g.rotation.set(-0.15, -0.35 + 0.08 * Math.sin(t * qw(1.3)), 0.1 * Math.sin(t * qw(1.1)));
+    tk.m.uniforms.uScatter.value = 1.2 * (1 - ta) + (won ? 2.5 * outExpo(clamp(wu / 0.5)) : 0); tk.m.uniforms.uBright.value = 5.2 * ta * (won ? 1 + 2 * Math.exp(-wu / 0.15) : 1) * (1 + 0.3 * Math.max(0, kick)); tk.glow.material.uniforms.uInt.value = 0.12 * ta; tk.glow.quaternion.copy(K.camera.quaternion);
+    if (won && wu < 0.6) { const c = project([XS[0] + 1.45, -0.12, 1.0]); F.shock = { c, r: 0.05 + 0.22 * outExpo(wu / 0.6), a: 0.75 * (1 - wu / 0.6), col: HI }; F.flash = { c, a: 0.6 * Math.exp(-wu / 0.2), r: 330 }; }
+    if (won && wu < 0.15) F.shake = Math.max(F.shake, 1 - wu / 0.15);
+    F.bursts.push({ t0: EV.win, pos: [XS[0] + 1.45, -0.12, 1.0], n: 180, speed: 1.9, life: 1.0, grav: -0.5, seed: 21, bright: 2.4 });
+    // 快乐柱：中奖那一拍冲到最高（过冲），之后每两拍往下滑一截，最后和“普通人”差不多高
+    const hW = won ? Math.max(0.4, (0.12 + 0.88 * outBack(clamp(wu / 0.35))) - 0.2 * sl) : 0.28, hU = 0.38;
+    const la = clamp((dt - 0.4) / 0.3);
+    F.hcols = XS.map((x, i) => { const b = project([x, 1.55 * BS, 0]); return { x: b[0], y0: b[1], e: (i ? hU : hW) * clamp((dt - 0.45) / 0.35), a: la, hit: i ? 0 : (won ? Math.exp(-wu / 0.3) : 0) }; });
+    ['中奖的人', '普通人'].forEach((s, i) => { const p = project([XS[i], -1.72 * BS, 0.3]); F.labels.push({ text: s, x: p[0], y: Math.min(p[1] + 40, 862), a: la }); });   // 不压字幕
+    subj = [XS[0], HEAD_C[1] * BS, 0];
+  } else if (t < EV.loose) {
+    // ---- 场景 5：失去的痛，是得到的两倍。两个半身像化成粒子，汇聚成巨大的金色天平（中央偏右、约 60% 高）；贪婪缩小站在左侧
+    const dt = t - EV.scale, k = clamp(dt / 0.5), D = 7.6;
+    cam = camLerp(live(camAt(0, 0.2, 9.6, 0.2), t, EV.lotto, 0), live(camAt(0, -0.25, D), t, EV.scale, 0), inOut(k));
+    const gx = -3.05, sh = 0.62;
+    W.g.visible = true; W.g.position.set(lerp(-2.3, gx, inOut(k)), lerp(0, -0.55, inOut(k)), 0); W.g.scale.setScalar(lerp(1, sh, inOut(k)));
+    const hug = outExpo(clamp((t - EV.hug) / 0.7));
+    setState(W, { lite: false, gray: false, eyes: 1, halo: 1, props: 1, scatter: 0, aud: AUD, shrink: lerp(1, sh, inOut(k)) }); animate(W, t, 9, -9, true, AUD);
+    F.coin = { tight: hug, extra: hug > 0 ? 6 : 0, spin: 1 + 1.2 * hug, dim: 0.6 };                               // 天平倾斜后：把金币紧紧往怀里搂
+    if (k < 1) { const U = S.future; U.g.visible = true; U.g.position.set(2.3, 0, 0); setState(U, { lite: false, gray: true, eyes: 0, halo: 0, props: 0, scatter: 2.4 * outExpo(k), aud: AUD }); U.mats.forEach(m => { m.uniforms.uDim.value *= 0.62 * (1 - k); }); }
+    // 天平
+    const B2 = S.scale, ba = clamp((dt - 0.1) / 0.5), tu = t - EV.tip, tip = tu < 0 ? 0 : -0.3 + (0.3 * Math.exp(-tu / 0.32) * Math.cos(tu * 13)) ;   // 右盘猛地下沉，晃动后回弹到倾斜的位置
+    const ang = tu < 0 ? 0.03 * Math.sin(t * qw(2.2)) : tip + 0.012 * Math.sin(t * qw(2.2));
+    B2.g.visible = true; B2.g.position.set(1.15, -0.55, 0); B2.g.scale.setScalar(1.0 * (0.7 + 0.3 * outBack(ba))); B2.beam.rotation.z = ang;
+    B2.pans.forEach((p, i) => { const sx = i ? 1 : -1; p.position.set(sx * 1.45 * Math.cos(ang), sx * 1.45 * Math.sin(ang) - 0.0, 0); });
+    B2.mats.forEach(m => { m.uniforms.uScatter.value = 1.6 * (1 - ba); m.uniforms.uBright.value = m.baseB * ba * (1 + 0.25 * Math.max(0, kick)); });
+    B2.g.updateMatrixWorld(true);
+    const panScr = i => { const v = new THREE.Vector3(0, -0.95, 0); B2.pans[i].localToWorld(v); return project([v.x, v.y, v.z]); };   // 盘子的位置
+    if (tu >= 0 && tu < 0.55) { F.shock = { c: panScr(1), r: 0.05 + 0.18 * outExpo(tu / 0.55), a: 0.7 * (1 - tu / 0.55), col: HI }; }
+    if (tu >= 0 && tu < 0.15) F.shake = Math.max(F.shake, 1 - tu / 0.15);
+    const p0 = panScr(0), p1 = panScr(1), la = clamp((dt - 0.45) / 0.3);
+    F.labels.push({ text: '得到100元', x: p0[0], y: p0[1] + 62, a: la });
+    F.labels.push({ text: '失去100元', x: p1[0], y: p1[1] + 62, a: la });
+    if (tu >= 0) F.labels.push({ text: '约2倍', x: p1[0] - 175, y: p1[1] - 20, a: clamp((tu - 0.2) / 0.15), align: 'right', pop: tu - 0.2 });
+    subj = [W.g.position.x, HEAD_C[1] * sh - 0.55, 0];
   } else if (t < EV.gaze) {
-    // ---- 场景 5：只是还没准备好。荆棘像雾一样散开，方块缩小、变柔和（浅青色）；懒惰慢慢把帽子往上推，眼睛慢慢睁开，镜头缓慢推近到脸
-    const dt = t - EV.calm, u = clamp(dt / (EV.gaze - EV.calm)), fog = clamp(dt / 1.6);
-    const px = lerp(-2.45, -0.9, inOut(u));
-    cam = camLerp(live(camAt(0, -0.4, 7.4), t, EV.back, 0), { pos: [px + 0.15, 0.15, 4.2], target: [px + 0.15, 0.05, 0], fov: 35 }, inOut(clamp(dt / 4.2)));
-    const up = sine(clamp((dt - 0.5) / 1.8)), open = sine(clamp((dt - 1.6) / 1.8));
-    W.g.visible = true; W.g.position.set(px, 0, -0.84 * (1 - inOut(u)));
-    setState(W, { lite: false, gray: false, eyes: open, halo: 1, props: 1, scatter: 0, aud: AUD }); animate(W, t, 9, -9, true, AUD);
-    W.g.rotation.y = 0.12 * (1 - u);
-    if (W.hat) W.hat.material.uniforms.uB.value = 1.35 * (1 - up);
-    W.eyes.forEach(m => { m.visible = m.visible && up > 0.5; m.material.uniforms.uInt.value *= 0.75; });
-    const T = S.thorns; T.visible = fog < 1; T.position.copy(S.cube.g.position); T.scale.setScalar(S.cube.g.scale.x); T.material.uniforms.uFade.value = 1 - fog; T.material.uniforms.uMist.value = fog; T.material.uniforms.uT.value = t; T.material.uniforms.uStill.value = 1 - fog;
-    T.material.uniforms.uGrow.value = 0.98 + 0.2 * fog;
-    const cs = lerp(1.6, 0.6, inOut(clamp(dt / 1.6))), cp = lerp3([1.55, -0.45, 0.2], [px + 1.5, -1.25, 0.9], inOut(u));
-    S.cube.g.visible = true; S.cube.g.position.set(...cp); S.cube.g.scale.setScalar(cs); S.cube.g.rotation.set(0.32, 0.55 + 0.25 * t, 0);
-    setCubeCol(hexs(C3('#C8F6FC').lerp(C3('#A8F0FA'), fog))); S.cube.m.uniforms.uBright.value = lerp(2.4, 3.0, fog); S.cube.m.uniforms.uScatter.value = 0.03 * fog;   // 变柔和
-    S.cube.glow.material.uniforms.uInt.value = 0.1 + 0.03 * fog; S.cube.glow.quaternion.copy(K.camera.quaternion);
-    subj = [px, HEAD_C[1], 0];
+    // ---- 场景 6：只是太怕失去。天平化成粒子散开，贪婪回到画面中央偏左（约 60% 高），金币环还紧紧缠着它；
+    //      之后每个小节第一拍，金币环松开一圈：散开、飘远、转慢；表情放松成平静，眼睛变柔和；镜头缓慢推近到脸
+    const dt = t - EV.loose, k = clamp(dt / 0.5), u = clamp(dt / (EV.gaze - EV.loose));
+    const s1 = outExpo(clamp((t - EV.lsteps[0]) / 0.8)), s2 = outExpo(clamp((t - EV.lsteps[1]) / 0.8));
+    const px = lerp(-1.0, -0.75, inOut(u));
+    cam = camLerp(live(camAt(0, -0.25, 7.6), t, EV.scale, 0), { pos: [px + 0.15, 0.15, lerp(5.6, 4.3, inOut(u))], target: [px + 0.15, 0.05, 0], fov: 35 }, inOut(k));
+    W.g.visible = true; W.g.position.set(lerp(-3.05, px, inOut(k)), lerp(-0.55, 0, inOut(k)), 0);
+    setState(W, { lite: false, gray: false, eyes: 1, halo: 1, props: 1, scatter: 0, aud: AUD, shrink: lerp(0.62, 1, inOut(k)), calm: s2 > 0.5 ? 1 : 0 }); animate(W, t, 9, -9, true, AUD);
+    W.eyes.forEach(m => { m.material.uniforms.uInt.value *= lerp(1, 0.6, s2); });
+    F.coin = { tight: 1 - s1, extra: 6, loose: 0.6 * s2, spin: lerp(2.2, 1, s1) * lerp(1, 0.35, s2) };
+    if (k < 1) { const B2 = S.scale; B2.g.visible = true; B2.g.position.set(1.15, -0.55, 0); B2.mats.forEach(m => { m.uniforms.uScatter.value = 2.4 * outExpo(k); m.uniforms.uBright.value = m.baseB * (1 - k); }); }
+    subj = [W.g.position.x, HEAD_C[1], 0];
   } else if (t < EV.end) {
-    // ---- 场景 6：正面直视镜头，脸在画面上方约 60%；眼睛是两团清楚的青光（虹膜圆环 + 瞳孔），嘴角放松
+    // ---- 场景 7：正面直视镜头，脸在画面上方约 60%；眼睛是两团清楚的金光（虹膜圆环 + 瞳孔），嘴角狡黠的笑；身边飘过一个小快递盒
     const dt = t - EV.gaze, k = inOut(clamp(dt / 0.6));
-    const from = { pos: [-0.9 + 0.15, 0.15, 4.2], target: [-0.9 + 0.15, 0.05, 0], fov: 35 }, to = { pos: [0, -0.42, 3.75], target: [0, -0.45, 0], fov: 35 };
-    cam = camLerp(from, { ...to, pos: lerp3(to.target, to.pos, 1 - 0.008 * Math.max(0, dt - 0.6)) }, k);
-    W.g.visible = true; W.g.position.set(lerp(-0.9, 0, k), 0, 0);
+    const from = { pos: [-0.75 + 0.15, 0.15, 4.3], target: [-0.75 + 0.15, 0.05, 0], fov: 35 }, to = { pos: [0, -0.42, 3.75], target: [0, -0.45, 0], fov: 35 };
+    cam = camLerp(from, { ...to, pos: lerp3(to.target, to.pos, 1 - 0.015 * Math.max(0, dt - 0.6)) }, k);
+    W.g.visible = true; W.g.position.set(lerp(-0.75, 0, k), 0, 0);
     setState(W, { lite: false, gray: false, eyes: 1, halo: 1, props: 1, scatter: 0, aud: AUD }); animate(W, t, 9, -9, true, AUD);
-    W.head.rotation.set(0.04 * (1 - k), 0.05 * (1 - k) * Math.sin(t * qw(1.6)), 0);
-    
-    if (W.hat) W.hat.material.uniforms.uB.value = 0;
+    W.head.rotation.set(0.03 * (1 - k), 0.05 * (1 - k) * Math.sin(t * qw(1.6)), 0);
     S.irises.forEach(o => { o.visible = k > 0.02; o.material.uniforms.uBright.value = 1.25 * k; });
-    W.eyes.forEach(m => { m.scale.y = 1; m.position.y = FACE.eyeR[1]; m.material.uniforms.uInt.value *= 1 - 0.75 * k; });
-    W.eyeHalo.forEach(m => { m.material.uniforms.uInt.value *= 1 - 0.5 * k; });
-    const ca = 1 - clamp(dt / 0.4); S.cube.g.visible = ca > 0; S.cube.g.position.set(-0.9 + 1.5, -1.25, 0.9); S.cube.g.scale.setScalar(0.55); S.cube.m.uniforms.uScatter.value = 1.5 * (1 - ca); S.cube.m.uniforms.uBright.value = 3.0 * ca;
+    W.eyes.forEach(m => { m.scale.y = 1; m.material.uniforms.uInt.value *= 1 - 0.75 * k; }); W.eyeHalo.forEach(m => { m.material.uniforms.uInt.value *= 1 - 0.5 * k; });
+    F.coin = { loose: 0.35 * (1 - k), spin: 0.8, max: 20, dim: lerp(1, 0.55, k) };
+    const bu = clamp((dt - 0.6) / 3.4); S.box.g.visible = bu > 0 && bu < 1; S.box.g.position.set(lerp(2.5, 1.0, bu), -0.75 + 0.1 * Math.sin(bu * 6), -0.5); S.box.g.scale.setScalar(0.22);   // 从右边身旁飘过，不经过脸 S.box.g.rotation.set(0.3, 1.2 * t, 0.2);
+    S.box.m.uniforms.uScatter.value = 0; S.box.m.uniforms.uOpen.value = 0; S.box.m.uniforms.uBright.value = 0.35 * Math.sin(Math.PI * bu); S.box.glow.material.uniforms.uInt.value = 0.03 * Math.sin(Math.PI * bu); S.box.glow.quaternion.copy(K.camera.quaternion);
     subj = [W.g.position.x, HEAD_C[1], 0];
   } else {
-    // ---- 场景 7：下集预告。懒惰缩小回到那一排；其他六个角色从两侧飞回。傲慢、嫉妒、愤怒、懒惰彩色睁眼（已播出），贪婪、暴食、色欲灰色闭眼
-    // 下一拍贪婪亮起一圈金光、睁一下眼，头顶“下一集”；最后 0.3 秒回到第 0 帧（七个都是彩色）
+    // ---- 场景 8：下集预告。贪婪缩小回到那一排；其他六个角色从两侧飞回。前五个彩色睁眼（已播出），暴食、色欲灰色闭眼
+    // 下一拍暴食亮起一圈橙光、睁一下眼，头顶“下一集”；最后 0.3 秒回到第 0 帧（七个都是彩色）
     const dt = t - EV.end, k = inOut(clamp(dt / 0.5)), fin = t >= TL - 0.3;
     cam = camLerp({ pos: [0, -0.42, 3.75], target: [0, -0.45, 0], fov: 35 }, lineupCam(t), k);
     if (fin) { cam = heroLineup(t, F, AUD); }
@@ -722,13 +806,14 @@ export function frame(t) {
         setState(O, { lite: k > 0.5 || O !== W, gray: !aired, eyes: aired ? 1 : 0, halo: aired ? 0.85 : 0, props: 1, scatter: 0, aud: A0 }); animate(O, t, 9, -9, true, A0);
         if (O !== W) O.g.position.x = slotX(O.i) + Math.sign(O.i - SL) * 7 * (1 - outExpo(clamp((dt - 0.1) / 0.5)));
       });
-      const G = S.chars[4], gu = t - EV.next;
-      if (gu >= 0) {                                                       // 贪婪：睁一下眼（金色），一圈金光
+      W.g.position.x = lerp(0, slotX(SL), k);
+      const G = S.chars[5], gu = t - EV.next;
+      if (gu >= 0) {                                                       // 暴食：睁一下眼（橙色），一圈橙光
         const blink = Math.exp(-gu / 0.5); G.eyes.forEach(m => { m.visible = true; m.material.uniforms.uInt.value = 0.95 * blink; m.material.uniforms.uOpen.value = 0.5 + 0.5 * blink; });
-        F.goldRing = { c: project([slotX(4), HEAD_C[1], 0.3]), a: clamp(gu / 0.1) * (1 - clamp((t - (TL - 0.45)) / 0.15)), k: gu };
-        const p = project([slotX(4), 1.18, 0]); F.nextTag = { x: p[0], y: p[1], a: clamp(gu / 0.15) * (1 - clamp((t - (TL - 0.45)) / 0.15)) };
+        F.goldRing = { c: project([slotX(5), HEAD_C[1], 0.3]), a: clamp(gu / 0.1) * (1 - clamp((t - (TL - 0.45)) / 0.15)), k: gu };
+        const p = project([slotX(5), 1.18, 0]); F.nextTag = { x: p[0], y: p[1], a: clamp(gu / 0.15) * (1 - clamp((t - (TL - 0.45)) / 0.15)) };
       }
-      F.names = clamp((dt - 0.35) / 0.35); F.aired4 = F.names; F.auraCol = '#8FB8C8'; F.auraK = 0.45;
+      F.names = clamp((dt - 0.35) / 0.35); F.aired4 = F.names; F.auraCol = '#C8B48F'; F.auraK = 0.4;
     }
     subj = null;
   }
@@ -769,7 +854,8 @@ export function frame(t) {
   if (window.COVER && W.g.visible) { W.mats.forEach(m => { m.uniforms.uDim.value *= 1.35; }); W.propMats.forEach(m => { m.uniforms.uBright.value *= 1.3; }); }   // 封面：主体亮一点（和前三集封面一致）
   // 给检查用：主体的脸（含帽子）和道具在屏幕上的范围（用这一帧的镜头投影）
   F.subjBoxes = [];
-  if (W.g.visible && t >= EV.zoom && t < EV.end) { const hp = W.g.position, a2 = project([hp.x - 0.62, HEAD_C[1] + 0.95, hp.z + 0.2]), b2 = project([hp.x + 0.62, HEAD_C[1] - 0.82, hp.z + 0.2]); F.subjBoxes.push({ name: '懒惰的脸和帽子', x0: a2[0], y0: a2[1], x1: b2[0], y1: b2[1] }); }
+  if (W.g.visible && t >= EV.zoom && t < EV.end) { const hp = W.g.position, a2 = project([hp.x - 0.62, HEAD_C[1] + 0.95, hp.z + 0.2]), b2 = project([hp.x + 0.62, HEAD_C[1] - 0.82, hp.z + 0.2]); F.subjBoxes.push({ name: '贪婪的脸', x0: a2[0], y0: a2[1], x1: b2[0], y1: b2[1] }); }
+  for (const [o, nm, rr] of [[S.box, '快递盒', 0.62], [S.ticket, '彩票', 0.75]]) if (o.g.visible) { const c = o.g.position, r = rr * o.g.scale.x, a2 = project([c.x - r, c.y + r, c.z]), b2 = project([c.x + r, c.y - r, c.z]); F.subjBoxes.push({ name: nm, x0: a2[0], y0: a2[1], x1: b2[0], y1: b2[1] }); }
   if (S.cube.g.visible) { const c = S.cube.g.position, r = 0.62 * S.cube.g.scale.x, a2 = project([c.x - r, c.y + r, c.z]), b2 = project([c.x + r, c.y - r, c.z]); F.subjBoxes.push({ name: '那件事', x0: a2[0], y0: a2[1], x1: b2[0], y1: b2[1] }); }
   F.cam = cam; F.kick = kick;
   return F;
@@ -795,7 +881,7 @@ function richText(ctx, text, cx, y, size, a, keyCol, o = {}) {
     ctx.fillStyle = col; ctx.fillText(s, x, y);
     ctx.restore(); x += ws[j];
   });
-  BOXES.push({ x0, x1: x0 + W2, y0: y - size * 0.6, y1: y + size * 0.6, label: plain(text), alpha: a });
+  { const T = ctx.getTransform(), q = K.scale; BOXES.push({ x0: (T.e + T.a * x0) / q, x1: (T.e + T.a * (x0 + W2)) / q, y0: (T.f + T.d * (y - size * 0.6)) / q, y1: (T.f + T.d * (y + size * 0.6)) / q, label: plain(text), alpha: a }); }   // 画布坐标（扣掉平移和缩放）
   return { x0, x1: x0 + W2 };
 }
 function drawSub2(t, ctx, s) {
@@ -815,7 +901,7 @@ function hookPos(s, t) {
 }
 function drawHook(t, ctx, s) {
   if (t < s.t0 || t > s.t1 + 0.12) return;
-  const a = Math.min(clamp((t - s.t0) / 0.06), 1 - clamp((t - s.t1) / 0.12)), [x, y, al] = hookPos(s, t), sc = popScale(t - s.t0);
+  const a = Math.min(clamp((t - s.t0) / (s.id === 'B' ? 0.15 : 0.06)), 1 - clamp((t - s.t1) / 0.12)), [x, y, al] = hookPos(s, t), sc = popScale(t - s.t0);
   if (s.suffix && t >= EV.pick) {                                          // 抽中那一拍补全罪名：整句（含“懒惰”）一起排版
     const sz2 = s.size + 8; ctx.save(); ctx.font = fs(900, s.size); const w1 = segs(s.text).reduce((p, [q]) => p + ctx.measureText(q).width, 0); ctx.font = fs(900, sz2); const w2 = ctx.measureText(s.suffix).width; ctx.restore();
     const kk = outExpo(clamp((t - EV.pick) / 0.25)), x0 = al === 'left' ? x : x - (w1 + w2) / 2;
@@ -853,7 +939,7 @@ function drawTag(ctx, L) {
   ctx.globalAlpha = L.a; ctx.fillStyle = 'rgba(3,14,17,0.66)'; ctx.beginPath(); ctx.roundRect(cx - w / 2, L.y - h / 2, w, h, 10); ctx.fill();
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.shadowColor = CY; ctx.shadowBlur = 8; ctx.fillStyle = TXTW; ctx.fillText(L.text, cx, L.y + 2);
   ctx.restore();
-  BOXES.push({ x0: cx - w / 2, x1: cx + w / 2, y0: L.y - h / 2, y1: L.y + h / 2, label: L.text, alpha: L.a });
+  { const T = ctx.getTransform(), q = K.scale; BOXES.push({ x0: (T.e + T.a * (cx - w / 2)) / q, x1: (T.e + T.a * (cx + w / 2)) / q, y0: (T.f + T.d * (L.y - h / 2)) / q, y1: (T.f + T.d * (L.y + h / 2)) / q, label: L.text, alpha: L.a }); }
 }
 // 电池（画面右侧，细线框外壳、5 格电量）+ 上方的小人形（大脑的位置亮一小块）
 function drawBattery(ctx, B2) {
@@ -914,6 +1000,36 @@ export function draw2D(t, ctx, F) {
     ctx.shadowColor = CY; ctx.shadowBlur = 18 + 30 * E2.hit; ctx.fillStyle = g; ctx.beginPath(); ctx.roundRect(E2.x - w / 2, y1, w, Math.max(4, E2.y0 - y1), 10); ctx.fill(); ctx.restore();
     drawTag(ctx, { text: '兴奋度', x: E2.x - w / 2 - 30, y: E2.y0 - 40, a: E2.a, align: 'right' });
   }
+  if (F.path && F.path.a > 0.01) {                                          // 奖励回路：一节一节亮起；最高点爆亮；得到后迅速变暗
+    const P3 = F.path, n = P3.pts.length - 1, upto = P3.lit * n; ctx.save(); ctx.globalAlpha = P3.a; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(255,194,61,0.22)'; ctx.lineWidth = 6; ctx.beginPath(); P3.pts.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke();
+    const br = (1 + 1.5 * P3.flare) * (1 - 0.75 * P3.dim); ctx.globalCompositeOperation = 'lighter'; ctx.shadowColor = CY; ctx.shadowBlur = 16 + 30 * P3.flare;
+    ctx.strokeStyle = `rgba(255,214,120,${clamp(0.85 * br)})`; ctx.lineWidth = 7 + 6 * P3.flare; ctx.beginPath();
+    for (let i = 0; i <= n; i++) { if (i > upto + 1e-6) { const f = upto - (i - 1); if (f > 0) { const a = P3.pts[i - 1], b = P3.pts[i]; ctx.lineTo(lerp(a[0], b[0], f), lerp(a[1], b[1], f)); } break; } const p = P3.pts[i]; i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); } ctx.stroke();
+    P3.pts.forEach((p, i) => { if (i > upto + 1e-6) return; ctx.fillStyle = `rgba(255,240,200,${clamp(0.9 * br)})`; ctx.beginPath(); ctx.arc(p[0], p[1], 7 + 5 * P3.flare, 0, TAU); ctx.fill(); });
+    ctx.restore();
+    const m = P3.pts[2]; drawTag(ctx, { text: '奖励回路', x: m[0], y: m[1] + 70, a: P3.a * clamp(P3.lit * 3) });
+  }
+  if (F.chart && F.chart.a > 0.01) {                                        // 折线：随时间画出来；最高点“快要得到”，迅速往下掉到“真得到了”
+    const C2 = F.chart, x0 = 1110, x1 = 1760, yb = 760, yt = 330, f = u => u <= 0.72 ? Math.pow(u / 0.72, 1.8) : u <= 0.92 ? 1 - 0.78 * sine((u - 0.72) / 0.2) : 0.22 - 0.04 * (u - 0.92) / 0.08;
+    const P = u => [lerp(x0, x1, u), lerp(yb, yt, f(u))];
+    ctx.save(); ctx.globalAlpha = C2.a; ctx.strokeStyle = 'rgba(255,231,163,0.35)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x0, yt - 20); ctx.lineTo(x0, yb); ctx.lineTo(x1 + 20, yb); ctx.stroke();
+    ctx.globalCompositeOperation = 'lighter'; ctx.shadowColor = CY; ctx.shadowBlur = 14; ctx.strokeStyle = 'rgba(255,200,90,0.95)'; ctx.lineWidth = 5; ctx.lineJoin = 'round'; ctx.beginPath();
+    for (let i = 0; i <= 80; i++) { const u = C2.u * i / 80, p = P(u); i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1]); } ctx.stroke();
+    const hp = P(C2.u); ctx.fillStyle = '#FFF3D0'; ctx.shadowBlur = 20; ctx.beginPath(); ctx.arc(hp[0], hp[1], 8, 0, TAU); ctx.fill();
+    if (C2.u >= 0.72) { const pk = P(0.72); ctx.globalAlpha = C2.a * (0.6 + 0.4 * Math.exp(-0.5)); ctx.fillStyle = `rgba(255,240,200,${0.6 + 0.4 * C2.flare})`; ctx.beginPath(); ctx.arc(pk[0], pk[1], 10 + 16 * C2.flare, 0, TAU); ctx.fill(); }
+    ctx.restore();
+    if (C2.u >= 0.72) { const pk = P(0.72); drawTag(ctx, { text: '快要得到', x: pk[0], y: pk[1] - 52, a: C2.a, pop: C2.u < 0.75 ? 0 : null }); }
+    if (C2.u >= 0.9) { const e = P(0.92); drawTag(ctx, { text: '真得到了', x: e[0] + 20, y: e[1] + 56, a: C2.a * clamp((C2.u - 0.9) / 0.02) }); }
+  }
+  if (F.hcols) {                                                            // 快乐柱（两个半身像头顶）
+    for (const c of F.hcols) { if (c.a <= 0.01) continue; const w = 110, full = c.y0 - 140, y1 = c.y0 - full * clamp(c.e, 0, 1.08);
+      ctx.save(); ctx.globalAlpha = c.a; ctx.strokeStyle = 'rgba(255,231,163,0.3)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(c.x - w / 2, 140, w, full, 10); ctx.stroke();
+      const g = ctx.createLinearGradient(0, c.y0, 0, y1); g.addColorStop(0, 'rgba(255,194,61,0.8)'); g.addColorStop(1, 'rgba(255,231,163,0.95)'); ctx.fillStyle = g; ctx.shadowColor = CY; ctx.shadowBlur = 16 + 30 * c.hit;
+      ctx.beginPath(); ctx.roundRect(c.x - w / 2, y1, w, Math.max(4, c.y0 - y1), 10); ctx.fill(); ctx.restore();
+      BOXES.push({ x0: c.x - w / 2, x1: c.x + w / 2, y0: 140, y1: c.y0, label: '#柱子', alpha: c.a }); }
+    const c0 = F.hcols[0]; drawTag(ctx, { text: '快乐', x: c0.x - 55 - 28, y: c0.y0 - 40, a: c0.a, align: 'right' });
+  }
   // 大脑的反应：三根发光的竖柱
   if (F.cols) {
     for (const c of F.cols) { if (c.a <= 0) continue;
@@ -927,9 +1043,9 @@ export function draw2D(t, ctx, F) {
   }
   if (F.battery && F.battery.a > 0.01) drawBattery(ctx, F.battery);
   if (!window.COVER) for (const L of F.labels) { if (L.pop != null && L.pop < 0.25) { const sc = popScale(L.pop); ctx.save(); ctx.translate(L.x, L.y); ctx.scale(sc, sc); drawTag(ctx, { ...L, x: 0, y: 0 }); ctx.restore(); } else drawTag(ctx, L); }
-  if (F.aired4 > 0) [0, 1, 2, 3].forEach(i => { const C = S.chars[i], p = project([C.g.position.x, 1.18, 0]); glowText('已播出', p[0], p[1], fs(700, 24), tone(C.sin.col, 0.4), { alpha: F.aired4, glow: 10, glowColor: C.sin.col }); });
-  if (F.goldRing && F.goldRing.a > 0) { const G2 = F.goldRing, r = 120 + 14 * Math.exp(-G2.k / 0.3); ctx.save(); ctx.globalAlpha = G2.a * (0.75 + 0.25 * Math.exp(-G2.k / 0.4)); ctx.strokeStyle = '#FFD27A'; ctx.lineWidth = 3; ctx.shadowColor = GOLD; ctx.shadowBlur = 22; ctx.beginPath(); ctx.arc(G2.c[0], G2.c[1], r, 0, TAU); ctx.stroke(); ctx.restore(); }
-  if (F.nextTag && F.nextTag.a > 0) glowText('下一集', F.nextTag.x, F.nextTag.y, fs(700, 28), '#FFD27A', { alpha: F.nextTag.a, glow: 12, glowColor: GOLD });
+  if (F.aired4 > 0) [0, 1, 2, 3, 4].forEach(i => { const C = S.chars[i], p = project([C.g.position.x, 1.18, 0]); glowText('已播出', p[0], p[1], fs(700, 24), tone(C.sin.col, 0.4), { alpha: F.aired4, glow: 10, glowColor: C.sin.col }); });
+  if (F.goldRing && F.goldRing.a > 0) { const G2 = F.goldRing, r = 120 + 14 * Math.exp(-G2.k / 0.3); ctx.save(); ctx.globalAlpha = G2.a * (0.75 + 0.25 * Math.exp(-G2.k / 0.4)); ctx.strokeStyle = '#FFB07A'; ctx.lineWidth = 3; ctx.shadowColor = GOLD; ctx.shadowBlur = 22; ctx.beginPath(); ctx.arc(G2.c[0], G2.c[1], r, 0, TAU); ctx.stroke(); ctx.restore(); }
+  if (F.nextTag && F.nextTag.a > 0) glowText('下一集', F.nextTag.x, F.nextTag.y, fs(700, 28), '#FFB07A', { alpha: F.nextTag.a, glow: 12, glowColor: GOLD });
   if (!window.COVER) for (const s of F.hooks) drawHook(t, ctx, s);   // 封面截图时不画钩子大字、标签
   if (!window.COVER) for (const s of F.subs) drawSub2(t, ctx, s);
   if (F.shock) { ctx.save(); ctx.globalAlpha = F.shock.a; ctx.strokeStyle = F.shock.col; ctx.lineWidth = lerp(5, 1, 1 - F.shock.a / 0.45); ctx.shadowColor = CY; ctx.shadowBlur = 14; ctx.beginPath(); ctx.arc(F.shock.c[0], F.shock.c[1], F.shock.r * 1920, 0, TAU); ctx.stroke(); ctx.restore(); }
