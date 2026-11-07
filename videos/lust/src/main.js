@@ -80,7 +80,7 @@ export function render(t) {
      d: fc.clone().multiplyScalar(0.012 * kk), m: fc.clone().multiplyScalar(0.02 * kk), h: fc.clone().lerp(C3('#FFFFFF'), 0.3).multiplyScalar(0.03 * kk) };   // 背景不能整屏红雾
   ['b', 'd', 'm', 'h'].forEach(x => { fu['uN0' + x].value.copy(nb[x]); fu['uN1' + x].value.copy(nb[x]); });
   fu.uTide.value = 0; fu.uTideMix.value = 0; fu.uBright.value = window.EXPO ?? 1;
-  const amb = window.AMB ?? 8;   // 色欲：背景仍是 #0A0306，只把人物身后的玫红光晕和远处的雾提亮一些（全片平均亮度目标 40–55）
+  const amb = window.AMB ?? 1;   // 背景近黑 #0A0306，玫红只在主体身后的光晕里
   S.bgGlow.material.uniforms.uCol.value.copy(fc); S.bgGlow.material.uniforms.uInt.value = 0.05 * kk * amb;   // 背景近黑：红色只在主体身后的光晕里
   S.fog.forEach((m, j) => { m.material.uniforms.uCol.value.copy(fc); m.material.uniforms.uInt.value = [0.004, 0.006, 0.008][j] * kk * amb; });   // 红色只在主体身后的光晕里   // 雾只留在远处和画面边缘
   K.dust.material.uniforms.uColA.value.copy(fc).lerp(C3('#FFFFFF'), 0.4); K.dust.material.uniforms.uColB.value.set('#FFFFFF');
