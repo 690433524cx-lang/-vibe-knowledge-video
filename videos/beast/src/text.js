@@ -129,27 +129,13 @@ export function videoOverlay(ctx, t, ep, T) {
   BOXES.length = 0;
   const hex = ep.color, W = 1920;
   logo(ctx, hex);
-  // 片尾回到第 0 帧：标题淡出，概念大字和眼睛淡入
-  const back = smooth(T.outro + 0.05, T.outro + 0.5, t);
+  // 片尾回到第 0 帧：标题淡出，概念大字淡入
+  const back = smooth(T.cardBack + 0.15, T.clip - 0.06, t);
   const outT = 1 - smooth(T.outro, T.outro + 0.35, t);
-  // 概念大字：第 0 帧到揭晓那一拍保持不动
-  const cA = t < T.reveal ? 1 : back;
+  // 概念大字：第 0 帧到主角卡升起那一拍保持不动；然后换成“INFJ 是——”（觉醒那一拍消失）
+  const cA = t < T.lift ? 1 : back;
   if (cA > 0.003) { ctx.save(); ctx.globalAlpha = cA; richLine(ctx, ep.concept, W / 2, ep.conceptY ?? 112, 64, hex, { label: '概念大字' }); ctx.restore(); }
-  // 暗处的一排眼睛：第 0 帧有，闪剪影时退到很淡，片尾回来
-  eyeRow(ctx, t < T.flashes[0] ? 1 : t < T.reveal ? 1 - 0.7 * smooth(T.flashes[0], T.flashes[0] + 0.15, t) : back, W, 1000);
-  // 剪影下面的类型字母
-  T.flashes.forEach((t0, i) => {
-    const t1 = T.flashes[i + 1] ?? T.reveal, a = ep.intro.animals[i];
-    if (t < t0 || t >= t1) return;
-    const k = smooth(t0, t0 + 0.1, t) * (1 - smooth(t1 - 0.08, t1, t));
-    ctx.save(); ctx.globalAlpha = k; ctx.font = `900 44px ${LATIN}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.shadowColor = rgba(a.color, 0.9); ctx.shadowBlur = 14; ctx.fillStyle = mixHex(a.color, '#EBEBEB', 0.55);
-    const [cx, cy] = ep.intro.center, y = cy + ep.intro.height / 2 + 62;
-    ctx.fillText(a.type.split('').join(' '), cx, y); const w = ctx.measureText(a.type.split('').join(' ')).width; ctx.restore();
-    box(cx - w / 2, y - 26, cx + w / 2, y + 26, '类型字母');
-  });
-  // 揭晓：INFJ 的动物是——（觉醒那一拍消失）
-  if (t >= T.reveal && t < T.hit) { const k = smooth(T.reveal, T.reveal + 0.06, t); ctx.save(); ctx.globalAlpha = k; richLine(ctx, ep.revealText, W / 2, ep.conceptY ?? 112, 64, hex, { label: '揭晓' }); ctx.restore(); }
+  if (t >= T.lift && t < T.hit) { const k = smooth(T.lift, T.lift + 0.08, t); ctx.save(); ctx.globalAlpha = k; richLine(ctx, ep.revealText, W / 2, ep.conceptY ?? 112, 72, hex, { label: '揭晓' }); ctx.restore(); }
   // 嚎叫结束的那一拍：左下方大字“类型 · 动物名”；下一拍：一句话
   const L = ep.textLeft ?? [100, 830];
   if (t >= T.title && outT > 0.003) {
@@ -220,8 +206,6 @@ export function cardOverlay(ctx, gl, ep, a, T) {
   ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 10;
   ctx.textAlign = 'left'; ctx.fillStyle = mixHex(hex, '#EBEBEB', 0.55); ctx.fillText(`${ep.group} · ${GROUP_NAME[ep.group]}`, X0 + 50, Y0 + 70);
   const gw = ctx.measureText(`${ep.group} · ${GROUP_NAME[ep.group]}`).width; box(X0 + 50, Y0 + 48, X0 + 50 + gw, Y0 + 92, 'label');
-  ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(230,228,238,0.85)'; ctx.fillText(ep.animal.zh, X0 + CW - 50, Y0 + 70);
-  const aw = ctx.measureText(ep.animal.zh).width; box(X0 + CW - 50 - aw, Y0 + 48, X0 + CW - 50, Y0 + 92, 'label');
   ctx.restore();
   // 类型 · 动物名 + 一句话（卡片下方的暗处）
   const mT = metalRun([{ text: ep.type, font: `900 150px ${LATIN}`, gap: 24 }, { text: '·', font: `900 130px ${CJK}`, gap: 24, fill: hex }, { text: ep.animal.zh, font: `900 150px ${CJK}` }], 150, hex, null);

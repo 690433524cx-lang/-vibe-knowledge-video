@@ -6,7 +6,7 @@ import { loadMesh, samplePoints } from './sample.js';
 import { SHARED } from './shaders.js';
 import { clamp, smooth, D2R } from './util.js';
 
-function silMaterial(col) {
+export function silMaterial(col) {
   return new THREE.ShaderMaterial({
     uniforms: { ...SHARED, uK: { value: 0 }, uScat: { value: 0 }, uCol: { value: new THREE.Color(col) }, uHi: { value: new THREE.Color(col).lerp(new THREE.Color('#FFFFFF'), 0.55) } },
     transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,

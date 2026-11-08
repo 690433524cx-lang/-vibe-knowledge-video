@@ -67,5 +67,6 @@
   1.59
  ],
  "awake_attack": 2.66,
- "grid_note": "\u516b\u5206\u97f3\u7b26\u7f51\u683c\uff1aawake_attack + k \u00d7 beat/2\uff08\u8d77\u97f3\u5b9e\u6d4b\uff0c\u4e0e 0.33\u30010.66\u30011.00\u30011.33\u2026 \u7684\u8d77\u97f3\u4e00\u81f4\uff09"
+ "grid_note": "\u516b\u5206\u97f3\u7b26\u7f51\u683c\uff1aawake_attack + k \u00d7 beat/2\uff08\u8d77\u97f3\u5b9e\u6d4b\uff0c\u4e0e 0.33\u30010.66\u30011.00\u30011.33\u2026 \u7684\u8d77\u97f3\u4e00\u81f4\uff09",
+ "first_onset": 0.331
 }

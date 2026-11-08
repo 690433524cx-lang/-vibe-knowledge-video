@@ -120,7 +120,19 @@ export async function initEngine(canvas, ep, { W, H, mode, T }) {
         float f = clamp(tau/life, 0.0, 1.0); b *= side*pow(1.0 - f, 1.3)*(0.75 + 0.25*h1(aMisc.y*9.0)); hot = 1.0 - f*1.6;`,
     }), 46);
   }
-  // ---- 片头闪过的动物剪影
+  // ---- 背景里飘浮的细小粒子（钉在镜头上，周期 = 成片时长，首尾一致）
+  {
+    const n = 900, P = new Float32Array(n * 3), M = new Float32Array(n * 4), R = rng(31);
+    for (let i = 0; i < n; i++) { P.set([(R() - 0.5) * 2, (R() - 0.5) * 2, 0], i * 3); M.set([0.4 + 0.8 * R(), R(), 1 + Math.floor(R() * 2), 8 + R() * 22], i * 4); }
+    E.dust = addPoints(geo({ position: [P, 3], aMisc: [M, 4] }), fxPointsMaterial({ col: mixHex(hex, '#C8D0D8', 0.6), hi: '#FFFFFF', size: 0.05, maxPx: 3, bright: 0.55,
+      uniforms: { uLoop: { value: T.clip }, uAsp: { value: W / H } }, uniformDecl: 'uniform float uLoop, uAsp;',
+      posHook: `
+        float d = aMisc.w, ph = uTime/uLoop*6.2831853;
+        float th = tan(0.2793); vec2 q = position.xy + vec2(0.04*sin(ph*aMisc.z + aMisc.y*40.0), fract(position.y*0.5 + 0.5 + aMisc.z*uTime/uLoop*0.25)*2.0 - 1.0 - position.y);
+        p = vec3(q.x*d*th*uAsp, q.y*d*th, -d);
+        b *= (0.5 + 0.5*sin(ph*(3.0 + aMisc.z) + aMisc.y*30.0))*smoothstep(1.0, 0.8, abs(q.y));` }), -40, camera);
+  }
+  // ---- 片头闪过的动物剪影（旧版片头，已由卡牌代替；episode.intro.animals 为空时不建）
   E.sil = await buildSilhouettes(ep, { E, addPoints, geo });
   // ---- 月亮（钉在镜头上）和专属特效
   E.fx = buildFX(ep.fx, { E, THREE, addPoints, addGlow, geo, C, hex });
@@ -154,7 +166,7 @@ export function beatPulse(t, sharp = 7) {
 
 export function frame(t) {
   const ep = E.ep, hex = ep.color, T = E.T;
-  SHARED.uTime.value = t;
+  SHARED.uTime.value = t % T.clip;
   const cam = heroCam(t);
   const da = t - T.hit, after = da >= 0 ? 1 : 0;
   const sh = after && da < 0.4 ? Math.exp(-da * 11) : 0;

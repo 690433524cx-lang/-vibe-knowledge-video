@@ -10,9 +10,9 @@
 <canvas id="gl"></canvas>
 <canvas id="out"></canvas>
 <script type="module">
-import { init, render } from './src/main.js';
-window.render = render;
-init().then(() => { render(0); window.READY = true; }).catch(e => { console.error(e); window.FAILED = String(e && e.stack || e); });
+const q = new URLSearchParams(location.search);
+if (q.get('mode') === 'art') { import('./src/art.js').then(m => m.initArt(q)).then(() => { window.render = () => {}; window.READY = true; }).catch(e => { console.error(e); window.FAILED = String(e && e.stack || e); }); }
+else import('./src/main.js').then(({ init, render }) => { window.render = render; return init(); }).then(() => { window.render(0); window.READY = true; }).catch(e => { console.error(e); window.FAILED = String(e && e.stack || e); });
 </script>
 </body>
 </html>

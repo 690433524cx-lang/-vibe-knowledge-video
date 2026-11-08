@@ -29,7 +29,7 @@ rows.push(`4. 事件对齐拍点：最大误差 ${(maxE * 1000).toFixed(0)}ms ${
   const { srv, url, browser } = await openBrowser();
   const over = [];
   const T = JSON.parse(fs.readFileSync(path.join(dir, `${ep}_觉醒_events.json`))).events;
-  const vts = [0, 0.4, 1.2, 2.0, 2.5, 2.8, 3.4, 4.1, 4.5, 5.0, 5.3, 5.6, 5.95];
+  const vts = [0, 1.0, 2.0, 2.9, 3.4, 3.9, 4.5, 5.4, 5.8, 6.4, 6.9, 7.3, 7.9];
   for (const [mode, ts] of [['video', vts], ['still', [0]], ['card', [0]]]) {
     const page = await openPage(browser, url, `ep=${ep}&mode=${mode}`);
     for (const t of ts) {

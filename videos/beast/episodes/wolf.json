@@ -85,8 +85,8 @@
  },
  "music": {
   "file": "音乐_MBTI_原版.mp4",
-  "awake": 2.66,
-  "note": "歌曲从第一个音开始。T_AWAKE = 第二小节第一拍：高频起音实测 2.660 秒（八分音符网格从 0.00 起，每 0.333 秒一拍）；低音鼓在晚一个十六分音符的 2.85 秒进来"
+  "awake": 3.996,
+  "note": "歌曲从第一个音开始。T_AWAKE = 第 4 小节第一拍（以 0.333 秒为一拍、4 拍一小节计）：实测起音 4.000 秒，网格 3.996 秒。真正的乐句开头（低音鼓进来、整体变响）在 5.33 秒"
  },
  "bright": 3.0,
  "action": {
@@ -125,61 +125,13 @@
    "note": "找到狼嚎时 hold = 狼嚎长度"
   }
  },
- "stillT": 4.9,
- "clip": 6.0,
+ "stillT": 6.2,
+ "clip": 8.0,
  "line": "你很少开口，但总能〔看穿人心〕。",
  "concept": "每一种 MBTI，都有一只对应的〔动物〕",
- "revealText": "〔INFJ〕 的动物是——",
+ "revealText": "〔INFJ〕 是——",
  "intro": {
-  "center": [
-   740,
-   540
-  ],
-  "height": 420,
-  "animals": [
-   {
-    "model": "sil_fox",
-    "type": "ENTP",
-    "zh": "狐狸",
-    "color": "#A24BFF",
-    "yaw": -60
-   },
-   {
-    "model": "sil_cat",
-    "type": "ISTP",
-    "zh": "猫",
-    "color": "#FFC23D",
-    "yaw": -60
-   },
-   {
-    "model": "sil_lion",
-    "type": "ESTJ",
-    "zh": "狮子",
-    "color": "#3AA8FF",
-    "yaw": -55
-   },
-   {
-    "model": "sil_eagle",
-    "type": "INTP",
-    "zh": "猫头鹰（暂用鹰）",
-    "color": "#A24BFF",
-    "yaw": -20
-   },
-   {
-    "model": "sil_dog",
-    "type": "ENFJ",
-    "zh": "狗",
-    "color": "#2BE36B",
-    "yaw": -60
-   },
-   {
-    "model": "sil_deer",
-    "type": "ISFJ",
-    "zh": "鹿",
-    "color": "#3AA8FF",
-    "yaw": -55
-   }
-  ]
+  "animals": []
  },
  "outroBeats": 8,
  "frame": {
@@ -214,5 +166,23 @@
  ],
  "groundY": 0.75,
  "conceptY": 112,
- "cardT": 3.6
+ "cardT": 4.95,
+ "flipOrder": [
+  "ESTP",
+  "INTP",
+  "ISFJ",
+  "ENTJ",
+  "ESFP",
+  "INFP",
+  "ISTJ",
+  "ENTP",
+  "ISTP",
+  "ENFJ",
+  "INTJ",
+  "ESFJ",
+  "ENFP",
+  "ISFP",
+  "ESTJ"
+ ],
+ "liftBeat": -3
 }
