@@ -22,11 +22,12 @@ export async function init() {
   // 拍点上的事件（觉醒时间）：眼睛 0、汇聚 0.5、觉醒 2.0、天赋词在觉醒后的每半拍
   // 汇聚从觉醒前两拍开始；天赋词落在觉醒后的三个十六分音符上
   const asm0 = Math.max(0.3, HIT - 2 * beat);
-  T = { hit: HIT, beat, asm0, titleY: ep.layout?.titleY ?? 880, talentTimes: [1, 2, 3].map(i => HIT + i * beat / 4) };
+  T = { hit: HIT, beat, asm0, titleY: ep.layout?.titleY ?? 880, talentTimes: [1, 2, 3].map(i => HIT + i * (ep.talentStep ?? 0.25) * beat) };
   await initEngine(gl, ep, { W, H, mode: MODE, beat, asm0 });
   window.META = {
     ep, mode: MODE, W, H, music: ep.music, start: (ep.music?.hit ?? HIT) - HIT, count: E.count, surface: E.surface,
-    events: [{ name: '眼睛亮起', a: 0 }, { name: '粒子开始汇聚', a: T.asm0 }, { name: '觉醒', a: HIT }, { name: '称号', a: HIT }, ...T.talentTimes.map((a, i) => ({ name: '天赋词' + (i + 1), a }))],
+    events: [{ name: '眼睛亮起', a: 0 }, { name: '粒子开始汇聚', a: T.asm0 }, { name: '觉醒', a: HIT }, { name: '称号', a: HIT },
+      ...(E.act ? [{ name: '动作抬到位', a: E.act.t1 }, { name: '动作开始收回', a: E.act.t2 }, { name: '回到英雄姿态', a: E.act.t3 }, ...Array.from({ length: ep.action.voice?.rings ?? 0 }, (_, k) => ({ name: '声波' + (k + 1), a: HIT + k * ep.action.voice.gap * beat }))] : []), ...T.talentTimes.map((a, i) => ({ name: '天赋词' + (i + 1), a }))],
   };
 }
 

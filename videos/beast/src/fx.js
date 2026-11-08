@@ -59,11 +59,13 @@ function moon(X) {
     update(a, s) {
       const k = appear(s);
       const mo = (X.E.mode === 'card' ? X.E.ep.cardMoon : null) ?? X.E.ep.moon ?? [3.3, 2.0, 7.5];
-      const pos = X.C.clone().addScaledVector(s.fwd, mo[2]).addScaledVector(s.up, mo[1]).addScaledVector(s.right, mo[0]);
+      const pos = X.E.moonPos ? X.E.moonPos.clone() : X.C.clone().addScaledVector(s.fwd, mo[2]).addScaledVector(s.up, mo[1]).addScaledVector(s.right, mo[0]);
+      // 嚎叫那一拍月亮亮度提高 40%，再慢慢回落
+      const boost = s.after ? 1 + 0.4 * Math.exp(-Math.max(0, s.da) / 1.1) : 1;
       face(g, X, pos, X.E.ep.moonR ?? 1.3);
-      mat.uniforms.uK.value = k; mat.uniforms.uP.value = s.pulse * s.after;
+      mat.uniforms.uK.value = k; mat.uniforms.uP.value = s.pulse * s.after; mat.uniforms.uBright.value = 0.7 * boost;
       g.visible = k > 0.001;
-      halo.position.copy(pos); halo.scale.setScalar(5.2); halo.material.uniforms.uInt.value = 0.05 * k * (1 + 0.15 * s.pulse);
+      halo.position.copy(pos); halo.scale.setScalar(5.2); halo.material.uniforms.uInt.value = 0.05 * k * boost * (1 + 0.15 * s.pulse);
       halo.visible = k > 0.001;
       const wu = wmat.uniforms; wu.uO.value.copy(X.C).addScaledVector(s.fwd, 0.4).addScaledVector(s.up, -0.3);
       wu.uR.value.copy(s.right).multiplyScalar(-1); wu.uU.value.copy(s.up); wu.uF.value.copy(s.fwd); wu.uK.value = k; wu.uP.value = s.pulse;

@@ -23,6 +23,7 @@ export function loadMesh(meta, buf) {
     comb: L.comb ? new Float32Array(buf, L.comb[0], L.comb[1]) : null,
     gain: L.gain ? new Float32Array(buf, L.gain[0], L.gain[1]) : null,
     fur: L.fur ? new Float32Array(buf, L.fur[0], L.fur[1]) : null,
+    chain: L.chain ? new Float32Array(buf, L.chain[0], L.chain[1]) : null,
     emph: L.emph ? new Float32Array(buf, L.emph[0], L.emph[1]) : null,
   };
 }
@@ -84,9 +85,10 @@ export function samplePoints(m, o) {
   const key = norm(o.key ?? [0.25, 1, 0.45]), cam = o.cam, eye = o.eyeMid;
   const N = o.n, furFrac = o.furFrac ?? 0.12, furLen = o.furLen ?? 0.05, comb0 = norm(o.comb ?? [0, -0.25, -1]);
   const cap = Math.ceil(N * (1 + furFrac * 6) + 10);
-  const OP = new Float32Array(cap * 3), ON = new Float32Array(cap * 3), OC = new Float32Array(cap * 3), OM = new Float32Array(cap * 4);
+  const OW = new Float32Array(cap * 4), OP = new Float32Array(cap * 3), ON = new Float32Array(cap * 3), OC = new Float32Array(cap * 3), OM = new Float32Array(cap * 4);
   let k = 0, tries = 0, maxD = 0;
-  const push = (p, n, c, b, kind) => { OP.set(p, k * 3); ON.set(n, k * 3); OC.set(c, k * 3); const d = Math.hypot(...sub(p, eye)); maxD = Math.max(maxD, d); OM[k * 4] = b; OM[k * 4 + 1] = R(); OM[k * 4 + 2] = kind; OM[k * 4 + 3] = d; k++; };
+  let curW = [0, 0, 0, 0];
+  const push = (p, n, c, b, kind) => { OW.set(curW, k * 4); OP.set(p, k * 3); ON.set(n, k * 3); OC.set(c, k * 3); const d = Math.hypot(...sub(p, eye)); maxD = Math.max(maxD, d); OM[k * 4] = b; OM[k * 4 + 1] = R(); OM[k * 4 + 2] = kind; OM[k * 4 + 3] = d; k++; };
   let surf = 0;
   while (surf < N && tries < N * 40) {
     tries++;
@@ -104,6 +106,7 @@ export function samplePoints(m, o) {
     const em = m.emph ? m.emph[i0] * a + m.emph[i1] * b + m.emph[i2] * c : 0;
     const dens = (nv < -0.25 ? 0.07 : 0.1 + 0.9 * lit) * (1 + em);   // 背光、背面：稀；需要强调的部位（耳朵）更密
     if (R() > dens) continue;
+    if (m.chain) { const W = m.chain; curW = [0, 1, 2, 3].map(j => W[i0 * 4 + j] * a + W[i1 * 4 + j] * b + W[i2 * 4 + j] * c); }
     let g = gainOf[mat[i0]];
     if (VG) g *= VG[i0] * a + VG[i1] * b + VG[i2] * c;
     g *= 1 + em * 0.35;
@@ -123,5 +126,5 @@ export function samplePoints(m, o) {
     }
   }
   for (let i = 0; i < k; i++) OM[i * 4 + 3] /= maxD;
-  return { count: k, surface: surf, pos: OP.subarray(0, k * 3), nrm: ON.subarray(0, k * 3), comb: OC.subarray(0, k * 3), misc: OM.subarray(0, k * 4) };
+  return { count: k, surface: surf, pos: OP.subarray(0, k * 3), nrm: ON.subarray(0, k * 3), comb: OC.subarray(0, k * 3), misc: OM.subarray(0, k * 4), chain: OW.subarray(0, k * 4) };
 }

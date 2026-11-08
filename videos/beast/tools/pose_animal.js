@@ -36,12 +36,16 @@ const xf = i => {
 };
 bones.forEach((_, i) => xf(i));
 const P = new Float32Array(nV * 3), N = new Float32Array(nV * 3), CB = new Float32Array(nV * 3), G = new Float32Array(nV), F = new Float32Array(nV), EM = new Float32Array(nV), SD = new Float32Array(nV);
+// 专属动作的骨骼链（最多 4 根）：每个顶点按“最近的链上祖先骨骼”把蒙皮权重归到 4 个槽里，渲染时逐帧在着色器里转动
+const chainBones = (ep.action?.bones || []).map(b => b.name);
+const slotOf = bones.map((b, i) => { for (let j = i; j != null; j = bones[j].parent != null ? idx[bones[j].parent] : null) { const k = chainBones.indexOf(bones[j].name); if (k >= 0) return k; } return -1; });
+const CH = new Float32Array(nV * 4);
 const emphB = Object.fromEntries(Object.entries(pose.emphasis || {}).map(([k, v]) => [idx[k], v]));
 for (let v = 0; v < nV; v++) {
   const p = [pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]], n = [nrm[v * 3], nrm[v * 3 + 1], nrm[v * 3 + 2]], c = comb ? [comb[v * 3], comb[v * 3 + 1], comb[v * 3 + 2]] : [0, 0, -1];
   const op = [0, 0, 0], on = [0, 0, 0], oc = [0, 0, 0]; let ws = 0;
   for (let k = 0; k < 4; k++) {
-    const w = sW[v * 4 + k]; if (!w) continue; ws += w; EM[v] += (emphB[sI[v * 4 + k]] ?? 0) * w;
+    const w = sW[v * 4 + k]; if (!w) continue; ws += w; EM[v] += (emphB[sI[v * 4 + k]] ?? 0) * w; { const sl = slotOf[sI[v * 4 + k]]; if (sl >= 0) CH[v * 4 + sl] += w; }
     const T = X[sI[v * 4 + k]], a = mv(T.R, p), b = mv(T.R, n), d = mv(T.R, c);
     for (let j = 0; j < 3; j++) { op[j] += (a[j] + T.t[j]) * w; on[j] += b[j] * w; oc[j] += d[j] * w; }
   }
@@ -65,8 +69,9 @@ const eyes = meta.eyes.map(e => {
 const joints = {}; for (const b of bones) { joints[b.headJ] = tp({ bone: b.name, p: J[b.headJ] }); joints[b.tailJ] = tp({ bone: b.name, p: J[b.tailJ] }); }
 const min = [1e9, 1e9, 1e9], max = [-1e9, -1e9, -1e9];
 for (let v = 0; v < nV; v++) for (let j = 0; j < 3; j++) { min[j] = Math.min(min[j], P[v * 3 + j]); max[j] = Math.max(max[j], P[v * 3 + j]); }
-const parts = [P, N, CB, G, F, EM, index], layout = {}; let off = 0;
-['pos', 'nrm', 'comb', 'gain', 'fur', 'emph', 'index'].forEach((k, i) => { layout[k] = [off, parts[i].length]; off += parts[i].byteLength; });
+for (let v = 0; v < nV; v++) { let t = 0; for (let k = 0; k < 4; k++) t += CH[v * 4 + k]; if (t > 1) for (let k = 0; k < 4; k++) CH[v * 4 + k] /= t; }
+const parts = [P, N, CB, G, F, EM, CH, index], layout = {}; let off = 0;
+['pos', 'nrm', 'comb', 'gain', 'fur', 'emph', 'chain', 'index'].forEach((k, i) => { layout[k] = [off, parts[i].length]; off += parts[i].byteLength; });
 fs.writeFileSync(path.join(dir, name + '.bin'), Buffer.concat(parts.map(a => Buffer.from(a.buffer, a.byteOffset, a.byteLength))));
-fs.writeFileSync(path.join(dir, name + '.json'), JSON.stringify({ source: meta.source, pose, nV, nT: index.length / 3, layout, mats: [], eyes, joints, bbox: { min, max } }));
+fs.writeFileSync(path.join(dir, name + '.json'), JSON.stringify({ source: meta.source, pose, chain: (ep.action?.bones || []).map(b => ({ ...b, pivot: joints[bones[idx[b.name]].headJ] })), nV, nT: index.length / 3, layout, mats: [], eyes, joints, bbox: { min, max } }));
 console.log(`${name}: ${nV} 顶点，包围盒 ${min.map(v => v.toFixed(2))} → ${max.map(v => v.toFixed(2))}；眼睛 ${eyes.map(e => e.c.map(v => v.toFixed(3))).join(' / ')}；鼻尖 ${joints.nose.map(v => v.toFixed(2))}`);

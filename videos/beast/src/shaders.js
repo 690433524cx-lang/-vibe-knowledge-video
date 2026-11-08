@@ -25,22 +25,29 @@ export function beastMaterial(o) {
     uCol: { value: col(o.col) }, uHi: { value: col(o.hi) }, uRim: { value: col(o.rim) },
     uBright: { value: o.bright ?? 1 }, uSize: { value: o.size ?? 0.0075 }, uMaxPx: { value: 6 }, uPulse: { value: 0 }, uFlow: { value: 0 },
     uFade: { value: 1 },
+    uAct: { value: [0, 1, 2, 3].map(() => new THREE.Matrix4()) },
   };
   return new THREE.ShaderMaterial({
     uniforms: u, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
     vertexShader: /* glsl */`
-      attribute vec3 aNrm; attribute vec3 aComb; attribute vec4 aMisc;
+      attribute vec3 aNrm; attribute vec3 aComb; attribute vec4 aMisc; attribute vec4 aChain;
+      uniform mat4 uAct[4];
       uniform float uPx, uTime, uA, uLag, uGhost, uHit, uAsm0, uKick, uWind, uBright, uSize, uMaxPx, uPulse, uFlow, uFade;
       uniform vec3 uC, uAxis, uCam, uWindDir, uKey, uCol, uHi, uRim;
       varying vec3 vCol; varying float vA;
       ${COMMON}
       void main(){
         float seed = aMisc.y, kind = aMisc.z, d = aMisc.w;
-        vec3 p = position;
+        // 专属动作：骨骼链的线性蒙皮（4 根骨骼 + 不动的其余部分）
+        float wr = 1.0 - (aChain.x + aChain.y + aChain.z + aChain.w);
+        vec4 hp = vec4(position, 1.0);
+        vec3 p = position*wr + (uAct[0]*hp).xyz*aChain.x + (uAct[1]*hp).xyz*aChain.y + (uAct[2]*hp).xyz*aChain.z + (uAct[3]*hp).xyz*aChain.w;
+        vec3 n = normalize(aNrm*wr + mat3(uAct[0])*aNrm*aChain.x + mat3(uAct[1])*aNrm*aChain.y + mat3(uAct[2])*aNrm*aChain.z + mat3(uAct[3])*aNrm*aChain.w);
         // 风：毛尖吹得最远，表面只有一点点
         float furT = kind > 0.5 ? (kind > 1.5 ? 0.55 : 1.0) : 0.0;
         float ph = uTime*(5.0 + 3.0*h1(seed*4.3)) + seed*6.2832 + dot(position, vec3(4.1, 3.3, 2.7));
         p += uWindDir*uWind*(furT*0.075 + 0.004)*(0.6 + 0.4*sin(ph));
+        vec3 pAnim = p;
         p += aComb*uWind*furT*0.02*sin(ph*1.7);
         // 觉醒一刻向外弹一下
         p = uC + (p - uC)*(1.0 + uKick*(0.55 + 0.9*h1(seed*7.3)));
@@ -69,13 +76,13 @@ export function beastMaterial(o) {
         gl_Position = projectionMatrix*mv;
         float dist = max(0.05, -mv.z);
         // 光照：顶光 + 轮廓光；背面暗
-        vec3 n = aNrm, v = normalize(uCam - p);
+        vec3 v = normalize(uCam - p);
         float nv = dot(n, v), lam = max(dot(n, uKey), 0.0);
         float rim = pow(1.0 - abs(nv), 2.2)*(nv > -0.15 ? 1.0 : 0.35)*smoothstep(-0.75, -0.1, n.y);
         float fill = max(nv, 0.0);
         float lit = mix(0.26 + 0.55*lam + 0.65*fill + 0.65*rim*smoothstep(-0.1, 0.25, nv + 0.3), 1.0, moving);
         float tw = 0.74 + 0.26*sin(uTime*(6.0 + 9.0*h1(seed*8.1)) + seed*40.0);
-        float flow = 1.0 + uFlow*0.45*pow(0.5 + 0.5*sin(dot(position - uC, vec3(0.0, 1.2, 2.6))*2.2 + uTime*3.2), 8.0);
+        float flow = 1.0 + uFlow*0.45*pow(0.5 + 0.5*sin(dot(pAnim - uC, vec3(0.0, 1.2, 2.6))*2.2 + uTime*3.2), 8.0);
         float b = aMisc.x*lit*uBright*tw*flow*(1.0 + uPulse*0.18)*(1.0 + moving*3.5);
         if (kind > 0.5) b *= 0.85;
         vec3 c = mix(uCol, uHi, clamp(lam*1.05 - 0.05, 0.0, 1.0)*0.8);

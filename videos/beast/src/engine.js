@@ -9,6 +9,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { beastMaterial, fxPointsMaterial, glowMaterial, FinalShader, SHARED } from './shaders.js';
 import { loadMesh, samplePoints } from './sample.js';
 import { buildFX } from './fx.js';
+import { makeAction } from './action.js';
 import { clamp, lerp, smooth, outCubic, hash, rng, D2R, mixHex } from './util.js';
 
 export const HIT = 2.0;            // 觉醒时刻（觉醒时间）
@@ -53,7 +54,7 @@ export async function initEngine(canvas, ep, { W, H, mode, beat }) {
     matGain: S.matGain ?? { Main: 0.95, Main_Light: 1.2, Nose: 0.3, Eyes_Black: 0.15 }, skipMat: S.skipMat ?? ['Eyes_Black'],
   });
   E.count = pts.count; E.surface = pts.surface;
-  const g = geo({ position: [pts.pos, 3], aNrm: [pts.nrm, 3], aComb: [pts.comb, 3], aMisc: [pts.misc, 4] });
+  const g = geo({ position: [pts.pos, 3], aNrm: [pts.nrm, 3], aComb: [pts.comb, 3], aMisc: [pts.misc, 4], aChain: [pts.chain, 4] });
   const hex = ep.color;
   const matOpts = { col: hex, hi: mixHex(hex, '#FFFFFF', 0.72), rim: mixHex(hex, '#FFFFFF', 0.35), bright: ep.bright ?? 1.7, size: 0.0068 };
   E.beast = addPoints(g, beastMaterial(matOpts), 5);
@@ -104,6 +105,37 @@ export async function initEngine(canvas, ep, { W, H, mode, beat }) {
     }), 2);
     E.ground.position.set(0, 0, 0);
   }
+  // ---- 专属动作 + 叫声的涟漪
+  E.act = makeAction(meta, ep, HIT, beat);
+  if (E.act) {
+    const V = ep.action.voice ?? { rings: 4, gap: 0.5 }, nr = V.rings, per = 5000, P = new Float32Array(nr * per * 3), M = new Float32Array(nr * per * 4);
+    for (let k = 0; k < nr; k++) for (let i = 0; i < per; i++) { const j = k * per + i; M.set([0.7 + 0.6 * hash(j * 1.7), hash(j * 2.3), k, i / per * Math.PI * 2], j * 4); }
+    E.ripples = addPoints(geo({ position: [P, 3], aMisc: [M, 4] }), fxPointsMaterial({
+      col: mixHex(hex, '#FFFFFF', 0.35), hi: '#FFFFFF', size: 0.013, maxPx: 4, bright: 1.3,
+      uniforms: { uA: { value: 0 }, uH: { value: HIT }, uGap: { value: V.gap * beat }, uO: { value: new THREE.Vector3() }, uD: { value: new THREE.Vector3(0, 1, 0) }, uE1: { value: new THREE.Vector3(1, 0, 0) }, uE2: { value: new THREE.Vector3(0, 0, 1) } },
+      uniformDecl: 'uniform float uA, uH, uGap; uniform vec3 uO, uD, uE1, uE2;',
+      posHook: `
+        float k = aMisc.z, tau = uA - (uH + k*uGap), life = 1.5;
+        vis = step(0.0, tau)*step(tau, life);
+        // 朝向镜头的弧（像“(((”），只画朝月亮那一侧的大半圈；圆心沿屏幕方向往月亮走，同时变大
+        float r = 0.12 + 0.95*tau + (h1(aMisc.y*5.3) - 0.5)*0.05*(1.0 + tau);
+        vec2 cs = vec2(cos(aMisc.w), sin(aMisc.w));
+        p = uO + uD*(0.55*tau) + (uE1*cs.x + uE2*cs.y)*r;
+        float side = smoothstep(0.15, 0.75, cs.x);
+        float f = clamp(tau/life, 0.0, 1.0); b *= side*pow(1.0 - f, 1.3)*(0.75 + 0.25*h1(aMisc.y*9.0)); hot = 1.0 - f*1.6; sz = 1.0 + 0.6*(1.0 - f);`,
+    }), 46);
+    // 月亮放在嚎叫的方向上：从嘴沿嚎叫方向在屏幕上走 moonPx 像素，深度在头后面 moonDepth
+    const m = E.act.mouth(1), hc = heroCam(HIT + 1.5);
+    const cam = new THREE.PerspectiveCamera(hc.fov, W / H, 0.05, 200); cam.position.copy(hc.pos); cam.lookAt(hc.target); cam.updateMatrixWorld(); cam.updateProjectionMatrix();
+    const s0 = m.pos.clone().project(cam), s1 = m.pos.clone().addScaledVector(m.dir, 0.3).project(cam);
+    const d = new THREE.Vector2((s1.x - s0.x) * W, (s1.y - s0.y) * H).normalize();
+    const px = (mode === 'card' ? ep.cardMoonPx : ep.moonPx) ?? 560;
+    const sx = s0.x + d.x * px * 2 / W, sy = s0.y + d.y * px * 2 / H;
+    const ray = new THREE.Vector3(sx, sy, 0.5).unproject(cam).sub(cam.position).normalize();
+    const depth = C.distanceTo(cam.position) + (ep.moonDepth ?? 7);
+    const fwd0 = new THREE.Vector3(); cam.getWorldDirection(fwd0);
+    E.moonPos = cam.position.clone().addScaledVector(ray, depth / ray.dot(fwd0));
+  }
   // ---- 专属特效
   E.fx = buildFX(ep.fx, { E, THREE, addPoints, addGlow, geo, C, hex });
   return E;
@@ -150,8 +182,12 @@ export function frame(a, t) {
   // ---- 动物
   const kick = after ? 0.075 * (da / 0.07) * Math.exp(1 - da / 0.07) : 0;
   const wind = after ? smooth(0, 0.35, da) * (0.85 + 0.25 * pulse) : 0;
+  // 专属动作的骨骼矩阵
+  const aw = E.act ? E.act.weight(a) : 0;
+  const mats = E.act ? E.act.pose(aw) : null;
   for (const p of [E.beast, ...E.ghosts]) {
     const u = p.material.uniforms;
+    if (mats) u.uAct.value.forEach((m, i) => m.copy(mats[i]));
     u.uA.value = a; u.uAsm0.value = E.asm0; u.uC.value.copy(E.C); u.uAxis.value.copy(fwd).negate(); u.uCam.value.copy(E.camera.position);
     u.uKick.value = kick; u.uWind.value = wind; u.uPulse.value = pulse * after; u.uFlow.value = after ? smooth(0, 0.6, da) : 0.25;
     u.uWindDir.value.set(...(ep.windDir ?? [0.15, 0.2, -1])).normalize();
@@ -165,10 +201,11 @@ export function frame(a, t) {
   else if (a > 1.5) eyeI += 0.25 * smooth(1.5, HIT, a);
   const qn = E.camera.quaternion;
   E.eyeGlows.forEach((g, i) => {
-    const e = E.eyes[i];
+    const e = mats ? E.eyes[i].clone().applyMatrix4(mats[E.act.headSlot]) : E.eyes[i];
     g.position.copy(e).add(new THREE.Vector3(0, 0.0, 0.03)).addScaledVector(fwd, -0.05);
     // 远侧的眼睛被吻部挡住一部分：按眼睛朝向镜头的程度变暗变小
-    const z = E.meta.eyes[i].z, toCam = E.camera.position.clone().sub(e).normalize();
+    const z0 = new THREE.Vector3(...E.meta.eyes[i].z); if (mats) z0.transformDirection(mats[E.act.headSlot]);
+    const z = [z0.x, z0.y, z0.z], toCam = E.camera.position.clone().sub(e).normalize();
     const vis = clamp(0.35 + 0.9 * (z[0] * toCam.x + z[1] * toCam.y + z[2] * toCam.z), 0.3, 1);
     g.userData.vis = vis;
     g.material.uniforms.uInt.value = eyeI * vis; g.material.uniforms.uFlare.value = flare * vis;
@@ -196,6 +233,15 @@ export function frame(a, t) {
   const su = E.sparks.material.uniforms; su.uT.value = after ? da : -1; su.uO.value.copy(behind); su.uR0.value = 0.9; su.uRight.value.copy(right); su.uUp.value.copy(up);
   // 地面冲击波
   const gu = E.ground.material.uniforms; gu.uWave.value = after ? da * 7.5 : -1; gu.uO.value.set(E.C.x, E.groundY, E.C.z - 0.4); gu.uBase.value = after ? smooth(0, 0.6, da) * (0.6 + 0.4 * pulse) : 0;
+  // 叫声的涟漪：从嘴部向月亮扩散
+  if (E.ripples) {
+    const m = E.act.mouth(aw), ru = E.ripples.material.uniforms;
+    // 屏幕平面里指向月亮的方向（去掉深度分量）
+    const D = (E.moonPos ? E.moonPos.clone().sub(m.pos) : m.dir.clone()); D.addScaledVector(fwd, -D.dot(fwd)).normalize();
+    const e1 = D.clone(), e2 = new THREE.Vector3().crossVectors(fwd, D).normalize();
+    ru.uA.value = a; ru.uO.value.copy(m.pos); ru.uD.value.copy(D); ru.uE1.value.copy(e1); ru.uE2.value.copy(e2);
+    E.act.pose(aw);
+  }
   // 公告板朝向镜头
   for (const g of E.glows) if (g.userData.billboard) g.quaternion.copy(qn);
   // ---- 特效
@@ -219,8 +265,9 @@ export function toScreen(v) { const p = v.clone().project(E.camera); return [(p.
 export function faceBox() {
   const J = E.meta.joints || {};
   const names = ['nose', 'occiput', 'earTipL', 'earTipR', 'jawTip', 'jawHinge'].filter(n => J[n]);
-  const pts = [...names.map(n => toScreen(new THREE.Vector3(...J[n]))), ...E.eyes.map(e => toScreen(e))];
+  const hm = E.act ? E.act.mats[E.act.headSlot] : null, tr = v => hm ? v.applyMatrix4(hm) : v;
+  const pts = [...names.map(n => toScreen(tr(new THREE.Vector3(...J[n])))), ...E.eyes.map(e => toScreen(tr(e.clone())))];
   const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
   const pad = 0.06 * (Math.max(...ys) - Math.min(...ys));
-  return { x0: Math.min(...xs) - pad, x1: Math.max(...xs) + pad, y0: Math.min(...ys) - pad, y1: Math.max(...ys) + pad, eyes: E.eyes.map(e => toScreen(e)) };
+  return { x0: Math.min(...xs) - pad, x1: Math.max(...xs) + pad, y0: Math.min(...ys) - pad, y1: Math.max(...ys) + pad, eyes: E.eyes.map(e => toScreen(tr(e.clone()))) };
 }
