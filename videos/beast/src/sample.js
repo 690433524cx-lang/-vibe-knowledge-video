@@ -18,8 +18,12 @@ export function loadMesh(meta, buf) {
     meta,
     pos: new Float32Array(buf, L.pos[0] * 1, L.pos[1]),
     nrm: new Float32Array(buf, L.nrm[0], L.nrm[1]),
-    mat: new Uint8Array(buf, L.mat[0], L.mat[1]),
+    mat: L.mat ? new Uint8Array(buf, L.mat[0], L.mat[1]) : new Uint8Array(L.pos[1] / 3),
     index: new Uint32Array(buf, L.index[0], L.index[1]),
+    comb: L.comb ? new Float32Array(buf, L.comb[0], L.comb[1]) : null,
+    gain: L.gain ? new Float32Array(buf, L.gain[0], L.gain[1]) : null,
+    fur: L.fur ? new Float32Array(buf, L.fur[0], L.fur[1]) : null,
+    emph: L.emph ? new Float32Array(buf, L.emph[0], L.emph[1]) : null,
   };
 }
 
@@ -70,7 +74,8 @@ export function samplePoints(m, o) {
   const { cn, fa } = cornerNormals(m);
   const P = i => [pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]];
   const skip = new Set((o.skipMat || []).map(n => meta.mats.indexOf(n)));
-  const gainOf = meta.mats.map(n => (o.matGain || {})[n] ?? 1);
+  const gainOf = meta.mats.length ? meta.mats.map(n => (o.matGain || {})[n] ?? 1) : [1];
+  const VG = m.gain, VC = m.comb, VF = m.fur;
   // 按面积的累积分布
   const cdf = new Float64Array(nT); let tot = 0;
   for (let f = 0; f < nT; f++) { const mm = mat[index[f * 3]]; tot += skip.has(mm) ? 0 : fa[f]; cdf[f] = tot; }
@@ -96,15 +101,20 @@ export function samplePoints(m, o) {
     const lam = Math.max(0, dot(n, key));
     const rim = Math.pow(1 - Math.abs(nv), 2.0) * (nv > -0.15 ? 1 : 0.35);
     const lit = clamp(0.8 * lam + 1.1 * rim + 0.08);
-    const dens = nv < -0.25 ? 0.07 : 0.1 + 0.9 * lit;   // 背光、背面：稀
+    const em = m.emph ? m.emph[i0] * a + m.emph[i1] * b + m.emph[i2] * c : 0;
+    const dens = (nv < -0.25 ? 0.07 : 0.1 + 0.9 * lit) * (1 + em);   // 背光、背面：稀；需要强调的部位（耳朵）更密
     if (R() > dens) continue;
-    const g = gainOf[mat[i0]];
+    let g = gainOf[mat[i0]];
+    if (VG) g *= VG[i0] * a + VG[i1] * b + VG[i2] * c;
+    g *= 1 + em * 0.35;
     surf++;
-    // 梳毛方向：把“向后略向下”投到切平面
-    const cb = norm(sub(comb0, mul(n, dot(comb0, n))));
+    // 梳毛方向：模型自带的梳毛方向；没有就用“向后略向下”投到切平面
+    const cv = VC ? [VC[i0 * 3] * a + VC[i1 * 3] * b + VC[i2 * 3] * c, VC[i0 * 3 + 1] * a + VC[i1 * 3 + 1] * b + VC[i2 * 3 + 1] * c, VC[i0 * 3 + 2] * a + VC[i1 * 3 + 2] * b + VC[i2 * 3 + 2] * c] : comb0;
+    const cb = norm(sub(cv, mul(n, dot(cv, n))));
+    const furHere = VF ? Math.max(0.004, (VF[i0] * a + VF[i1] * b + VF[i2] * c)) * (o.furScale ?? 1) : furLen;
     push(p, n, cb, g * (0.85 + 0.3 * R()), 0);
-    if (g > 0.6 && R() < furFrac * (0.6 + 1.4 * rim)) {
-      const L = furLen * (0.5 + R());
+    if (g > 0.4 && R() < furFrac * (0.6 + 1.4 * rim)) {
+      const L = furHere * (0.5 + R());
       const bend = 0.6 + 0.6 * R();
       for (let s = 1; s <= 3; s++) {
         const u = s / 3;

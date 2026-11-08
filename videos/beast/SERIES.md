@@ -65,7 +65,7 @@
 
 ## 7. 觉醒出场（每只动物都用，约 3 秒，卡在音乐上）
 
-以“觉醒时刻” H（= 某小节第一拍）为基准，其余时间都相对 H：
+以“觉醒时刻” H（= 某小节第一拍）为基准，其余时间都相对 H。实际实现按拍子取整：眼睛从 H 前 3 拍左右开始（90 BPM 时正好 2.0 秒），汇聚从 H 前 2 拍开始，天赋词落在 H 后的三个十六分音符上：
 
 | 时间 | 画面 |
 |---|---|
@@ -117,6 +117,7 @@ videos/beast/
   assets/models/       姿势固定后的网格（由 tools/gltf_to_mesh.js 生成）
   assets/fonts/        Cinzel（OFL）
   src/                 引擎：粒子、特效、文字、收藏卡
+  beats.json           音乐节拍（tools/beats.py 生成）
   index.html           渲染页面（?ep=wolf&mode=video|still|card）
   stills.js render.js  截图与出片
   qa.js                质量检查

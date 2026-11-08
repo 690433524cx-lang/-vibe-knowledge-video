@@ -25,7 +25,7 @@ export function addGlow(mode, color, size, order = 10, o = {}) {
 }
 
 export async function initEngine(canvas, ep, { W, H, mode, beat }) {
-  E.ep = ep; E.mode = mode; E.W = W; E.H = H; E.beat = beat; E.mats = []; E.glows = [];
+  E.ep = ep; E.mode = mode; E.W = W; E.H = H; E.beat = beat; E.asm0 = arguments[2].asm0 ?? 0.5; E.mats = []; E.glows = [];
   const renderer = new THREE.WebGLRenderer({ canvas, preserveDrawingBuffer: true, antialias: false, alpha: false });
   renderer.setPixelRatio(1); renderer.setSize(W, H, false); renderer.setClearColor(0x000000, 1);
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(32, W / H, 0.05, 200);
@@ -49,7 +49,7 @@ export async function initEngine(canvas, ep, { W, H, mode, beat }) {
   const S = ep.sample ?? {};
   const pts = samplePoints(mesh, {
     n: S.n ?? 230000, seed: 11, cam: camHero.pos.toArray(), eyeMid: C.toArray(), key: [0.25, 1, 0.45],
-    furFrac: S.furFrac ?? 0.08, furLen: S.furLen ?? 0.06, comb: S.comb ?? [0, -0.3, -1], bulge: S.bulge ?? 1,
+    furFrac: S.furFrac ?? 0.08, furLen: S.furLen ?? 0.06, furScale: S.furScale, comb: S.comb ?? [0, -0.3, -1], bulge: S.bulge ?? 1,
     matGain: S.matGain ?? { Main: 0.95, Main_Light: 1.2, Nose: 0.3, Eyes_Black: 0.15 }, skipMat: S.skipMat ?? ['Eyes_Black'],
   });
   E.count = pts.count; E.surface = pts.surface;
@@ -58,8 +58,8 @@ export async function initEngine(canvas, ep, { W, H, mode, beat }) {
   const matOpts = { col: hex, hi: mixHex(hex, '#FFFFFF', 0.72), rim: mixHex(hex, '#FFFFFF', 0.35), bright: ep.bright ?? 1.7, size: 0.0068 };
   E.beast = addPoints(g, beastMaterial(matOpts), 5);
   // 拖尾：同一批粒子，时间往回错开几帧、只画一部分、越来越暗；只在汇聚途中可见
-  E.ghosts = [0.035, 0.07, 0.11, 0.16].map((lag, i) => {
-    const gm = beastMaterial(matOpts); gm.uniforms.uLag.value = lag; gm.uniforms.uGhost.value = 0.5 + [0.5, 0.34, 0.22, 0.12][i];
+  E.ghosts = Array.from({ length: 10 }, (_, i) => 0.022 * (i + 1)).map((lag, i) => {
+    const gm = beastMaterial(matOpts); gm.uniforms.uLag.value = lag; gm.uniforms.uGhost.value = 0.5 + 0.55 * Math.pow(1 - i / 10, 1.6);
     const p = addPoints(g, gm, 4); p.geometry = g.clone(); p.geometry.setDrawRange(0, Math.floor(pts.count * 0.45)); return p;
   });
 
@@ -152,13 +152,14 @@ export function frame(a, t) {
   const wind = after ? smooth(0, 0.35, da) * (0.85 + 0.25 * pulse) : 0;
   for (const p of [E.beast, ...E.ghosts]) {
     const u = p.material.uniforms;
-    u.uA.value = a; u.uC.value.copy(E.C); u.uAxis.value.copy(fwd).negate(); u.uCam.value.copy(E.camera.position);
+    u.uA.value = a; u.uAsm0.value = E.asm0; u.uC.value.copy(E.C); u.uAxis.value.copy(fwd).negate(); u.uCam.value.copy(E.camera.position);
     u.uKick.value = kick; u.uWind.value = wind; u.uPulse.value = pulse * after; u.uFlow.value = after ? smooth(0, 0.6, da) : 0.25;
     u.uWindDir.value.set(...(ep.windDir ?? [0.15, 0.2, -1])).normalize();
   }
-  for (const p of E.ghosts) p.visible = a > 0.45 && a < HIT + 0.05;
+  for (const p of E.ghosts) p.visible = a > E.asm0 - 0.05 && a < HIT + 0.05;
   // ---- 眼睛：第 0 帧就亮着；觉醒时冲到最亮再回落
-  let eyeI = lerp(0.62, 0.8, smooth(0, 0.5, a)) + 0.05 * Math.sin(a * 9);
+  let eyeI = lerp(0.3, 0.85, smooth(0, E.asm0, a)) + 0.05 * Math.sin(a * 9);
+  const eyeOpen = lerp(0.1, 1, smooth(0.02, E.asm0 * 0.85, a));   // 片头：眼睛从一条缝慢慢睁开
   let flare = 0.15;
   if (after) { const sp = Math.exp(-da / 0.09); eyeI = 1.0 + 1.5 * sp + 0.08 * pulse; flare = 0.35 + 1.6 * sp + 0.15 * pulse; }
   else if (a > 1.5) eyeI += 0.25 * smooth(1.5, HIT, a);
@@ -166,9 +167,13 @@ export function frame(a, t) {
   E.eyeGlows.forEach((g, i) => {
     const e = E.eyes[i];
     g.position.copy(e).add(new THREE.Vector3(0, 0.0, 0.03)).addScaledVector(fwd, -0.05);
-    g.material.uniforms.uInt.value = eyeI; g.material.uniforms.uFlare.value = flare;
+    // 远侧的眼睛被吻部挡住一部分：按眼睛朝向镜头的程度变暗变小
+    const z = E.meta.eyes[i].z, toCam = E.camera.position.clone().sub(e).normalize();
+    const vis = clamp(0.35 + 0.9 * (z[0] * toCam.x + z[1] * toCam.y + z[2] * toCam.z), 0.3, 1);
+    g.userData.vis = vis;
+    g.material.uniforms.uInt.value = eyeI * vis; g.material.uniforms.uFlare.value = flare * vis;
     const s = (0.5 + 0.18 * (after ? Math.exp(-da / 0.12) : 0)) * (E.mode === 'card' ? 1.2 : 1);
-    g.scale.setScalar(s);
+    g.scale.setScalar(s * (0.6 + 0.4 * g.userData.vis)); g.scale.y *= eyeOpen; g.scale.x *= lerp(1.6, 1, eyeOpen);
   });
   // ---- 光环：觉醒一刻在头后面炸开，之后留一圈细光环随拍呼吸
   const behind = E.C.clone().addScaledVector(fwd, 1.6).addScaledVector(up, 0.12);
@@ -177,16 +182,16 @@ export function frame(a, t) {
     const k = outCubic(da / 0.6);
     E.ringBurst.visible = E.ringBurst2.visible = true;
     E.ringBurst.position.copy(behind); E.ringBurst2.position.copy(behind);
-    E.ringBurst.scale.setScalar(lerp(0.6, 5.2, k)); E.ringBurst2.scale.setScalar(lerp(0.5, 3.8, outCubic(da / 0.75)));
-    rb.uRing.value = 0.62; rb.uWidth.value = lerp(0.03, 0.012, k); rb.uInt.value = 1.6 * Math.pow(1 - clamp(da / 0.75), 1.6);
-    rb2.uRing.value = 0.62; rb2.uWidth.value = 0.05; rb2.uInt.value = 0.55 * Math.pow(1 - clamp(da / 0.9), 2);
+    E.ringBurst.scale.setScalar(lerp(2.2, 6.5, k)); E.ringBurst2.scale.setScalar(lerp(2.0, 4.6, outCubic(da / 0.75)));
+    rb.uRing.value = 0.62; rb.uWidth.value = lerp(0.018, 0.008, k); rb.uInt.value = 0.7 * Math.pow(1 - clamp(da / 0.7), 1.6);
+    rb2.uRing.value = 0.62; rb2.uWidth.value = 0.035; rb2.uInt.value = 0.18 * Math.pow(1 - clamp(da / 0.9), 2);
   } else E.ringBurst.visible = E.ringBurst2.visible = false;
   const rs = E.ringStay.material.uniforms;
   E.ringStay.visible = after === 1;
-  E.ringStay.position.copy(behind); E.ringStay.scale.setScalar(3.1 + 0.05 * pulse);
+  E.ringStay.position.copy(behind); E.ringStay.scale.setScalar(2.4 + 0.04 * pulse);
   rs.uRing.value = 0.62; rs.uWidth.value = 0.006; rs.uInt.value = (0.2 + 0.16 * pulse) * smooth(0.05, 0.4, da);
   E.backGlow.position.copy(behind); E.backGlow.scale.setScalar(4.4);
-  E.backGlow.material.uniforms.uInt.value = after ? (0.03 + 0.06 * Math.exp(-da / 0.25) + 0.01 * pulse) : 0.012 * smooth(0.5, HIT, a);
+  E.backGlow.material.uniforms.uInt.value = after ? (0.012 + 0.025 * Math.exp(-da / 0.25) + 0.006 * pulse) : 0.008 * smooth(0.5, HIT, a);
   // 火花
   const su = E.sparks.material.uniforms; su.uT.value = after ? da : -1; su.uO.value.copy(behind); su.uR0.value = 0.9; su.uRight.value.copy(right); su.uUp.value.copy(up);
   // 地面冲击波
@@ -203,7 +208,7 @@ export function frame(a, t) {
   fu.uGlowR.value = E.mode === 'card' ? 0.42 : 0.36;
   fu.uGlowI.value = (0.012 + 0.01 * smooth(0.5, HIT, a)) + after * (0.012 + 0.03 * Math.exp(-da / 0.3) + 0.006 * pulse);
   fu.uShift.value.set(0, 0);
-  E.bloom.strength = 0.55 + (after ? 0.25 * Math.exp(-da / 0.2) : 0);
+  E.bloom.strength = 0.55 + (after ? 0.15 * Math.exp(-da / 0.15) : 0);
   for (const m of E.mats) if (m.uniforms.uTime && m.uniforms.uTime !== SHARED.uTime) m.uniforms.uTime.value = t;
   E.composer.render();
 }
@@ -212,10 +217,10 @@ export function frame(a, t) {
 export function toScreen(v) { const p = v.clone().project(E.camera); return [(p.x * 0.5 + 0.5) * E.W, (-p.y * 0.5 + 0.5) * E.H, p.z]; }
 // 脸的屏幕包围框（眼睛 + 口鼻 + 耳朵的大致范围），给文字避让检查用
 export function faceBox() {
-  const pts = [];
-  const { min, max } = E.meta.bbox;
-  const C = E.C;
-  for (const dx of [-0.42, 0.42]) for (const dy of [-0.38, 0.5]) for (const dz of [-0.35, 0.45]) pts.push(toScreen(new THREE.Vector3(C.x + dx, C.y + dy, C.z + dz)));
+  const J = E.meta.joints || {};
+  const names = ['nose', 'occiput', 'earTipL', 'earTipR', 'jawTip', 'jawHinge'].filter(n => J[n]);
+  const pts = [...names.map(n => toScreen(new THREE.Vector3(...J[n]))), ...E.eyes.map(e => toScreen(e))];
   const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
-  return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys), eyes: E.eyes.map(e => toScreen(e)) };
+  const pad = 0.06 * (Math.max(...ys) - Math.min(...ys));
+  return { x0: Math.min(...xs) - pad, x1: Math.max(...xs) + pad, y0: Math.min(...ys) - pad, y1: Math.max(...ys) + pad, eyes: E.eyes.map(e => toScreen(e)) };
 }

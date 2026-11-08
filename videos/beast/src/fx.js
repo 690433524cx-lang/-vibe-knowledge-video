@@ -58,8 +58,9 @@ function moon(X) {
   return {
     update(a, s) {
       const k = appear(s);
-      const pos = X.C.clone().addScaledVector(s.fwd, 7.5).addScaledVector(s.up, 1.25).addScaledVector(s.right, -1.0);
-      face(g, X, pos, 1.55);
+      const mo = (X.E.mode === 'card' ? X.E.ep.cardMoon : null) ?? X.E.ep.moon ?? [3.3, 2.0, 7.5];
+      const pos = X.C.clone().addScaledVector(s.fwd, mo[2]).addScaledVector(s.up, mo[1]).addScaledVector(s.right, mo[0]);
+      face(g, X, pos, X.E.ep.moonR ?? 1.3);
       mat.uniforms.uK.value = k; mat.uniforms.uP.value = s.pulse * s.after;
       g.visible = k > 0.001;
       halo.position.copy(pos); halo.scale.setScalar(5.2); halo.material.uniforms.uInt.value = 0.05 * k * (1 + 0.15 * s.pulse);

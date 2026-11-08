@@ -2,7 +2,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.obj': 'text/plain', '.bin': 'application/octet-stream', '.ttf': 'font/ttf', '.png': 'image/png' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.mjs': 'text/javascript', '.json': 'application/json', '.obj': 'text/plain', '.html': 'text/html; charset=utf-8', '.bin': 'application/octet-stream', '.ttf': 'font/ttf', '.png': 'image/png' };
 function serve(root) {
   return new Promise(resolve => {
     const srv = http.createServer((req, res) => {

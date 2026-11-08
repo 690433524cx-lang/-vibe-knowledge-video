@@ -170,7 +170,7 @@ export function cardOverlay(ctx, gl, ep, a, T) {
   talents(ctx, ep.talents, W / 2, 1100, hex, [0, 0, 0], 10);
   ctx.save(); ctx.font = `700 40px ${CJK}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(225,223,235,0.82)';
   ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 8;
-  ctx.fillText(`“${ep.quote}”`, W / 2, 1186); const qw = ctx.measureText(`“${ep.quote}”`).width; box(W / 2 - qw / 2, 1164, W / 2 + qw / 2, 1208, 'quote');
+  ctx.fillText(`“${ep.quote}”`, W / 2, 1172); const qw = ctx.measureText(`“${ep.quote}”`).width; box(W / 2 - qw / 2, 1150, W / 2 + qw / 2, 1194, 'quote');
   ctx.restore();
-  logo(ctx, hex, X0 + 34, Y0 + CH - 76, 26);
+  logo(ctx, hex, X0 + 34, Y0 + CH - 62, 24);
 }

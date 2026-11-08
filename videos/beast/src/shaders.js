@@ -46,19 +46,24 @@ export function beastMaterial(o) {
         p = uC + (p - uC)*(1.0 + uKick*(0.55 + 0.9*h1(seed*7.3)));
         // 汇聚：从眼睛开始向外，四面八方的粒子沿旋涡被吸过来，越来越快
         float a = uA - uLag;
-        float ts = uAsm0 + d*0.72 + h1(seed*3.1)*0.28;
+        float span = uHit - uAsm0;
+        float ts = uAsm0 + (d*0.55 + h1(seed*3.1)*0.2)*span;
         float te = ts + (uHit - 0.035 - ts)*(0.72 + 0.28*h1(seed*5.7));
         float k = clamp((a - ts)/max(te - ts, 0.01), 0.0, 1.0);
         float vis = step(ts, a)*uFade;
         float moving = 0.0;
         if (k < 1.0) {
           float e = pow(k, 2.3);
-          vec3 dir = normalize(h3(seed*13.7) - 0.5);
-          vec3 rel0 = dir*(3.2 + 5.5*h1(seed*9.1));
-          rel0 = rotAxis(rel0, uAxis, (1.0 - e)*(2.6 + 2.8*h1(seed*2.9)));
+          // 起点在镜头前的一个圆盘上（垂直于视线），再绕视线旋转：屏幕上是清楚的旋涡
+          vec3 ax = normalize(uAxis), t1 = normalize(cross(ax, vec3(0.0, 1.0, 0.0))), t2 = cross(ax, t1);
+          float ang = h1(seed*13.7)*6.2832, rad = 0.75 + 2.5*pow(h1(seed*9.1), 0.8);
+          vec3 rel0 = (t1*cos(ang) + t2*sin(ang))*rad + ax*(h1(seed*6.3) - 0.5)*1.5;
+          rel0 = rotAxis(rel0, ax, (1.0 - e)*(3.5 + 2.5*h1(seed*2.9)));
           p = uC + mix(rel0, p - uC, e);
-          vis *= smoothstep(0.0, 0.1, k);
-          moving = 1.0 - e;
+          // 只有一成的粒子在途中就亮（像彗星，带拖尾），其余的快到时才显出来，画面不会糊成一片雾
+          float comet = step(h1(seed*21.1), 0.1);
+          vis *= smoothstep(0.0, 0.1, k)*mix(smoothstep(0.72, 0.97, k), 1.0, comet);
+          moving = (1.0 - e)*(0.35 + 0.65*comet);
         } else if (uGhost > 0.5) vis = 0.0;
         vec4 mv = modelViewMatrix*vec4(p, 1.0);
         gl_Position = projectionMatrix*mv;
@@ -66,17 +71,17 @@ export function beastMaterial(o) {
         // 光照：顶光 + 轮廓光；背面暗
         vec3 n = aNrm, v = normalize(uCam - p);
         float nv = dot(n, v), lam = max(dot(n, uKey), 0.0);
-        float rim = pow(1.0 - abs(nv), 2.2)*(nv > -0.15 ? 1.0 : 0.35);
+        float rim = pow(1.0 - abs(nv), 2.2)*(nv > -0.15 ? 1.0 : 0.35)*smoothstep(-0.75, -0.1, n.y);
         float fill = max(nv, 0.0);
-        float lit = mix(0.16 + 0.55*lam + 0.42*fill + 0.95*rim, 1.0, moving);
+        float lit = mix(0.26 + 0.55*lam + 0.65*fill + 0.65*rim*smoothstep(-0.1, 0.25, nv + 0.3), 1.0, moving);
         float tw = 0.74 + 0.26*sin(uTime*(6.0 + 9.0*h1(seed*8.1)) + seed*40.0);
         float flow = 1.0 + uFlow*0.45*pow(0.5 + 0.5*sin(dot(position - uC, vec3(0.0, 1.2, 2.6))*2.2 + uTime*3.2), 8.0);
-        float b = aMisc.x*lit*uBright*tw*flow*(1.0 + uPulse*0.18)*(1.0 + moving*0.7);
+        float b = aMisc.x*lit*uBright*tw*flow*(1.0 + uPulse*0.18)*(1.0 + moving*3.5);
         if (kind > 0.5) b *= 0.85;
         vec3 c = mix(uCol, uHi, clamp(lam*1.05 - 0.05, 0.0, 1.0)*0.8);
         c = mix(c, uRim, clamp(rim*1.3, 0.0, 1.0)*0.7);
         c = mix(c, uRim, moving*0.6);
-        float px = uSize*uPx/dist*(kind > 0.5 ? 0.85 : 1.0)*(1.0 + moving*0.5);
+        float px = uSize*uPx/dist*(kind > 0.5 ? 0.85 : 1.0)*(1.0 + moving*1.2);
         if (px < 1.5) { b *= px/1.5; px = 1.5; }
         if (px > uMaxPx) { b *= uMaxPx/px; px = uMaxPx; }
         gl_PointSize = px;
