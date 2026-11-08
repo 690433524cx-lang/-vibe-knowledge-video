@@ -130,12 +130,12 @@ export function videoOverlay(ctx, t, ep, T) {
   const hex = ep.color, W = 1920;
   logo(ctx, hex);
   // 片尾回到第 0 帧：标题淡出，概念大字淡入
-  const back = smooth(T.cardBack + 0.15, T.clip - 0.06, t);
+  const back = smooth(T.cards.gather, T.cards.end + 0.1, t);
   const outT = 1 - smooth(T.outro, T.outro + 0.35, t);
   // 概念大字：第 0 帧到主角卡升起那一拍保持不动；然后换成“INFJ 是——”（觉醒那一拍消失）
-  const cA = t < T.lift ? 1 : back;
+  const cA = t < T.cards.pop ? 1 : back;
   if (cA > 0.003) { ctx.save(); ctx.globalAlpha = cA; richLine(ctx, ep.concept, W / 2, ep.conceptY ?? 112, 64, hex, { label: '概念大字' }); ctx.restore(); }
-  if (t >= T.lift && t < T.hit) { const k = smooth(T.lift, T.lift + 0.08, t); ctx.save(); ctx.globalAlpha = k; richLine(ctx, ep.revealText, W / 2, ep.conceptY ?? 112, 72, hex, { label: '揭晓' }); ctx.restore(); }
+  if (t >= T.cards.pop && t < T.reveal) { const k = smooth(T.cards.pop, T.cards.pop + 0.08, t); ctx.save(); ctx.globalAlpha = k; richLine(ctx, ep.revealText, W / 2, ep.conceptY ?? 112, 72, hex, { label: '揭晓' }); ctx.restore(); }
   // 嚎叫结束的那一拍：左下方大字“类型 · 动物名”；下一拍：一句话
   const L = ep.textLeft ?? [100, 830];
   if (t >= T.title && outT > 0.003) {
@@ -211,6 +211,6 @@ export function cardOverlay(ctx, gl, ep, a, T) {
   const mT = metalRun([{ text: ep.type, font: `900 150px ${LATIN}`, gap: 24 }, { text: '·', font: `900 130px ${CJK}`, gap: 24, fill: hex }, { text: ep.animal.zh, font: `900 150px ${CJK}` }], 150, hex, null);
   const ts = Math.min(0.82, 560 / mT.tw), tx = X0 + 50;
   blitMetal(ctx, mT, tx + mT.tw * ts / 2, 1070, ts, 1, hex, 24); box(tx, 1070 - 128 * ts, tx + mT.tw * ts, 1070 + 18 * ts, '大字');
-  ctx.save(); richLine(ctx, ep.line, tx + 6, 1160, 40, hex, { align: 'left', weight: 700, back: true, label: '一句话' }); ctx.restore();
+  ctx.save(); richLine(ctx, ep.line, tx + 6, 1160, 48, hex, { align: 'left', weight: 700, back: true, label: '一句话' }); ctx.restore();
   logo(ctx, hex, X0 + 34, Y0 + CH - 62, 24);
 }

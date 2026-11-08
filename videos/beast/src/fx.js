@@ -84,9 +84,10 @@ function moon(X) {
       grp.position.set((mx - E.W / 2) / ppu, (E.H / 2 - my) / ppu, -D); grp.scale.setScalar(mr / ppu);
       const da = t - T.hit, after = da >= 0;
       // 点亮：觉醒那一拍 0.12 秒内亮起；亮度冲高 40% 再在 1.2 秒里回落；片尾回到轮廓
-      const lit = (after ? smooth(0, 0.12, da) : 0) * (1 - s.outro);
+      // 月亮第一次出现在镜头冲进卡面的那一刻（觉醒前半拍），觉醒那一拍全亮；抽卡阶段没有月亮
+      const lit = (after ? 0.55 + 0.45 * smooth(0, 0.1, da) : 0.55 * smooth(T.asm0, T.hit, t)) * (1 - s.outro);
       const boost = after ? 1 + 0.4 * Math.exp(-da / 0.45) * smooth(0, 0.08, da) : 1;
-      const mu = quad.material.uniforms; mu.uLit.value = lit; mu.uBoost.value = boost * (1 + 0.04 * s.pulse); mu.uOutline.value = 1;
+      const mu = quad.material.uniforms; mu.uLit.value = lit; mu.uBoost.value = boost * (1 + 0.04 * s.pulse); mu.uOutline.value = 0;
       spark.uniforms.uK.value = lit;
       for (const [m, r0, r1, w, i0, life] of [[burst, 1.0, 2.4, 0.012, 0.7, 0.8], [burst2, 1.0, 1.8, 0.03, 0.2, 1.0]]) {
         const k = after ? Math.min(1, da / life) : 1;

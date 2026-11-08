@@ -196,7 +196,7 @@ export function frame(t) {
   for (const p of E.ghosts) p.visible = t > T.asm0 - 0.02 && t < T.hit + 0.08;
   { const ou = E.occluder.material.uniforms; if (mats) ou.uAct.value.forEach((m, i) => m.copy(mats[i])); ou.uOp.value = (ep.occlude ?? 0.9) * smooth(T.hit - 0.1, T.hit + 0.04, t) * (1 - outro); E.occluder.visible = ou.uOp.value > 0.002; }
   // ---- 眼睛：揭晓那一拍睁开；觉醒时冲到最亮再回落；片尾随狼散去
-  const eyeOpen = smooth(T.reveal, T.reveal + 0.12, t);
+  const eyeOpen = smooth(T.asm0, T.asm0 + 0.1, t);
   let eyeI = 0.85, flare = 0.2;
   if (after) { const sp = Math.exp(-da / 0.09); eyeI = 1.0 + 1.5 * sp + 0.08 * pulse; flare = 0.35 + 1.6 * sp + 0.15 * pulse; }
   E.eyeGlows.forEach((g, i) => {
@@ -229,7 +229,7 @@ export function frame(t) {
   const sc = E.C.clone().project(E.camera);
   fu.uGlowC.value.set(sc.x * 0.5 + 0.5, sc.y * 0.5 + 0.5);
   fu.uGlowR.value = E.card ? 0.42 : 0.4;
-  fu.uGlowI.value = (0.006 + after * (0.012 + 0.025 * Math.exp(-da / 0.3) + 0.004 * pulse)) * (1 - outro);
+  fu.uGlowI.value = after * (0.018 + 0.025 * Math.exp(-da / 0.3) + 0.004 * pulse) * (1 - outro);
   E.bloom.strength = 0.5 + (after ? 0.15 * Math.exp(-da / 0.15) : 0);
   E.composer.render();
 }

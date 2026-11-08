@@ -59,18 +59,20 @@ export function back(type, grp, w = FW, h = FH) {
   c.globalAlpha = 0.06; c.strokeStyle = '#E8D9A8'; c.lineWidth = 1 * s; for (let i = -h; i < w + h; i += 14 * s) { c.beginPath(); c.moveTo(i, 0); c.lineTo(i - h, h); c.stroke(); c.beginPath(); c.moveTo(i - h, 0); c.lineTo(i, h); c.stroke(); }
   c.restore(); c.globalAlpha = 1;
   frame(c, w, h, s);
-  // 徽记：外圆、内圆、旋转的方块、八条光芒、中心菱形
-  const g = goldGrad(c, w * 0.25, h * 0.2, w * 0.75, h * 0.6), cx = w / 2, cy = h * 0.42, r = 78 * s;
-  c.save(); c.strokeStyle = g; c.fillStyle = g; c.lineWidth = 2.2 * s; c.shadowColor = 'rgba(232,217,168,0.45)'; c.shadowBlur = 8 * s;
+  // 徽记：外圆、内圆、旋转的方块、八条光芒、中心菱形；下面“兽格觉醒”
+  const g = goldGrad(c, w * 0.25, h * 0.15, w * 0.75, h * 0.6), cx = w / 2, cy = h * 0.36, r = 62 * s;
+  c.save(); c.strokeStyle = g; c.fillStyle = g; c.lineWidth = 2.4 * s; c.shadowColor = 'rgba(232,217,168,0.45)'; c.shadowBlur = 8 * s;
   c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.stroke();
-  c.lineWidth = 1.2 * s; c.beginPath(); c.arc(cx, cy, r * 0.78, 0, Math.PI * 2); c.stroke();
-  for (const rot of [0, Math.PI / 4]) { c.save(); c.translate(cx, cy); c.rotate(rot); c.lineWidth = 1.6 * s; c.strokeRect(-r * 0.52, -r * 0.52, r * 1.04, r * 1.04); c.restore(); }
+  c.lineWidth = 1.3 * s; c.beginPath(); c.arc(cx, cy, r * 0.78, 0, Math.PI * 2); c.stroke();
+  for (const rot of [0, Math.PI / 4]) { c.save(); c.translate(cx, cy); c.rotate(rot); c.lineWidth = 1.7 * s; c.strokeRect(-r * 0.52, -r * 0.52, r * 1.04, r * 1.04); c.restore(); }
   for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; c.beginPath(); c.moveTo(cx + Math.cos(a) * r * 1.06, cy + Math.sin(a) * r * 1.06); c.lineTo(cx + Math.cos(a) * r * (i % 2 ? 1.18 : 1.3), cy + Math.sin(a) * r * (i % 2 ? 1.18 : 1.3)); c.stroke(); }
-  c.save(); c.translate(cx, cy); c.rotate(Math.PI / 4); c.fillRect(-9 * s, -9 * s, 18 * s, 18 * s); c.restore();
-  c.font = `900 ${30 * s}px ${CJK}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('兽格觉醒', cx, cy + r + 40 * s);
+  c.save(); c.translate(cx, cy); c.rotate(Math.PI / 4); c.fillRect(-8 * s, -8 * s, 16 * s, 16 * s); c.restore();
+  c.font = `900 ${28 * s}px ${CJK}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('兽格觉醒', cx, cy + r + 34 * s);
   c.restore();
-  c.font = `900 ${34 * s}px ${LATIN}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.shadowColor = rgba(hex, 0.9); c.shadowBlur = 12 * s;
-  c.fillStyle = mixHex(hex, '#EBEBEB', 0.25); c.fillText(type.split('').join(' '), cx, h - 50 * s);
+  // 类型字母：大（卡高的约 22%，网格里约 36px），用这一类的颜色
+  c.font = `900 ${80 * s}px ${LATIN}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.shadowColor = rgba(hex, 0.95); c.shadowBlur = 14 * s;
+  c.fillStyle = mixHex(hex, '#EBEBEB', 0.3); let tw = c.measureText(type).width; if (tw > w * 0.84) { c.font = `900 ${80 * s * w * 0.84 / tw}px ${LATIN}`; }
+  c.fillText(type, cx, h - 64 * s);
   return c.canvas;
 }
 
@@ -132,117 +134,157 @@ function seal(c) {
 // ------------------------------------------------------------ 卡组
 export async function buildCards(ep) {
   const load = src => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('缺少 ' + src)); im.src = src; });
-  const cards = [];
-  for (const card of DECK) {
-    const [type, , grp] = card, hex = GROUP[grp][1];
-    let art = null;
-    if (type === ep.type) art = null;
-    else if (ICONS[type]) art = iconCanvas(type, hex);
-    else art = await load(`assets/cards/art_${type}.png`);
-    cards.push({ card, type, grp, hex, art, face: art ? face(card, art) : null, back: back(type, grp) });
-  }
+  const cards = DECK.map(card => ({ card, type: card[0], grp: card[2], hex: GROUP[card[2]][1], back: back(card[0], card[2]) }));
   const hero = cards.find(c => c.type === ep.type);
   hero.front = await load(`assets/cards/front_${ep.type}.png`);   // 主角卡的正面 = 收藏卡（1080×1350）
+  hero.frontMeta = await (await fetch(`assets/cards/front_${ep.type}.json`)).json();   // 收藏卡里眼睛的位置
   hero.backHi = back(hero.type, hero.grp, 600, 750);
-  // 金色粒子：沿卡框分布
   const R = rng(77), border = [];
-  for (let i = 0; i < 900; i++) { const u = R(); const per = 2 * (0.8 + 1); let d = u * per, x, y; if (d < 0.8) { x = d - 0.4; y = -0.5; } else if ((d -= 0.8) < 1) { x = 0.4; y = d - 0.5; } else if ((d -= 1) < 0.8) { x = 0.4 - d; y = 0.5; } else { d -= 0.8; x = -0.4; y = 0.5 - d; } border.push({ x, y, a: R() * Math.PI * 2, v: 0.4 + R() * 1.4, s: 1 + R() * 2.2, ph: R() }); }
-  return { cards, hero, heroIdx: cards.indexOf(hero), border };
+  for (let i = 0; i < 900; i++) { const u = R(); let d = u * 3.6, x, y; if (d < 0.8) { x = d - 0.4; y = -0.5; } else if ((d -= 0.8) < 1) { x = 0.4; y = d - 0.5; } else if ((d -= 1) < 0.8) { x = 0.4 - d; y = 0.5; } else { d -= 0.8; x = -0.4; y = 0.5 - d; } border.push({ x, y, a: R() * Math.PI * 2, v: 0.4 + R() * 1.4, s: 1 + R() * 2.2, ph: R() }); }
+  const motes = Array.from({ length: 16 * 14 }, () => ({ a: R() * Math.PI * 2, v: 0.6 + R(), s: 1 + R() * 1.5 }));
+  return { cards, hero, heroIdx: cards.indexOf(hero), border, motes };
 }
 
-// 扇形里第 i 张卡的位置：圆弧摊开（像塔罗牌）
-function slot(i, n, push) {
-  const th = (i / (n - 1) - 0.5) * 2 * 34 * Math.PI / 180, PX = 960, PY = 1850, R = 1180, H = 205;
-  let x = PX + R * Math.sin(th), y = PY - R * Math.cos(th);
-  // 镜头推近：整体绕扇形中心放大
-  x = 960 + (x - 960) * push; y = 760 + (y - 760) * push;
-  return { x, y, rot: th, h: H * push };
+// 4×4 网格（略微俯视的透视）：第 r 行、第 c 列 → 屏幕位置、卡高
+const GH = 168, GAPX = 34, GAPY = 22;
+function gridPos(i, push, orbit) {
+  const r = Math.floor(i / 4), c = i % 4;
+  const depth = (1.5 - r) * 0.06;                 // 上面的行远一点（俯视）
+  const sc = (1 - depth) * push;
+  const cx = 960, cy = 610, w = GH * 0.8;
+  const x = cx + ((c - 1.5) * (w + GAPX)) * sc + orbit * (r - 1.5) * 18 * push;
+  const y = cy + ((r - 1.5) * (GH + GAPY)) * (1 - 0.04 * (1.5 - r)) * push * 0.96;
+  return { x, y, h: GH * sc, rot: 0 };
 }
-function drawCard(ctx, img, x, y, h, rot, sx, alpha, extra = 0, flash = 0) {
+const STACK = { x: 960, y: 610, h: GH * 1.05 };
+function drawCard(ctx, img, x, y, h, rot, sx, alpha, o = {}) {
   if (alpha <= 0.003 || Math.abs(sx) < 0.002) return;
   const w = h * 0.8;
-  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y); ctx.rotate(rot); ctx.scale(sx, 1);
-  ctx.shadowColor = 'rgba(0,0,0,0.6)'; ctx.shadowBlur = h * 0.08;
+  ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y); ctx.rotate(rot); ctx.scale(sx, o.sy ?? 1);
+  if (o.glow) { ctx.shadowColor = rgba(o.glowCol, Math.min(1, o.glow)); ctx.shadowBlur = h * 0.18 * o.glow; } else { ctx.shadowColor = 'rgba(0,0,0,0.65)'; ctx.shadowBlur = h * 0.07; }
+  if (o.blur) ctx.filter = `blur(${o.blur}px)`;
   ctx.drawImage(img, -w / 2, -h / 2, w, h);
-  ctx.shadowBlur = 0;
-  if (extra > 0.003) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = alpha * extra; ctx.drawImage(img, -w / 2, -h / 2, w, h); }
-  if (flash > 0.003) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = alpha * flash * 0.28; rr(-w / 2, -h / 2, w, h, h * 0.075, ctx); ctx.fillStyle = 'rgba(235,228,200,1)'; ctx.fill(); }
+  ctx.filter = 'none'; ctx.shadowBlur = 0;
+  if (o.dark) { ctx.globalCompositeOperation = 'source-atop'; ctx.globalAlpha = o.dark; ctx.fillStyle = '#000'; rr(-w / 2, -h / 2, w, h, h * 0.075, ctx); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; }
+  if (o.tint) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = alpha * o.tint; rr(-w / 2, -h / 2, w, h, h * 0.075, ctx); ctx.fillStyle = rgba(o.glowCol, 0.35); ctx.fill(); }
   ctx.restore();
 }
+const lerpS = (a, b, e) => ({ x: lerp(a.x, b.x, e), y: lerp(a.y, b.y, e), h: lerp(a.h, b.h, e), rot: lerp(a.rot, b.rot, e) });
 
 // ------------------------------------------------------------ 每一帧
-export function drawCards(ctx, D, t, T, pulse) {
-  const { cards, hero, heroIdx, border } = D, n = cards.length;
-  const push = 1 + 0.09 * smooth(0, T.lift, t) * (1 - smooth(T.cardBack, T.clip - 0.05, t));
-  // 其他卡变暗到 30% 并向后退；片尾回来
-  const dimIn = smooth(T.lift, T.lift + 0.33, t), dimOut = smooth(T.cardBack, T.clip - 0.06, t);
-  const dim = dimIn * (1 - dimOut);
-  const goneIn = smooth(T.flipFront + 0.1, T.hit, t), goneOut = smooth(T.outro + 0.3, T.cardHold, t);
-  const fanAlpha = (1 - 0.7 * dim) * (1 - goneIn * (1 - goneOut));
-  const recede = 1 - 0.12 * dim;
-  const hidden = t >= T.hit && t < T.outro + 0.3;
-  if (!hidden) {
-    const list = [];
-    cards.forEach((c, i) => {
-      if (i === heroIdx) return;
-      const s = slot(i, n, push * recede);
-      // 翻开：0.2 秒；片尾翻回背面（依次）
-      const f0 = T.flips[c.type];
-      let k = clamp((t - f0) / 0.2);
-      const r0 = T.cardBack + 0.16 * ((i * 7) % 15) / 15;
-      if (t >= r0) k = 1 - clamp((t - r0) / 0.2);
-      // 翻开的卡稍微升起、放大，盖在没翻的卡上面，正面看得清
-      const up = smooth(0, 1, k);
-      list.push({ c, s, k, up, x: s.x + Math.sin(s.rot) * 34 * up, y: s.y + 40 * dim - Math.cos(s.rot) * 34 * up });
-    });
-    list.sort((a, b) => a.up - b.up);
-    for (const L of list) {
-      const showFace = L.k > 0.5, sx = Math.cos(Math.PI * L.k);
-      const flash = Math.exp(-Math.pow((L.k - 0.5) / 0.18, 2)) * (t < T.cardBack ? 1 : 0.5);
-      const beat = showFace && t < T.lift ? pulse * 0.3 : 0;
-      drawCard(ctx, showFace ? L.c.face : L.c.back, L.x, L.y, L.s.h * (1 + 0.12 * L.up), L.s.rot, Math.max(1e-3, Math.abs(sx)), fanAlpha, beat, flash);
+export function drawCards(ctx, D, t, T) {
+  const { cards, hero, heroIdx, border, motes } = D, n = cards.length, C = T.cards;
+  // 镜头：转盘时缓慢推近网格、轻微环绕（±3 度）；片尾回到原样
+  const push = 1 + 0.07 * smooth(C.spin0, C.pop, t) * (1 - smooth(C.gather, C.end, t));
+  const orbit = Math.sin(clamp((t - C.spin0) / (C.pop - C.spin0)) * Math.PI) * Math.sin(3 * Math.PI / 180) / Math.sin(3 * Math.PI / 180) * 0.6;
+  const dimP = smooth(C.pop, C.pop + 0.25, t) * (1 - smooth(C.backIn, C.backIn + 0.3, t));
+  const exitK = smooth(T.reveal, T.reveal + 0.2, t) * (1 - smooth(C.backIn, C.backIn + 0.33, t));
+  const inStack = t < C.deal[0] || t >= C.end - 0.001;
+  // 转盘：当前照到哪张卡
+  let lit = -1, litAge = 9;
+  for (let j = C.jumps.length - 1; j >= 0; j--) if (t >= C.jumps[j][0]) { lit = C.jumps[j][1]; litAge = t - C.jumps[j][0]; break; }
+  if (t >= C.pop) lit = -1;
+  const roulette = t >= C.spin0 && t < C.pop;
+  const list = [];
+  cards.forEach((c, i) => {
+    if (i === heroIdx && t >= C.pop && t < C.gather) return;   // 主角卡单独画
+    const g = gridPos(i, push, orbit);
+    // 发牌：从牌堆旋转着飞到格子，落下时一震
+    const d0 = C.deal[i], df = 0.3;
+    let p, z = 0, rot = 0, bump = 0;
+    const stackP = { x: STACK.x + (i - 8) * 0.0, y: STACK.y - (n - 1 - i) * 1.6, h: STACK.h, rot: ((i * 37) % 7 - 3) * 0.012 };
+    if (t < d0) { p = stackP; z = -i; }
+    else if (t < d0 + df) { const e = outCubic((t - d0) / df); p = lerpS(stackP, g, e); p.rot = ((i % 2 ? 1 : -1) * Math.PI * (1 - e)) * 1.1; p.y -= Math.sin(e * Math.PI) * 60; z = 100; }
+    else { p = { ...g }; bump = Math.exp(-((t - d0 - df) / 0.07)) * (t - d0 - df < 0.35 ? 1 : 0); z = 10; }
+    // 片尾：其他卡回到网格，然后 16 张收回成一叠
+    if (t >= C.gather) { const e = inOut(clamp((t - C.gather) / (C.end - 0.04 - C.gather))); p = lerpS(g, stackP, e); p.rot = stackP.rot * e; z = -i; bump = 0; }
+    let alpha = 1, glow = 0, sy = 1, h = p.h * (1 + 0.05 * bump), y = p.y + 4 * bump, dark = 0.42, blur = 0;
+    if (inStack || t < C.spin0) dark = 0;
+    if (roulette) {
+      dark = 0.3;
+      if (i === lit) { const k = Math.exp(-litAge / 0.12); dark = 0; glow = 0.75 + 0.5 * k; h *= 1.1 + 0.04 * k; y -= 16; sy = 1.04; z = 200; }
     }
-  }
+    if (t >= C.pop) { dark = 0.75 * dimP; blur = 2.5 * dimP; h *= 1 - 0.1 * dimP; alpha = 1 - exitK; y += 30 * dimP + exitK * 260; }
+    if (t >= C.backIn && t < C.gather) { const k = smooth(C.backIn, C.backIn + 0.33, t); dark = 0.75 * (1 - k); blur = 2.5 * (1 - k); }
+    list.push({ c, x: p.x, y, h, rot: p.rot, alpha, glow, sy, dark, blur, z, i });
+  });
+  list.sort((a, b) => a.z - b.z);
+  for (const L of list) drawCard(ctx, L.c.back, L.x, L.y, L.h, L.rot, 1, L.alpha, { glow: L.glow, glowCol: L.c.hex, sy: L.sy, dark: L.dark, blur: L.blur });
+  // 落下时的一圈小粒子
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  cards.forEach((c, i) => {
+    const age = t - C.deal[i] - 0.3; if (age < 0 || age > 0.4 || t >= C.gather) return;
+    const g = gridPos(i, push, orbit), k = age / 0.4;
+    for (let m = 0; m < 14; m++) { const mo = motes[i * 14 + m], r = g.h * (0.45 + 0.5 * k * mo.v); ctx.fillStyle = rgba(mixHex(c.hex, '#E8D9A8', 0.5), 0.7 * (1 - k)); ctx.beginPath(); ctx.arc(g.x + Math.cos(mo.a) * r * 0.8, g.y + Math.sin(mo.a) * r, mo.s, 0, Math.PI * 2); ctx.fill(); }
+  });
+  ctx.restore();
+
   // ---- 主角卡
-  const hs = slot(heroIdx, n, push), C = { x: 960, y: 590, h: 1080 * 0.6, rot: 0 };
-  const lerpS = (a, b, e) => ({ x: lerp(a.x, b.x, e), y: lerp(a.y, b.y, e), h: lerp(a.h, b.h, e), rot: lerp(a.rot, b.rot, e) });
+  const hs = gridPos(heroIdx, push, orbit), CEN = { x: 960, y: 592, h: 1080 * 0.75, rot: 0 };
   let gold = null;
-  if (t < T.lift) drawCard(ctx, hero.back, hs.x, hs.y, hs.h, hs.rot, 1, 1);
-  else if (t < T.flipFront) {
-    // 升起，旋转着飞到中央并放大
-    const e = inOut(clamp((t - T.lift) / (T.flipFront - T.lift - 0.08)));
-    const p = lerpS(hs, C, e); p.y -= Math.sin(e * Math.PI) * 120;
+  if (t >= C.pop && t < T.reveal) {
+    // 弹出：旋转着飞到中央、放大到画面高度 75%，背面朝镜头，绿光一拍比一拍亮
+    const e = inOut(clamp((t - C.pop) / (T.reveal - C.pop - 0.06)));
+    const p = lerpS(hs, CEN, e); p.y -= Math.sin(e * Math.PI) * 90; p.rot = (1 - e) * Math.PI * 2 * 0.0;
     const spin = Math.cos(e * Math.PI * 2);
-    drawCard(ctx, hero.backHi, p.x, p.y, p.h, p.rot, Math.max(0.02, Math.abs(spin)), 1, 0, Math.exp(-Math.pow((Math.abs(spin) - 0) / 0.15, 2)) * 0.4);
-  } else if (t < T.hit) {
-    // 翻到正面（0.2 秒，带一闪），然后镜头冲进卡面：卡越放越大、淡出，卡框散成金色粒子
-    const k = clamp((t - T.flipFront) / 0.2), sx = Math.cos(Math.PI * k);
-    const rush = clamp((t - T.flipFront - 0.2) / (T.hit - T.flipFront - 0.2));
-    const zoom = 1 + 2.6 * Math.pow(rush, 2.2);
-    const a = 1 - smooth(0.25, 1, rush);
-    drawCard(ctx, k > 0.5 ? hero.front : hero.backHi, C.x, C.y, C.h * zoom, 0, Math.max(0.02, Math.abs(sx)), a, 0, Math.exp(-Math.pow((k - 0.5) / 0.2, 2)));
-    if (rush > 0) gold = { cx: C.x, cy: C.y, h: C.h * zoom, k: -rush, a: 1 - rush * 0.7 };
-  } else if (t >= T.outro) {
-    // 狼和月亮缩小，金色粒子重新聚成卡框，定格成收藏卡；然后翻回背面、飞回扇形
-    const form = clamp((t - T.outro) / (T.cardHold - T.outro));
-    const e = outCubic(form);
-    if (t < T.cardBack) {
-      const h = lerp(1080 * 2.4, C.h, e), a = smooth(0, 0.45, form);
-      drawCard(ctx, hero.front, C.x, C.y, h, 0, 1, a, 0, 0);
-      if (form < 1) gold = { cx: C.x, cy: C.y, h, k: 1 - form, a: smooth(0, 0.3, form) };
+    const beats = Math.floor((t - C.pop) / T.e8 * 2 + 1e-6), pulse = Math.exp(-(((t - C.pop) / (T.e8 / 2)) % 1) * 4);
+    const glow = 0.35 + 0.22 * Math.min(beats, 3) + 0.2 * pulse;
+    drawCard(ctx, hero.backHi, p.x, p.y, p.h, p.rot, Math.max(0.03, Math.abs(spin)), 1, { glow, glowCol: hero.hex });
+  } else if (t >= T.reveal && t < T.hit) {
+    // 翻面亮相：0.12 秒猛地翻到正面；正对镜头、正中央、不模糊；绿光和冲击波在卡的外面
+    const k = clamp((t - T.reveal) / 0.12), sx = Math.cos(Math.PI * k), front = k >= 0.5;
+    const hold = t - T.reveal;
+    const rush = clamp((t - C.rush) / (T.hit - C.rush));
+    const zoom = (1 + 0.03 * smooth(0.12, T.hit - T.reveal, hold)) * (1 + 3.2 * Math.pow(rush, 2.0));
+    const a = 1 - smooth(0.3, 1, rush);
+    // 外圈绿光 + 冲击波（画在卡后面，不盖卡面）
+    if (front) {
+      const age = hold - 0.06, w = CEN.h * 0.8;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      for (let r = 0; r < 2; r++) { const ag = age - r * 0.08; if (ag < 0 || ag > 0.7) continue; const rk = ag / 0.7; ctx.strokeStyle = rgba(hero.hex, 0.55 * (1 - rk)); ctx.lineWidth = 10 * (1 - rk) + 1; rr(CEN.x - w / 2 - 20 - rk * 420, CEN.y - CEN.h / 2 - 20 - rk * 420, w + 40 + rk * 840, CEN.h + 40 + rk * 840, 60 + rk * 200, ctx); ctx.stroke(); }
+      const gk = Math.exp(-Math.max(0, age) / 0.25);
+      const gg = ctx.createRadialGradient(CEN.x, CEN.y, CEN.h * 0.3, CEN.x, CEN.y, CEN.h * 0.95); gg.addColorStop(0, rgba(hero.hex, 0.35 * gk + 0.08)); gg.addColorStop(1, rgba(hero.hex, 0));
+      ctx.fillStyle = gg; ctx.fillRect(0, 0, 1920, 1080);
+      ctx.restore();
+    }
+    const cx = CEN.x, cy = CEN.y, h = CEN.h * zoom;
+    drawCard(ctx, front ? hero.front : hero.backHi, cx, cy, h, 0, Math.max(0.03, Math.abs(sx)), a, { glow: front ? 0.6 * a : 1, glowCol: hero.hex });
+    if (front && a > 0.01) {
+      // 卡面上：全息光泽扫过一次、狼的眼睛一闪一闪（翻面那一拍亮起）
+      const w = h * 0.8, sxS = w / 1080, x0 = cx - w / 2, y0 = cy - h / 2;
+      ctx.save(); rr(x0, y0, w, h, h * 0.03, ctx); ctx.clip(); ctx.globalAlpha = a;
+      const sw = smooth(0.25, T.hit - T.reveal - 0.2, hold);
+      if (sw > 0 && sw < 1) { ctx.globalCompositeOperation = 'screen'; ctx.translate(x0 + lerp(-0.3, 1.3, sw) * w, cy); ctx.rotate(-0.62);
+        const bw = w * 0.5, g2 = ctx.createLinearGradient(-bw / 2, 0, bw / 2, 0); ['#FF3D8B', '#FFC23D', '#2BE36B', '#3AA8FF', '#A24BFF', '#FF3D8B'].forEach((col, i, arr) => g2.addColorStop(i / 5, rgba(col, 0.16)));
+        ctx.fillStyle = g2; ctx.fillRect(-bw / 2, -h, bw, h * 2); ctx.setTransform(1, 0, 0, 1, 0, 0); }
+      ctx.globalCompositeOperation = 'lighter';
+      const flare = Math.exp(-Math.max(0, hold - 0.06) / 0.18), tw = 0.75 + 0.25 * Math.sin(hold * 12) * Math.sin(hold * 5.3);
+      for (const [ex, ey] of hero.frontMeta.eyes ?? []) {
+        const X = x0 + ex * sxS, Y = y0 + ey * sxS, R0 = (10 + 26 * flare) * sxS * (front ? 1 : 0);
+        const g3 = ctx.createRadialGradient(X, Y, 0, X, Y, R0 * 3); g3.addColorStop(0, `rgba(225,255,235,${(0.5 * tw + 0.5 * flare) * a})`); g3.addColorStop(0.3, rgba(hero.hex, 0.45 * (tw * 0.6 + flare) * a)); g3.addColorStop(1, rgba(hero.hex, 0));
+        ctx.fillStyle = g3; ctx.fillRect(X - R0 * 3, Y - R0 * 3, R0 * 6, R0 * 6);
+      }
+      ctx.restore();
+    }
+    if (rush > 0) gold = { cx, cy, h, k: -rush, a: 1 - rush * 0.7 };
+  } else if (t >= T.outro && t < C.gather) {
+    // 片尾：狼和月亮缩小，金色粒子聚成卡框，定格成收藏卡；翻回背面，飞回网格
+    const form = clamp((t - T.outro) / (C.cardHold - T.outro)), e = outCubic(form);
+    if (t < C.cardBack) {
+      const h = lerp(1080 * 2.4, CEN.h, e), a = smooth(0, 0.45, form);
+      drawCard(ctx, hero.front, CEN.x, CEN.y, h, 0, 1, a, { glow: 0.5 * a, glowCol: hero.hex });
+      if (form < 1) gold = { cx: CEN.x, cy: CEN.y, h, k: 1 - form, a: smooth(0, 0.3, form) };
     } else {
-      const k = clamp((t - T.cardBack) / 0.2), sx = Math.cos(Math.PI * k);
-      const fly = inOut(clamp((t - T.cardBack - 0.2) / (T.clip - 0.06 - T.cardBack - 0.2)));
-      const p = lerpS(C, hs, fly);
-      drawCard(ctx, k < 0.5 ? hero.front : (fly > 0.6 ? hero.back : hero.backHi), p.x, p.y, p.h, p.rot, Math.max(0.02, Math.abs(sx)), 1, 0, Math.exp(-Math.pow((k - 0.5) / 0.2, 2)) * 0.8);
+      const k = clamp((t - C.cardBack) / 0.2), sx = Math.cos(Math.PI * k);
+      const fly = inOut(clamp((t - C.flyBack) / (C.gather - C.flyBack)));
+      const p = lerpS(CEN, hs, fly);
+      drawCard(ctx, k < 0.5 ? hero.front : (fly > 0.6 ? hero.back : hero.backHi), p.x, p.y, p.h, 0, Math.max(0.03, Math.abs(sx)), 1, { glow: 0.5 * (1 - fly), glowCol: hero.hex });
     }
   }
-  // 金色粒子（卡框散开 / 聚拢）。k < 0：向外散；k > 0：还差多少聚拢
   if (gold) {
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     for (const b of border) {
-      const off = gold.k < 0 ? -gold.k : gold.k;
-      const d = off * (300 + 500 * b.v);
+      const off = Math.abs(gold.k), d = off * (300 + 500 * b.v);
       const x = gold.cx + b.x * gold.h + Math.cos(b.a) * d, y = gold.cy + b.y * gold.h + Math.sin(b.a) * d;
       const al = gold.a * (0.5 + 0.5 * Math.sin(t * 20 + b.ph * 30)) * (gold.k < 0 ? 1 - off * 0.8 : 1 - off * 0.6);
       if (al <= 0.01) continue;
