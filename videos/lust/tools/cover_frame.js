@@ -1,14 +1,15 @@
-// 《七宗罪》第六集·暴食 4:5 竖版封面（1080×1350），排版和前三集的系列封面一致
+// 《七宗罪》第七集（最终集）·色欲 4:5 竖版封面（1080×1350），排版和前三集的系列封面一致
 // 上方间隔小字“七 宗 罪 · 第 X 集”，中间光环里的脸，下方金属渐变大字和两行问句
 // 用法：node tools/cover_frame.js 输出.jpg [秒] [相机JSON]   （window.COVER=1 时片中的字幕、标题、左上角小字都不画）
 const fs = require('fs');
 const { openBrowser, openPage } = require('./page');
 (async () => {
   // 三集共用同一套版式：node tools/cover_frame.js 输出.jpg [wrath|envy|pride] [秒]
-  const [out, sin = 'gluttony', t = '6.1'] = process.argv.slice(2);
+  const [out, sin = 'lust', t = '8.05'] = process.argv.slice(2);
   const SIN = {
     pride: { i: 0, ep: '一', name: '傲慢', col: '#A24BFF', hi: '#C9A6FF', core: '#E9D5FF', bg: '#07030B', metal: 'prideC', l1: '为什么，几乎没有人', l2: '觉得自己傲慢？' },
     envy:  { i: 1, ep: '二', name: '嫉妒', col: '#2BE36B', hi: '#8FF0B5', core: '#D8FFE6', bg: '#030A05', metal: 'envy', l1: '别人过得好的时候，', l2: '为什么心里会疼？' },
+    lust: { i: null, ep: '七', name: '色欲', col: '#FF3D8B', hi: '#FFB3D1', core: '#FFE0EC', bg: '#0A0306', metal: 'lust', l1: '说实话，', l2: '你是颜控吗？', cam: { pos: [0, -0.55, 7.2], target: [0, -0.67, 0], fov: 35 }, cx: 0 },
     gluttony: { i: null, ep: '六', name: '暴食', col: '#FF7A1F', hi: '#FFC49A', core: '#FFE2CC', bg: '#0A0603', metal: 'gluttony', l1: '你吃到第几口，', l2: '才会真的停下来？', cam: { pos: [0, -0.62, 7.6], target: [0, -0.74, 0], fov: 35 }, cx: 0 },
     greed: { i: null, ep: '五', name: '贪婪', col: '#FFC23D', hi: '#FFE7A3', core: '#FFF1CC', bg: '#0A0803', metal: 'greed', l1: '为什么最开心的时候，', l2: '是等快递的时候？', cam: { pos: [0, -0.5, 7.4], target: [0, -0.62, 0], fov: 35 }, cx: 0 },
     sloth: { i: null, ep: '四', name: '懒惰', col: '#2BC8E0', hi: '#A8F0FA', core: '#CFF7FC', bg: '#03080A', metal: 'sloth', l1: '总说“明天再说”的你，', l2: '真的是懒吗？', cam: { pos: [0, -0.5, 7.0], target: [0, -0.62, 0], fov: 35 }, cx: 0 },
