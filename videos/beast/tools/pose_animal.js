@@ -43,6 +43,18 @@ const CH = new Float32Array(nV * 4);
 const emphB = Object.fromEntries(Object.entries(pose.emphasis || {}).map(([k, v]) => [idx[k], v]));
 for (let v = 0; v < nV; v++) {
   const p = [pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]], n = [nrm[v * 3], nrm[v * 3 + 1], nrm[v * 3 + 2]], c = comb ? [comb[v * 3], comb[v * 3 + 1], comb[v * 3 + 2]] : [0, 0, -1];
+  // 四肢加粗：主骨骼是四肢的顶点，在静止姿势里沿垂直骨骼轴的方向向外推
+  if (pose.limbThick) {
+    let bi = -1, bw = 0; for (let k = 0; k < 4; k++) if (sW[v * 4 + k] > bw) { bw = sW[v * 4 + k]; bi = sI[v * 4 + k]; }
+    const bb = bones[bi];
+    if (bb && (bb.region === 'limb' || bb.region === 'foot') && !/scapula|femur/.test(bb.name) || (bb && /femur|scapula/.test(bb.name) && pose.limbThickUpper)) {
+      const k = /femur|scapula/.test(bb.name) ? (pose.limbThickUpper ?? 1) : pose.limbThick;
+      const a = J[bb.headJ], b2 = J[bb.tailJ], ab = [b2[0] - a[0], b2[1] - a[1], b2[2] - a[2]], L2 = ab[0] ** 2 + ab[1] ** 2 + ab[2] ** 2 || 1;
+      const u = Math.max(0, Math.min(1, ((p[0] - a[0]) * ab[0] + (p[1] - a[1]) * ab[1] + (p[2] - a[2]) * ab[2]) / L2));
+      const q = [a[0] + ab[0] * u, a[1] + ab[1] * u, a[2] + ab[2] * u];
+      for (let j = 0; j < 3; j++) p[j] = q[j] + (p[j] - q[j]) * k;
+    }
+  }
   const op = [0, 0, 0], on = [0, 0, 0], oc = [0, 0, 0]; let ws = 0;
   for (let k = 0; k < 4; k++) {
     const w = sW[v * 4 + k]; if (!w) continue; ws += w; EM[v] += (emphB[sI[v * 4 + k]] ?? 0) * w; { const sl = slotOf[sI[v * 4 + k]]; if (sl >= 0) CH[v * 4 + sl] += w; }
@@ -53,6 +65,9 @@ for (let v = 0; v < nV; v++) {
   for (let j = 0; j < 3; j++) { P[v * 3 + j] = op[j] / (ws || 1) * S; N[v * 3 + j] = on[j] / ln; CB[v * 3 + j] = oc[j] / lc; }
   const L = tint ? 0.3 * tint[v * 4] + 0.59 * tint[v * 4 + 1] + 0.11 * tint[v * 4 + 2] : 0.5;
   G[v] = L; F[v] = coat ? coat[v * 4 + 2] * S : 0.02;
+  // 颈毛：指定骨骼上的毛更长、更向外蓬（梳毛方向偏向法线）
+  if (pose.furBoost) { let fb = 0, wsum = 0; for (let k = 0; k < 4; k++) { const bn = bones[sI[v * 4 + k]]?.name, f = pose.furBoost[bn]; if (f) { fb += (f - 1) * sW[v * 4 + k]; wsum += sW[v * 4 + k]; } }
+    if (fb > 0) { F[v] *= 1 + fb; const o = Math.min(1, wsum) * (pose.furOut ?? 0); for (let j = 0; j < 3; j++) CB[v * 3 + j] = CB[v * 3 + j] * (1 - o) + N[v * 3 + j] * o; const l = Math.hypot(CB[v * 3], CB[v * 3 + 1], CB[v * 3 + 2]) || 1; for (let j = 0; j < 3; j++) CB[v * 3 + j] /= l; } }
   // 接缝（比如嘴唇：一半跟下颌、一半跟头）压暗，嘴看起来是闭着的
   for (const [bn, amt] of Object.entries(pose.seamDim || {})) { let w = 0; for (let k = 0; k < 4; k++) if (sI[v * 4 + k] === idx[bn]) w += sW[v * 4 + k]; SD[v] = Math.max(SD[v], amt * Math.min(1, 4 * w * (1 - w) * 1.3)); }
 }
@@ -73,5 +88,5 @@ for (let v = 0; v < nV; v++) { let t = 0; for (let k = 0; k < 4; k++) t += CH[v 
 const parts = [P, N, CB, G, F, EM, CH, index], layout = {}; let off = 0;
 ['pos', 'nrm', 'comb', 'gain', 'fur', 'emph', 'chain', 'index'].forEach((k, i) => { layout[k] = [off, parts[i].length]; off += parts[i].byteLength; });
 fs.writeFileSync(path.join(dir, name + '.bin'), Buffer.concat(parts.map(a => Buffer.from(a.buffer, a.byteOffset, a.byteLength))));
-fs.writeFileSync(path.join(dir, name + '.json'), JSON.stringify({ source: meta.source, pose, chain: (ep.action?.bones || []).map(b => ({ ...b, pivot: joints[bones[idx[b.name]].headJ] })), nV, nT: index.length / 3, layout, mats: [], eyes, joints, bbox: { min, max } }));
-console.log(`${name}: ${nV} 顶点，包围盒 ${min.map(v => v.toFixed(2))} → ${max.map(v => v.toFixed(2))}；眼睛 ${eyes.map(e => e.c.map(v => v.toFixed(3))).join(' / ')}；鼻尖 ${joints.nose.map(v => v.toFixed(2))}`);
+fs.writeFileSync(path.join(dir, name + '.json'), JSON.stringify({ source: meta.source, pose, bones: bones.map(b => ({ name: b.name, headJ: b.headJ, tailJ: b.tailJ, region: b.region })), chain: (ep.action?.bones || []).map(b => ({ ...b, pivot: joints[bones[idx[b.name]].headJ] })), nV, nT: index.length / 3, layout, mats: [], eyes, joints, bbox: { min, max } }));
+console.log(`${name}: ${nV} 顶点，包围盒 ${min.map(v => v.toFixed(2))} → ${max.map(v => v.toFixed(2))}；眼睛 ${eyes.map(e => e.c.map(v => v.toFixed(3))).join(' / ')}；鼻尖 ${joints.nose?.map(v => v.toFixed(2)) ?? "—"}`);

@@ -51,7 +51,7 @@ beats = []
 for g in grid:
     a, b = int((g - 0.04) * fr), int((g + 0.04) * fr) + 1
     a = max(a, 0); seg = on[a:b]
-    if len(seg) and seg.max() > 0.25: beats.append((a + int(np.argmax(seg))) / fr * 0.5 + g * 0.5)
+    if len(seg) and seg.max() > 0.25: beats.append((a + int(np.argmax(seg))) / fr)
     else: beats.append(g)
 beats = np.array(beats)
 # 小节第一拍

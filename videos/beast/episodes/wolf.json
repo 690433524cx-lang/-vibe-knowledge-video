@@ -12,16 +12,11 @@
    "species": "wolf",
    "quality": "hero",
    "seed": 3,
-   "variant": "grey"
+   "variant": "grey",
+   "sex": "male",
+   "overrides": "muzzle 1.14, headW 1.1, ear 0.86, ruff 1.6, girth/shoulder warps"
   }
  },
- "title": "月下孤狼",
- "talents": [
-  "洞察",
-  "共情",
-  "坚守"
- ],
- "quote": "你看起来安静，其实什么都看见了。",
  "facts": [
   "狼的嚎叫能传到 10 公里外，是在告诉同伴：我在这里。"
  ],
@@ -51,60 +46,49 @@
    ]
   },
   "boneScale": {
-   "earL": 1.35,
-   "earR": 1.35
+   "earL": 1.0,
+   "earR": 1.0
   },
   "emphasis": {
-   "earL": 1.6,
-   "earR": 1.6,
-   "jaw": -0.6
+   "earL": 0.8,
+   "earR": 0.8,
+   "jaw": -0.6,
+   "neck1": 1.6,
+   "neck2": 1.3,
+   "chest": 0.5
   },
   "seamDim": {
    "jaw": 0.85
   },
   "gainLo": 0.15,
-  "gainGamma": 0.6
+  "gainGamma": 0.6,
+  "limbThick": 1.28,
+  "limbThickUpper": 1.12,
+  "furBoost": {
+   "neck1": 1.9,
+   "neck2": 1.7,
+   "chest": 1.4
+  },
+  "furOut": 0.7
  },
  "camera": {
   "yaw": 48,
-  "pitch": -5,
-  "dist": 2.7,
+  "pitch": -8,
+  "dist": 3.0,
   "fov": 32,
-  "aim": [
-   0,
-   -0.05,
-   0
-  ],
-  "push": 0.07,
-  "cardAim": [
-   0.05,
-   -0.42,
-   0
-  ],
-  "cardDist": 4.1,
-  "cardFov": 34
+  "push": 0.07
  },
  "sample": {
   "n": 240000,
-  "furFrac": 0.22,
-  "furScale": 2.6
+  "furFrac": 0.2,
+  "furScale": 1.0
  },
  "music": {
-  "file": "音乐_MBTI.mp4",
-  "hit": 10.626,
-  "beat": 0.66639
+  "file": "音乐_MBTI_原版.mp4",
+  "awake": 2.66,
+  "note": "歌曲从第一个音开始。T_AWAKE = 第二小节第一拍：高频起音实测 2.660 秒（八分音符网格从 0.00 起，每 0.333 秒一拍）；低音鼓在晚一个十六分音符的 2.85 秒进来"
  },
- "moon": [
-  3.3,
-  2.05,
-  7.0
- ],
- "bright": 2.1,
- "cardMoon": [
-  1.5,
-  2.75,
-  6.0
- ],
+ "bright": 3.0,
  "action": {
   "type": "howl",
   "zh": "对月嚎叫",
@@ -126,26 +110,109 @@
     "pitch": -32
    }
   ],
-  "rise": 1,
-  "hold": 3,
-  "back": 1,
+  "rise": 2,
+  "hold": 2,
+  "back": 2,
   "voice": {
    "rings": 4,
-   "gap": 0.5
+   "gap": 1
   },
   "duck": {
-   "to": 0.5,
-   "down": 0.15,
-   "hold": 1.5,
-   "up": 0.8
+   "to": 0.3,
+   "down": 0.1,
+   "hold": 2.0,
+   "up": 0.8,
+   "note": "找到狼嚎时 hold = 狼嚎长度"
   }
  },
- "talentStep": 1,
- "moonPx": 470,
- "cardMoonPx": 300,
- "moonDepth": 7,
- "stillA": 5.7,
- "stillT": 5.7,
+ "stillT": 4.9,
  "clip": 6.0,
- "moonR": 1.0
+ "line": "你很少开口，但总能〔看穿人心〕。",
+ "concept": "每一种 MBTI，都有一只对应的〔动物〕",
+ "revealText": "〔INFJ〕 的动物是——",
+ "intro": {
+  "center": [
+   740,
+   540
+  ],
+  "height": 420,
+  "animals": [
+   {
+    "model": "sil_fox",
+    "type": "ENTP",
+    "zh": "狐狸",
+    "color": "#A24BFF",
+    "yaw": -60
+   },
+   {
+    "model": "sil_cat",
+    "type": "ISTP",
+    "zh": "猫",
+    "color": "#FFC23D",
+    "yaw": -60
+   },
+   {
+    "model": "sil_lion",
+    "type": "ESTJ",
+    "zh": "狮子",
+    "color": "#3AA8FF",
+    "yaw": -55
+   },
+   {
+    "model": "sil_eagle",
+    "type": "INTP",
+    "zh": "猫头鹰（暂用鹰）",
+    "color": "#A24BFF",
+    "yaw": -20
+   },
+   {
+    "model": "sil_dog",
+    "type": "ENFJ",
+    "zh": "狗",
+    "color": "#2BE36B",
+    "yaw": -60
+   },
+   {
+    "model": "sil_deer",
+    "type": "ISFJ",
+    "zh": "鹿",
+    "color": "#3AA8FF",
+    "yaw": -55
+   }
+  ]
+ },
+ "outroBeats": 8,
+ "frame": {
+  "moon": [
+   1230,
+   560,
+   378
+  ],
+  "eyes": [
+   1330,
+   640
+  ],
+  "dist": 4.3,
+  "fov": 32
+ },
+ "card": {
+  "moon": [
+   470,
+   430,
+   262
+  ],
+  "eyes": [
+   730,
+   560
+  ],
+  "dist": 5.6,
+  "fov": 34
+ },
+ "textLeft": [
+  100,
+  830
+ ],
+ "groundY": 0.75,
+ "conceptY": 112,
+ "cardT": 3.6
 }

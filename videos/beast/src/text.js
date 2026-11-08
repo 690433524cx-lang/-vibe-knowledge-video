@@ -84,25 +84,87 @@ function talents(ctx, list, cx, y, hex, times, a) {
   ctx.restore();
 }
 
-// ------------------------------------------------------------ 横屏视频的文字层
-export function videoOverlay(ctx, a, ep, T) {
+// 带关键词颜色的一行字：〔关键词〕用这一类的颜色。align: left / center
+function richLine(ctx, text, x, y, size, hex, o = {}) {
+  const parts = []; text.split(/(〔[^〕]*〕)/).forEach(p => { if (!p) return; const k = p.startsWith('〔'); parts.push({ t: k ? p.slice(1, -1) : p, k }); });
+  ctx.save(); ctx.font = `${o.weight ?? 900} ${size}px ${CJK}`; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  const ws = parts.map(p => ctx.measureText(p.t).width), w = ws.reduce((s, v) => s + v, 0);
+  let cx = o.align === 'left' ? x : x - w / 2;
+  if (o.back) {   // 暗色底
+    const px = size * 0.55, py = size * 0.42;
+    ctx.fillStyle = 'rgba(4,6,8,0.62)'; ctx.beginPath(); ctx.roundRect(cx - px, y - size / 2 - py, w + px * 2, size + py * 2, size * 0.35); ctx.fill();
+  }
+  ctx.shadowColor = 'rgba(0,0,0,0.85)'; ctx.shadowBlur = size * 0.25;
+  parts.forEach((p, i) => {
+    ctx.fillStyle = p.k ? mixHex(hex, '#EBEBEB', 0.12) : (o.color ?? MAXW);
+    if (p.k) { ctx.save(); ctx.shadowColor = rgba(hex, 0.8); ctx.shadowBlur = size * 0.35; ctx.fillText(p.t, cx, y); ctx.restore(); }
+    else ctx.fillText(p.t, cx, y);
+    cx += ws[i];
+  });
+  ctx.restore();
+  const x0 = o.align === 'left' ? x : x - w / 2;
+  box(x0, y - size * 0.62, x0 + w, y + size * 0.62, o.label ?? 'text');
+  return w;
+}
+
+// 暗处的一排发光眼睛（第 0 帧和片尾）
+function eyeRow(ctx, alpha, W, y) {
+  if (alpha <= 0.003) return;
+  const cols = ['#A24BFF', '#2BE36B', '#3AA8FF', '#FFC23D'];
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const n = 9;
+  for (let i = 0; i < n; i++) {
+    const x = W * (i + 0.5) / n + (i % 2 ? 18 : -14), yy = y + ((i * 37) % 5 - 2) * 16, c = cols[i % 4], gap = 15 + (i % 3) * 4;
+    for (const dx of [-gap, gap]) {
+      const g = ctx.createRadialGradient(x + dx, yy, 0, x + dx, yy, 13);
+      g.addColorStop(0, rgba(mixHex(c, '#FFFFFF', 0.45), 0.85 * alpha)); g.addColorStop(0.25, rgba(c, 0.5 * alpha)); g.addColorStop(1, rgba(c, 0));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x + dx, yy, 13, 7, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+// ------------------------------------------------------------ 横屏视频的文字层（时间表见 main.js 的 timeline）
+export function videoOverlay(ctx, t, ep, T) {
   BOXES.length = 0;
-  const hex = ep.color;
+  const hex = ep.color, W = 1920;
   logo(ctx, hex);
-  if (a < T.hit - 0.001) return;
-  const da = a - T.hit;
-  const sizeL = 168, sizeC = 150;
-  const m = metalRun([
-    { text: ep.type, font: `900 ${sizeL}px ${LATIN}`, gap: 30 },
-    { text: '·', font: `900 ${sizeC}px ${CJK}`, gap: 30, fill: hex },
-    { text: ep.title, font: `900 ${sizeC}px ${CJK}` },
-  ], sizeC, hex, (da - 0.12) / 0.55);
-  const k = clamp(da / 0.18);
-  const sc = lerp(1.22, 1, outBack(k, 1.4)), al = clamp(da / 0.07);
-  const cy = T.titleY ?? 880;
-  blitMetal(ctx, m, 960, cy, sc, al, hex, 26 + 40 * Math.exp(-da / 0.2));
-  box(960 - m.tw / 2, cy - sizeC * 0.85, 960 + m.tw / 2, cy + sizeC * 0.12, 'title');
-  talents(ctx, ep.talents, 960, cy + 102, hex, T.talentTimes, a);
+  // 片尾回到第 0 帧：标题淡出，概念大字和眼睛淡入
+  const back = smooth(T.outro + 0.05, T.outro + 0.5, t);
+  const outT = 1 - smooth(T.outro, T.outro + 0.35, t);
+  // 概念大字：第 0 帧到揭晓那一拍保持不动
+  const cA = t < T.reveal ? 1 : back;
+  if (cA > 0.003) { ctx.save(); ctx.globalAlpha = cA; richLine(ctx, ep.concept, W / 2, ep.conceptY ?? 112, 64, hex, { label: '概念大字' }); ctx.restore(); }
+  // 暗处的一排眼睛：第 0 帧有，闪剪影时退到很淡，片尾回来
+  eyeRow(ctx, t < T.flashes[0] ? 1 : t < T.reveal ? 1 - 0.7 * smooth(T.flashes[0], T.flashes[0] + 0.15, t) : back, W, 1000);
+  // 剪影下面的类型字母
+  T.flashes.forEach((t0, i) => {
+    const t1 = T.flashes[i + 1] ?? T.reveal, a = ep.intro.animals[i];
+    if (t < t0 || t >= t1) return;
+    const k = smooth(t0, t0 + 0.1, t) * (1 - smooth(t1 - 0.08, t1, t));
+    ctx.save(); ctx.globalAlpha = k; ctx.font = `900 44px ${LATIN}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.shadowColor = rgba(a.color, 0.9); ctx.shadowBlur = 14; ctx.fillStyle = mixHex(a.color, '#EBEBEB', 0.55);
+    const [cx, cy] = ep.intro.center, y = cy + ep.intro.height / 2 + 62;
+    ctx.fillText(a.type.split('').join(' '), cx, y); const w = ctx.measureText(a.type.split('').join(' ')).width; ctx.restore();
+    box(cx - w / 2, y - 26, cx + w / 2, y + 26, '类型字母');
+  });
+  // 揭晓：INFJ 的动物是——（觉醒那一拍消失）
+  if (t >= T.reveal && t < T.hit) { const k = smooth(T.reveal, T.reveal + 0.06, t); ctx.save(); ctx.globalAlpha = k; richLine(ctx, ep.revealText, W / 2, ep.conceptY ?? 112, 64, hex, { label: '揭晓' }); ctx.restore(); }
+  // 嚎叫结束的那一拍：左下方大字“类型 · 动物名”；下一拍：一句话
+  const L = ep.textLeft ?? [100, 830];
+  if (t >= T.title && outT > 0.003) {
+    const da = t - T.title, sizeL = 168, sizeC = 150;
+    const m = metalRun([{ text: ep.type, font: `900 ${sizeL}px ${LATIN}`, gap: 30 }, { text: '·', font: `900 ${sizeC}px ${CJK}`, gap: 30, fill: hex }, { text: ep.animal.zh, font: `900 ${sizeC}px ${CJK}` }], sizeC, hex, (da - 0.12) / 0.5);
+    const k = clamp(da / 0.16), sc = lerp(1.18, 1, outBack(k, 1.4));
+    blitMetal(ctx, m, L[0] + m.tw / 2, L[1], sc, clamp(da / 0.06) * outT, hex, 24 + 36 * Math.exp(-da / 0.2));
+    box(L[0], L[1] - sizeC * 0.85, L[0] + m.tw, L[1] + sizeC * 0.12, '大字');
+  }
+  if (t >= T.sentence && outT > 0.003) {
+    const da = t - T.sentence, k = clamp(da / 0.14);
+    ctx.save(); ctx.globalAlpha = clamp(da / 0.08) * outT; ctx.translate(0, (1 - outCubic(k)) * 24);
+    richLine(ctx, ep.line, L[0] + 8, L[1] + 112, 52, hex, { align: 'left', weight: 700, back: true, label: '一句话' });
+    ctx.restore();
+  }
 }
 
 // ------------------------------------------------------------ 收藏卡（1080×1350）
@@ -161,16 +223,10 @@ export function cardOverlay(ctx, gl, ep, a, T) {
   ctx.textAlign = 'right'; ctx.fillStyle = 'rgba(230,228,238,0.85)'; ctx.fillText(ep.animal.zh, X0 + CW - 50, Y0 + 70);
   const aw = ctx.measureText(ep.animal.zh).width; box(X0 + CW - 50 - aw, Y0 + 48, X0 + CW - 50, Y0 + 92, 'label');
   ctx.restore();
-  // 类型字母 + 称号 + 天赋 + 一句话
-  const mL = metalRun([{ text: ep.type.split('').join(' '), font: `900 112px ${LATIN}` }], 112, hex, T.sweep ?? null);
-  blitMetal(ctx, mL, W / 2, 858, 1, 1, hex, 22); box(W / 2 - mL.tw / 2, 858 - 95, W / 2 + mL.tw / 2, 858 + 10, 'type');
-  const mT = metalRun([{ text: ep.title, font: `900 150px ${CJK}` }], 150, hex, null);
-  const ts = Math.min(1, 820 / mT.tw);
-  blitMetal(ctx, mT, W / 2, 1022, ts, 1, hex, 26); box(W / 2 - mT.tw * ts / 2, 1022 - 128 * ts, W / 2 + mT.tw * ts / 2, 1022 + 18 * ts, 'title');
-  talents(ctx, ep.talents, W / 2, 1100, hex, [0, 0, 0], 10);
-  ctx.save(); ctx.font = `700 40px ${CJK}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = 'rgba(225,223,235,0.82)';
-  ctx.shadowColor = 'rgba(0,0,0,0.8)'; ctx.shadowBlur = 8;
-  ctx.fillText(`“${ep.quote}”`, W / 2, 1172); const qw = ctx.measureText(`“${ep.quote}”`).width; box(W / 2 - qw / 2, 1150, W / 2 + qw / 2, 1194, 'quote');
-  ctx.restore();
+  // 类型 · 动物名 + 一句话（卡片下方的暗处）
+  const mT = metalRun([{ text: ep.type, font: `900 150px ${LATIN}`, gap: 24 }, { text: '·', font: `900 130px ${CJK}`, gap: 24, fill: hex }, { text: ep.animal.zh, font: `900 150px ${CJK}` }], 150, hex, null);
+  const ts = Math.min(0.82, 560 / mT.tw), tx = X0 + 50;
+  blitMetal(ctx, mT, tx + mT.tw * ts / 2, 1070, ts, 1, hex, 24); box(tx, 1070 - 128 * ts, tx + mT.tw * ts, 1070 + 18 * ts, '大字');
+  ctx.save(); richLine(ctx, ep.line, tx + 6, 1160, 40, hex, { align: 'left', weight: 700, back: true, label: '一句话' }); ctx.restore();
   logo(ctx, hex, X0 + 34, Y0 + CH - 62, 24);
 }

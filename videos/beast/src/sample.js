@@ -116,7 +116,7 @@ export function samplePoints(m, o) {
     const cb = norm(sub(cv, mul(n, dot(cv, n))));
     const furHere = VF ? Math.max(0.004, (VF[i0] * a + VF[i1] * b + VF[i2] * c)) * (o.furScale ?? 1) : furLen;
     push(p, n, cb, g * (0.85 + 0.3 * R()), 0);
-    if (g > 0.4 && R() < furFrac * (0.6 + 1.4 * rim)) {
+    if (g > 0.4 && R() < furFrac * (0.6 + 1.4 * rim) * (1 + Math.max(0, em))) {
       const L = furHere * (0.5 + R());
       const bend = 0.6 + 0.6 * R();
       for (let s = 1; s <= 3; s++) {

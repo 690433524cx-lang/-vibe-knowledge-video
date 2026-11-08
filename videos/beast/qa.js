@@ -17,27 +17,30 @@ const fsz = W * H; let minD = 1e9, minF = 0;
 // 明显变化：0.5 秒前后亮度差 > 12 的像素至少占 0.1%（眼睛、局部的变化也算）
 for (let f = 0; f + 15 < n; f++) { let d = 0; for (let i = 0; i < fsz; i++) if (Math.abs(raw[f * fsz + i] - raw[(f + 15) * fsz + i]) > 12) d++; d /= fsz; if (d < minD) { minD = d; minF = f; } }
 rows.push(`2. 0.5 秒内的画面变化：明显变化的像素最少占 ${(minD * 100).toFixed(2)}%（第 ${minF} 帧起），阈值 0.1% ${minD >= 0.001 ? '✓' : '✗'}`); if (minD < 0.001) fail.push(2);
+{ let d = 0, big = 0; for (let i = 0; i < fsz; i++) { const v = Math.abs(raw[i] - raw[(n - 1) * fsz + i]); d += v; if (v > 24) big++; } d /= fsz;
+  rows.push(`5. 首尾帧一致：平均差 ${d.toFixed(2)}，差 > 24 的像素 ${(big / fsz * 100).toFixed(2)}%（阈值：平均差 < 2、大差像素 < 0.3%） ${d < 2 && big / fsz < 0.003 ? '✓' : '✗'}`); if (!(d < 2 && big / fsz < 0.003)) fail.push(5); }
 const ev = JSON.parse(fs.readFileSync(path.join(dir, `${ep}_觉醒_events.json`)));
 const bt = JSON.parse(fs.readFileSync(path.join(__dirname, 'beats.json')));
-const grid = []; for (const b of bt.beats) for (let k = 0; k < 4; k++) grid.push(b + k * bt.beat / 4);
+const grid = []; for (let k = -40; k < 80; k++) grid.push(bt.awake_attack + k * bt.beat / 4);   // 起音实测的十六分音符网格
 let maxE = 0; const evRows = [];
-for (const e of ev.events) { const d = Math.min(...grid.map(g => Math.abs(g - e.music))); maxE = Math.max(maxE, d); const onDown = Math.min(...bt.downbeats.map(g => Math.abs(g - e.music))); evRows.push(`   ${e.name.padEnd(6, '　')} 音乐 ${e.music.toFixed(3)}s  离拍点 ${(d * 1000).toFixed(0)}ms${onDown < 0.04 ? '（小节第一拍）' : ''}`); }
+for (const e of ev.events) { const d = Math.min(...grid.map(g => Math.abs(g - e.music))); maxE = Math.max(maxE, d); const onDown = Math.min(...[-1, 0, 1, 2, 3, 4].map(k => Math.abs(bt.awake_attack + k * 4 * bt.beat - e.music))); evRows.push(`   ${e.name.padEnd(6, '　')} 音乐 ${e.music.toFixed(3)}s  离拍点 ${(d * 1000).toFixed(0)}ms${onDown < 0.04 ? '（小节第一拍）' : ''}`); }
 rows.push(`4. 事件对齐拍点：最大误差 ${(maxE * 1000).toFixed(0)}ms ${maxE < 0.04 ? '✓' : '✗'}`, ...evRows); if (maxE >= 0.04) fail.push(4);
 (async () => {
   const { srv, url, browser } = await openBrowser();
   const over = [];
-  for (const [mode, ts] of [['video', [2.2, 2.6, 2.95]], ['still', [0]], ['card', [0]]]) {
+  const T = JSON.parse(fs.readFileSync(path.join(dir, `${ep}_觉醒_events.json`))).events;
+  const vts = [0, 0.4, 1.2, 2.0, 2.5, 2.8, 3.4, 4.1, 4.5, 5.0, 5.3, 5.6, 5.95];
+  for (const [mode, ts] of [['video', vts], ['still', [0]], ['card', [0]]]) {
     const page = await openPage(browser, url, `ep=${ep}&mode=${mode}`);
     for (const t of ts) {
       const L = await page.evaluate(t => { window.render(t); return window.LAST; }, t);
-      const F = L.face, eyeHit = b => L.face.eyes.some(([x, y]) => x > b.x0 - 20 && x < b.x1 + 20 && y > b.y0 - 20 && y < b.y1 + 20);
-      for (const b of L.boxes) { const hit = b.x0 < F.x1 && b.x1 > F.x0 && b.y0 < F.y1 && b.y1 > F.y0; if (hit || eyeHit(b)) over.push(`${mode}@${t} ${b.label}`); }
-      rows.push(`   ${mode}@${t}：脸框 x ${F.x0.toFixed(0)}–${F.x1.toFixed(0)} y ${F.y0.toFixed(0)}–${F.y1.toFixed(0)}；文字框 ${L.boxes.length} 个`);
+      const hit = (b, r) => r.circle ? (() => { const [cx, cy, rr] = r.circle; const nx = Math.max(b.x0, Math.min(cx, b.x1)), ny = Math.max(b.y0, Math.min(cy, b.y1)); return Math.hypot(nx - cx, ny - cy) < rr; })() : b.x0 < r.x1 && b.x1 > r.x0 && b.y0 < r.y1 && b.y1 > r.y0;
+      for (const b of L.boxes) { if (b.label === 'logo' || b.label === 'label') continue; for (const r of L.avoid) { if (hit(b, r)) over.push(`${mode}@${t}「${b.label}」压到${r.label}`); } }
     }
     await page.close();
   }
   await browser.close(); srv.close();
-  rows.splice(2, 0, `3. 文字不压眼睛和脸：${over.length ? '✗ ' + over.join('，') : '✓'}`); if (over.length) fail.push(3);
+  rows.splice(2, 0, `3. 文字不压狼的脸、身体和月亮：${over.length ? '✗ ' + over.join('，') : '✓'}`); if (over.length) fail.push(3);
   const txt = `# ${ep} 质量检查\n\n` + rows.join('\n') + `\n\n结果：${fail.length ? '未通过 ' + fail.join(',') : '全部通过'}\n`;
   fs.writeFileSync(path.join(dir, 'qa.md'), txt); console.log(txt);
 })();

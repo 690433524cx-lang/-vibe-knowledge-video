@@ -12,12 +12,12 @@ const { serve } = require('./server');
   await page.goto(url + '/tools/mesh_page.html');
   await page.waitForFunction(() => window.READY);
   const t0 = Date.now();
-  const r = await page.evaluate(([s, o]) => window.dump(s, o), [species, { quality, seed: +seed, ...(variant ? { variant } : {}) }]);
+  const r = await page.evaluate(([s, o]) => window.dump(s, o), [species, { quality, seed: +seed, ...(variant ? { variant } : {}), ...(process.env.OVERRIDES ? { overrides: JSON.parse(process.env.OVERRIDES) } : {}), ...(process.env.SEX ? { sex: process.env.SEX } : {}) }]);
   const out = path.resolve(__dirname, '../assets/models/raw'); fs.mkdirSync(out, { recursive: true });
   const layout = {}, bufs = []; let off = 0;
   for (const [k, v] of Object.entries(r.bin)) { const b = Buffer.from(v.data, 'base64'); layout[k] = { type: v.type, n: v.n, offset: off }; bufs.push(b, Buffer.alloc((4 - b.length % 4) % 4)); off += b.length + (4 - b.length % 4) % 4; }
   fs.writeFileSync(path.join(out, name + '.bin'), Buffer.concat(bufs));
-  fs.writeFileSync(path.join(out, name + '.json'), JSON.stringify({ source: { library: 'procedural-animals c95ae49', species, quality, seed: +seed, variant: variant || null }, layout, ...r.meta }));
+  fs.writeFileSync(path.join(out, name + '.json'), JSON.stringify({ source: { library: 'procedural-animals c95ae49', species, quality, seed: +seed, variant: variant || null, sex: process.env.SEX || null, overrides: process.env.OVERRIDES ? JSON.parse(process.env.OVERRIDES) : null }, layout, ...r.meta }));
   console.log(name, species, 'nV', r.meta.nV, 'tris', r.meta.stats.tris, ((Date.now() - t0) / 1000).toFixed(1) + 's');
   await browser.close(); srv.close();
 })().catch(e => { console.error(e); process.exit(1); });

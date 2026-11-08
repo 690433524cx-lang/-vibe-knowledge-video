@@ -1,6 +1,6 @@
 // 专属能量特效：觉醒后一直存在，跟着音乐律动。每个特效返回 { update(a, s) }
 // s = { pulse 拍点脉冲, after 是否已觉醒, da 觉醒后秒数, right/up/fwd 镜头方向, behind 头后方的点, t 真实时间 }
-import { fxPointsMaterial } from './shaders.js';
+import { fxPointsMaterial, glowMaterial } from './shaders.js';
 import { rng, hash, smooth, clamp, mixHex, outCubic } from './util.js';
 
 export function buildFX(type, X) {
@@ -15,61 +15,89 @@ const appear = s => s.after ? outCubic(clamp(s.da / 0.45)) : 0;
 function panel(X) { const g = new X.THREE.Group(); X.E.scene.add(g); return g; }
 function face(g, X, pos, scale) { g.position.copy(pos); g.quaternion.copy(X.E.camera.quaternion); g.scale.setScalar(scale); }
 
-// ------------------------------------------------------------ 狼：身后一轮巨大的粒子月亮 + 寒风
+// ------------------------------------------------------------ 狼：身后一轮巨大的满月（钉在镜头上，屏幕上的位置和大小固定）+ 寒风
+// 片头和片尾只有暗处的轮廓；觉醒那一拍点亮、亮度再冲高 40% 后回落，同时一圈能量从月亮边缘向外爆开
+function moonMaterial(hex) {
+  return new X3.ShaderMaterial({
+    uniforms: { uLit: { value: 0 }, uOutline: { value: 1 }, uBoost: { value: 1 }, uCol: { value: new X3.Color(mixHex(hex, '#FFFFFF', 0.72)) }, uRim: { value: new X3.Color(mixHex(hex, '#FFFFFF', 0.45)) }, uTime: { value: 0 } },
+    transparent: true, depthWrite: false, depthTest: false, blending: X3.AdditiveBlending,
+    vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
+    fragmentShader: /* glsl */`
+      uniform float uLit, uOutline, uBoost, uTime; uniform vec3 uCol, uRim; varying vec2 vUv;
+      float hh(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7)))*43758.5453); }
+      float noise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(hh(i), hh(i+vec2(1,0)), f.x), mix(hh(i+vec2(0,1)), hh(i+vec2(1,1)), f.x), f.y); }
+      float fbm(vec2 p){ float v = 0.0, a = 0.5; for (int i = 0; i < 5; i++){ v += a*noise(p); p = p*2.03 + 7.1; a *= 0.5; } return v; }
+      void main(){
+        vec2 p = (vUv - 0.5)*2.0*1.25; float r = length(p);          // 圆盘半径 1，面片留出外圈光晕
+        float disc = smoothstep(1.0, 0.992, r);
+        // 月面：淡淡的“海”和细纹，球面让中间略亮、边缘一圈更亮
+        vec2 q = p/max(0.25, sqrt(max(0.0, 1.0 - r*r*0.6)));
+        float maria = smoothstep(0.42, 0.68, fbm(q*1.6 + 3.0));
+        float fine = fbm(q*7.0);
+        float surf = (0.86 - 0.22*maria + 0.1*(fine - 0.5))*(0.88 + 0.12*sqrt(max(0.0, 1.0 - r*r)));
+        float limb = exp(-pow((r - 0.985)/0.02, 2.0));
+        float halo = exp(-max(r - 1.0, 0.0)*9.0)*step(1.0, r)*smoothstep(1.24, 1.06, r);
+        vec3 lit = uCol*surf*disc*0.6 + uRim*limb*0.25 + uRim*halo*0.16;
+        // 暗处的轮廓：一圈细边 + 极淡的月面
+        vec3 dark = uRim*(exp(-pow((r - 1.0)/0.006, 2.0))*0.26 + disc*0.022*surf + halo*0.025);
+        vec3 c = mix(dark*uOutline, lit*uBoost, uLit);
+        gl_FragColor = vec4(c, 1.0);
+      }`,
+  });
+}
+let X3 = null;
 function moon(X) {
   const { THREE, E, hex } = X, R = rng(21);
-  const g = panel(X);
-  // 月面：圆盘里的点，边缘（月面边缘）稍亮，几块暗色的“海”
-  const n = 60000, P = new Float32Array(n * 3), M = new Float32Array(n * 4);
-  const maria = Array.from({ length: 9 }, () => [R() * 1.4 - 0.7, R() * 1.4 - 0.7, 0.12 + R() * 0.3, 0.35 + R() * 0.4]);
-  for (let i = 0; i < n; i++) {
-    const r = Math.sqrt(R()), a = R() * Math.PI * 2, x = Math.cos(a) * r, y = Math.sin(a) * r;
-    let b = 0.55 + 0.45 * Math.pow(r, 6);
-    for (const [mx, my, mr, md] of maria) { const d = Math.hypot(x - mx, y - my); b *= 1 - md * Math.exp(-d * d / (mr * mr)); }
-    b *= 0.8 + 0.4 * R();
-    P.set([x, y, 0], i * 3); M.set([b, R(), r, 0], i * 4);
-  }
-  const mat = fxPointsMaterial({ col: mixHex(hex, '#FFFFFF', 0.55), hi: '#FFFFFF', size: 0.05, maxPx: 3, bright: 0.42,
-    uniforms: { uK: { value: 0 }, uP: { value: 0 } }, uniformDecl: 'uniform float uK, uP;',
-    posHook: `
-      float r = aMisc.z; float k = clamp(uK*1.4 - r*0.4, 0.0, 1.0);
-      p = position*(0.9 + 0.1*k);
-      vis = k; b *= 1.0 + uP*0.25*smoothstep(0.75, 1.0, r); hot = smoothstep(0.85, 1.0, r)*0.5;` });
-  const disc = X.addPoints(X.geo({ position: [P, 3], aMisc: [M, 4] }), mat, -20, g);
-  const halo = X.addGlow(0, mixHex(hex, '#FFFFFF', 0.3), 1, -21);
-  // 寒风：一缕缕细长的光点从镜头前横着掠过，向动物身后吹
-  const ns = 520, per = 9, Q = new Float32Array(ns * per * 3), W = new Float32Array(ns * per * 4);
+  X3 = THREE;
+  const cam = E.camera, D = 60;   // 月亮挂在镜头前 60 个单位，跟着镜头走
+  const grp = new THREE.Group(); cam.add(grp);
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 2.5), moonMaterial(hex)); quad.renderOrder = -30; quad.frustumCulled = false; grp.add(quad);
+  // 月面上的细小粒子闪烁（粒子风格）
+  const n = 9000, P = new Float32Array(n * 3), M = new Float32Array(n * 4);
+  for (let i = 0; i < n; i++) { const r = Math.sqrt(R()), a = R() * Math.PI * 2; P.set([Math.cos(a) * r, Math.sin(a) * r, 0.01], i * 3); M.set([0.5 + R(), R(), r, 0], i * 4); }
+  const spark = fxPointsMaterial({ col: mixHex(hex, '#FFFFFF', 0.7), hi: '#FFFFFF', size: 0.5, maxPx: 2.2, bright: 0.5,
+    uniforms: { uK: { value: 0 } }, uniformDecl: 'uniform float uK;',
+    posHook: `vis = uK; b *= 0.5 + 0.5*sin(uTime*(3.0 + 5.0*h1(aMisc.y*7.0)) + aMisc.y*50.0); hot = 0.5;` });
+  X.addPoints(X.geo({ position: [P, 3], aMisc: [M, 4] }), spark, -29, grp);
+  // 爆开的能量圈：从月亮边缘向外
+  const burst = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), glowMaterial(2, mixHex(hex, '#FFFFFF', 0.3), { core: '#FFFFFF' })); burst.renderOrder = -28; burst.frustumCulled = false; grp.add(burst);
+  const burst2 = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), glowMaterial(2, hex, { core: mixHex(hex, '#FFFFFF', 0.5) })); burst2.renderOrder = -28; burst2.frustumCulled = false; grp.add(burst2);
+  // 寒风：一缕缕细长的光点从画面横着掠过
+  const ns = 420, per = 9, Q = new Float32Array(ns * per * 3), W = new Float32Array(ns * per * 4);
   for (let i = 0; i < ns; i++) for (let j = 0; j < per; j++) {
-    const k = i * per + j;
-    Q.set([R() * 2 - 1, (R() - 0.5) * 2.4, (R() - 0.5) * 3.2], k * 3);
+    const k = i * per + j; Q.set([R() * 2 - 1, (R() - 0.5) * 2.4, (R() - 0.5) * 3.2], k * 3);
     if (j) Q.set(Q.subarray(i * per * 3, i * per * 3 + 3), k * 3);
     W.set([1 - j / per, hash(i * 3.1), j, 0.5 + hash(i * 5.3)], k * 4);
   }
-  const wmat = fxPointsMaterial({ col: mixHex(hex, '#DFFFF0', 0.6), hi: '#FFFFFF', size: 0.009, maxPx: 3, bright: 0.55,
+  const wmat = fxPointsMaterial({ col: mixHex(hex, '#DFFFF0', 0.6), hi: '#FFFFFF', size: 0.009, maxPx: 3, bright: 0.5,
     uniforms: { uO: { value: new THREE.Vector3() }, uR: { value: new THREE.Vector3(1, 0, 0) }, uU: { value: new THREE.Vector3(0, 1, 0) }, uF: { value: new THREE.Vector3(0, 0, 1) }, uK: { value: 0 }, uP: { value: 0 } },
     uniformDecl: 'uniform vec3 uO, uR, uU, uF; uniform float uK, uP;',
     posHook: `
       float sp = aMisc.w*(2.6 + 1.2*uP);
       float x = fract(position.x*0.5 + 0.5 - uTime*sp*0.16 - aMisc.y)*2.0 - 1.0;
-      float L = 4.2;
-      vec3 q = uO + uR*(x*L + aMisc.z*0.045) + uU*(position.y + 0.08*sin(x*3.0 + aMisc.y*20.0) - x*0.25) + uF*position.z;
-      p = q; b *= aMisc.x*uK*smoothstep(1.0, 0.6, abs(x))*(0.6 + 0.6*uP); hot = aMisc.x;` });
+      p = uO + uR*(x*4.2 + aMisc.z*0.045) + uU*(position.y + 0.08*sin(x*3.0 + aMisc.y*20.0) - x*0.25) + uF*position.z;
+      b *= aMisc.x*uK*smoothstep(1.0, 0.6, abs(x))*(0.6 + 0.6*uP); hot = aMisc.x;` });
   const windP = X.addPoints(X.geo({ position: [Q, 3], aMisc: [W, 4] }), wmat, 50);
   return {
-    update(a, s) {
-      const k = appear(s);
-      const mo = (X.E.mode === 'card' ? X.E.ep.cardMoon : null) ?? X.E.ep.moon ?? [3.3, 2.0, 7.5];
-      const pos = X.E.moonPos ? X.E.moonPos.clone() : X.C.clone().addScaledVector(s.fwd, mo[2]).addScaledVector(s.up, mo[1]).addScaledVector(s.right, mo[0]);
-      // 嚎叫那一拍月亮亮度提高 40%，再慢慢回落
-      const boost = s.after ? 1 + 0.4 * Math.exp(-Math.max(0, s.da) / 1.1) : 1;
-      face(g, X, pos, X.E.ep.moonR ?? 1.3);
-      mat.uniforms.uK.value = k; mat.uniforms.uP.value = s.pulse * s.after; mat.uniforms.uBright.value = 0.7 * boost;
-      g.visible = k > 0.001;
-      halo.position.copy(pos); halo.scale.setScalar(5.2); halo.material.uniforms.uInt.value = 0.05 * k * boost * (1 + 0.15 * s.pulse);
-      halo.visible = k > 0.001;
-      const wu = wmat.uniforms; wu.uO.value.copy(X.C).addScaledVector(s.fwd, 0.4).addScaledVector(s.up, -0.3);
-      wu.uR.value.copy(s.right).multiplyScalar(-1); wu.uU.value.copy(s.up); wu.uF.value.copy(s.fwd); wu.uK.value = k; wu.uP.value = s.pulse;
-      windP.visible = k > 0.001;
+    update(t, s) {
+      const T = E.T, [mx, my, mr] = E.L.moon, tanh = Math.tan(cam.fov * Math.PI / 360), ppu = E.H / (2 * D * tanh);
+      grp.position.set((mx - E.W / 2) / ppu, (E.H / 2 - my) / ppu, -D); grp.scale.setScalar(mr / ppu);
+      const da = t - T.hit, after = da >= 0;
+      // 点亮：觉醒那一拍 0.12 秒内亮起；亮度冲高 40% 再在 1.2 秒里回落；片尾回到轮廓
+      const lit = (after ? smooth(0, 0.12, da) : 0) * (1 - s.outro);
+      const boost = after ? 1 + 0.4 * Math.exp(-da / 0.45) * smooth(0, 0.08, da) : 1;
+      const mu = quad.material.uniforms; mu.uLit.value = lit; mu.uBoost.value = boost * (1 + 0.04 * s.pulse); mu.uOutline.value = 1;
+      spark.uniforms.uK.value = lit;
+      for (const [m, r0, r1, w, i0, life] of [[burst, 1.0, 2.4, 0.012, 0.7, 0.8], [burst2, 1.0, 1.8, 0.03, 0.2, 1.0]]) {
+        const k = after ? Math.min(1, da / life) : 1;
+        m.visible = after && da < life;
+        if (!m.visible) continue;
+        const e = 1 - Math.pow(1 - k, 3), rad = r0 + (r1 - r0) * e;
+        m.scale.setScalar(rad / 0.62); const u = m.material.uniforms; u.uRing.value = 0.62; u.uWidth.value = w / rad * 0.62 * 1.6; u.uInt.value = i0 * Math.pow(1 - k, 1.6);
+      }
+      const wu = wmat.uniforms; wu.uO.value.copy(X.C).addScaledVector(s.fwd, 0.6).addScaledVector(s.up, -0.2);
+      wu.uR.value.copy(s.right).multiplyScalar(-1); wu.uU.value.copy(s.up); wu.uF.value.copy(s.fwd); wu.uK.value = lit; wu.uP.value = s.pulse;
+      windP.visible = lit > 0.001;
     },
   };
 }

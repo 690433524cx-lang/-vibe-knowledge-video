@@ -1,11 +1,83 @@
 {
-  "id": "cat", "type": "ISTP", "group": "SP", "color": "#FFC23D",
-  "animal": { "zh": "猫", "en": "Cat", "model": "cat" },
-  "title": "暗影独行者",
-  "talents": ["冷静", "灵巧", "自由"],
-  "quote": "不用管我，我自己能搞定。",
-  "facts": ["猫从高处落下时，会在半空中自己翻正身体。"],
-  "fx": "shadow",
-  "pose": {},
-  "camera": { "yaw": 30, "pitch": -8, "dist": 3.4, "fov": 32, "aim": [0, -0.32, 0], "push": 0.07 }
+ "id": "cat",
+ "type": "ISTP",
+ "group": "SP",
+ "color": "#FFC23D",
+ "animal": {
+  "zh": "猫",
+  "en": "Cat",
+  "model": "cat"
+ },
+ "facts": [
+  "猫从高处落下时，会在半空中自己翻正身体。"
+ ],
+ "fx": "shadow",
+ "pose": {},
+ "camera": {
+  "yaw": 30,
+  "pitch": -8,
+  "dist": 3.4,
+  "fov": 32,
+  "aim": [
+   0,
+   -0.32,
+   0
+  ],
+  "push": 0.07
+ },
+ "line": "你独来独往，但〔什么都会〕。",
+ "concept": "每一种 MBTI，都有一只对应的〔动物〕",
+ "revealText": "〔ISTP〕 的动物是——",
+ "intro": {
+  "center": [
+   740,
+   540
+  ],
+  "height": 420,
+  "animals": [
+   {
+    "model": "sil_fox",
+    "type": "ENTP",
+    "zh": "狐狸",
+    "color": "#A24BFF",
+    "yaw": -60
+   },
+   {
+    "model": "sil_cat",
+    "type": "ISTP",
+    "zh": "猫",
+    "color": "#FFC23D",
+    "yaw": -60
+   },
+   {
+    "model": "sil_lion",
+    "type": "ESTJ",
+    "zh": "狮子",
+    "color": "#3AA8FF",
+    "yaw": -55
+   },
+   {
+    "model": "sil_eagle",
+    "type": "INTP",
+    "zh": "猫头鹰（暂用鹰）",
+    "color": "#A24BFF",
+    "yaw": -20
+   },
+   {
+    "model": "sil_dog",
+    "type": "ENFJ",
+    "zh": "狗",
+    "color": "#2BE36B",
+    "yaw": -60
+   },
+   {
+    "model": "sil_deer",
+    "type": "ISFJ",
+    "zh": "鹿",
+    "color": "#3AA8FF",
+    "yaw": -55
+   }
+  ]
+ },
+ "conceptY": 112
 }

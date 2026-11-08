@@ -63,12 +63,12 @@ export function beastMaterial(o) {
           float e = pow(k, 2.3);
           // 起点在镜头前的一个圆盘上（垂直于视线），再绕视线旋转：屏幕上是清楚的旋涡
           vec3 ax = normalize(uAxis), t1 = normalize(cross(ax, vec3(0.0, 1.0, 0.0))), t2 = cross(ax, t1);
-          float ang = h1(seed*13.7)*6.2832, rad = 0.75 + 2.5*pow(h1(seed*9.1), 0.8);
+          float ang = h1(seed*13.7)*6.2832, rad = 0.45 + 1.6*pow(h1(seed*9.1), 0.9);
           vec3 rel0 = (t1*cos(ang) + t2*sin(ang))*rad + ax*(h1(seed*6.3) - 0.5)*1.5;
           rel0 = rotAxis(rel0, ax, (1.0 - e)*(3.5 + 2.5*h1(seed*2.9)));
           p = uC + mix(rel0, p - uC, e);
           // 只有一成的粒子在途中就亮（像彗星，带拖尾），其余的快到时才显出来，画面不会糊成一片雾
-          float comet = step(h1(seed*21.1), 0.1);
+          float comet = step(h1(seed*21.1), 0.045);
           vis *= smoothstep(0.0, 0.1, k)*mix(smoothstep(0.72, 0.97, k), 1.0, comet);
           moving = (1.0 - e)*(0.35 + 0.65*comet);
         } else if (uGhost > 0.5) vis = 0.0;
