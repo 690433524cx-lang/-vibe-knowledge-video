@@ -1,0 +1,11 @@
+{
+  "id": "wolf", "type": "INFJ", "group": "NF", "color": "#2BE36B",
+  "animal": { "zh": "狼", "en": "Wolf", "model": "wolf_q" },
+  "title": "月下孤狼",
+  "talents": ["洞察", "共情", "坚守"],
+  "quote": "你看起来安静，其实什么都看见了。",
+  "facts": ["狼的嚎叫能传到 10 公里外，是在告诉同伴：我在这里。"],
+  "fx": "moon",
+  "pose": { "bones": { "Neck1": [-14, 0, 0], "Neck3": [-6, 12, 0], "Head": [10, 10, 0] } },
+  "camera": { "yaw": 32, "pitch": -8, "dist": 3.4, "fov": 32, "aim": [0, -0.32, 0], "push": 0.07 }
+}

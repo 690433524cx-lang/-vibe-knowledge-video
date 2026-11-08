@@ -1,0 +1,11 @@
+{
+  "id": "cat", "type": "ISTP", "group": "SP", "color": "#FFC23D",
+  "animal": { "zh": "猫", "en": "Cat", "model": "cat" },
+  "title": "暗影独行者",
+  "talents": ["冷静", "灵巧", "自由"],
+  "quote": "不用管我，我自己能搞定。",
+  "facts": ["猫从高处落下时，会在半空中自己翻正身体。"],
+  "fx": "shadow",
+  "pose": {},
+  "camera": { "yaw": 30, "pitch": -8, "dist": 3.4, "fov": 32, "aim": [0, -0.32, 0], "push": 0.07 }
+}

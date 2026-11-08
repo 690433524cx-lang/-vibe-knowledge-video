@@ -1,0 +1,11 @@
+{
+  "id": "owl", "type": "INTP", "group": "NT", "color": "#A24BFF",
+  "animal": { "zh": "猫头鹰", "en": "Owl", "model": "owl" },
+  "title": "夜之智者",
+  "talents": ["思考", "好奇", "独立"],
+  "quote": "你不是在发呆，是想得更深。",
+  "facts": ["猫头鹰的脖子能转 270 度，因为它的眼睛转不动。"],
+  "fx": "startrail",
+  "pose": {},
+  "camera": { "yaw": 24, "pitch": -8, "dist": 3.4, "fov": 32, "aim": [0, -0.32, 0], "push": 0.07 }
+}

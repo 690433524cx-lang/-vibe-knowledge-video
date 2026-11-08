@@ -1,0 +1,11 @@
+{
+  "id": "fox", "type": "ENTP", "group": "NT", "color": "#A24BFF",
+  "animal": { "zh": "狐狸", "en": "Fox", "model": "fox_q" },
+  "title": "千面妖狐",
+  "talents": ["机变", "辩才", "创意"],
+  "quote": "规则？我先看看能不能换个玩法。",
+  "facts": ["狐狸能听见地下一米深处老鼠的动静，再一跃扎进雪里。"],
+  "fx": "foxfire",
+  "pose": { "bones": { "Neck1": [-12, 0, 0], "Neck3": [-4, 12, 0], "Head": [8, 12, 4] } },
+  "camera": { "yaw": 34, "pitch": -8, "dist": 3.4, "fov": 32, "aim": [0, -0.32, 0], "push": 0.07 }
+}
