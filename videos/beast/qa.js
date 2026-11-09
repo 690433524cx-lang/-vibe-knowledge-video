@@ -17,7 +17,16 @@ const fsz = W * H; let minD = 1e9, minF = 0; const perSec = [];
 // 明显变化：0.5 秒前后亮度差 > 12 的像素至少占 0.1%（眼睛、局部的变化也算）；按秒输出每一秒里最“静”的那个 0.5 秒
 for (let f = 0; f + 15 < n; f++) { let d = 0; for (let i = 0; i < fsz; i++) if (Math.abs(raw[f * fsz + i] - raw[(f + 15) * fsz + i]) > 12) d++; d /= fsz; const sec = Math.floor(f / 30); perSec[sec] = Math.min(perSec[sec] ?? 1, d); if (d < minD) { minD = d; minF = f; } }
 rows.push(`2. 0.5 秒内的画面变化：明显变化的像素最少占 ${(minD * 100).toFixed(2)}%（第 ${minF} 帧，${(minF / 30).toFixed(2)} 秒起），阈值 0.1% ${minD >= 0.001 ? '✓' : '✗'}`); if (minD < 0.001) fail.push(2);
-rows.push('   按秒（每一秒里最静的 0.5 秒，明显变化像素占比）：' + perSec.map((v, i) => `${i}s ${(v * 100).toFixed(2)}%${v < 0.001 ? '✗' : ''}`).join('  '));
+// 每 0.5 秒一段：这一段里每一帧和 0.5 秒后相比，明显变化像素的平均占比
+const evj = JSON.parse(fs.readFileSync(path.join(dir, `${ep}_觉醒_events.json`))), TA = evj.T_AWAKE;
+const bins = []; for (let f = 0; f + 15 < n; f++) { let d = 0; for (let i = 0; i < fsz; i++) if (Math.abs(raw[f * fsz + i] - raw[(f + 15) * fsz + i]) > 12) d++; const b = Math.floor(f / 15); (bins[b] ??= []).push(d / fsz); }
+const bv = bins.map(a => a.reduce((x, y) => x + y, 0) / a.length);
+const aw = bv.filter((_, b) => b * 0.5 >= TA - 0.01 && b * 0.5 < TA + 2.0), awAvg = aw.reduce((x, y) => x + y, 0) / aw.length;
+const lim = awAvg / 2; let midOk = true;
+const binRows = bv.map((v, b) => { const t0 = b * 0.5, inMid = t0 >= 9 && t0 < 22, bad = inMid && v < lim; if (bad) midOk = false; return `${t0.toFixed(1)}s ${(v * 100).toFixed(1)}%${bad ? '✗' : ''}`; });
+rows.push(`7. 静止检测（每 0.5 秒，明显变化像素的平均占比）：觉醒段（${TA.toFixed(2)}–${(TA + 2).toFixed(2)} 秒）平均 ${(awAvg * 100).toFixed(1)}%，9–22 秒每一段都要 ≥ 一半（${(lim * 100).toFixed(1)}%） ${midOk ? '✓' : '✗'}`);
+for (let i = 0; i < binRows.length; i += 10) rows.push('   ' + binRows.slice(i, i + 10).join('  '));
+if (!midOk) fail.push(7);
 { // 首尾一致：最后一帧接回第 0 帧的变化，不应超过正常相邻两帧之间的变化（画面里有持续的缓慢运动，比如旋转的粒子环）
   const cmp = (fa, fb) => { let d = 0, big = 0; for (let i = 0; i < fsz; i++) { const v = Math.abs(raw[fa * fsz + i] - raw[fb * fsz + i]); d += v; if (v > 24) big++; } return [d / fsz, big / fsz]; };
   const [d, big] = cmp(n - 1, 0), [d01, big01] = cmp(0, 1), [d12, big12] = cmp(1, 2);

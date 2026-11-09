@@ -59,7 +59,9 @@ export async function initEngine(canvas, ep, { W, H, mode, T }) {
     furFrac: S.furFrac ?? 0.12, furLen: S.furLen ?? 0.06, furScale: S.furScale, comb: S.comb ?? [0, -0.3, -1], bulge: S.bulge ?? 1,
   });
   E.count = pts.count; E.surface = pts.surface;
-  const g = geo({ position: [pts.pos, 3], aNrm: [pts.nrm, 3], aComb: [pts.comb, 3], aMisc: [pts.misc, 4], aChain: [pts.chain, 4] });
+  const split8 = (w, n) => { const a = new Float32Array(n * 4), b = new Float32Array(n * 4); for (let i = 0; i < n; i++) for (let j = 0; j < 4; j++) { a[i * 4 + j] = w ? w[i * 8 + j] : 0; b[i * 4 + j] = w ? w[i * 8 + 4 + j] : 0; } return [a, b]; };
+  const [ch1, ch2] = split8(pts.chain, pts.count);
+  const g = geo({ position: [pts.pos, 3], aNrm: [pts.nrm, 3], aComb: [pts.comb, 3], aMisc: [pts.misc, 4], aChain: [ch1, 4], aChain2: [ch2, 4] });
   const matOpts = { col: hex, hi: mixHex(hex, '#FFFFFF', 0.7), rim: mixHex(hex, '#FFFFFF', 0.55), bright: (ep.bright ?? 2.0) * (mode === 'card' ? (ep.cardBright ?? 1.3) : 1), size: 0.0068 };
   E.beast = addPoints(g, beastMaterial(matOpts), 5);
   // 拖尾：同一批粒子，时间往回错开、只画一部分、越来越暗；只在汇聚途中可见
@@ -71,14 +73,15 @@ export async function initEngine(canvas, ep, { W, H, mode, T }) {
   {
     const og = new THREE.BufferGeometry();
     og.setAttribute('position', new THREE.BufferAttribute(mesh.pos, 3));
-    og.setAttribute('aChain', new THREE.BufferAttribute(mesh.chain ?? new Float32Array(mesh.pos.length / 3 * 4), 4));
+    { const [o1, o2] = split8(mesh.chain, mesh.pos.length / 3); og.setAttribute('aChain', new THREE.BufferAttribute(o1, 4)); og.setAttribute('aChain2', new THREE.BufferAttribute(o2, 4)); }
     og.setIndex(new THREE.BufferAttribute(mesh.index, 1));
     const om = new THREE.ShaderMaterial({
-      uniforms: { uAct: { value: [0, 1, 2, 3].map(() => new THREE.Matrix4()) }, uOp: { value: 0 }, uCol: { value: new THREE.Color(mixHex(hex, '#000000', 0.94)) } },
+      uniforms: { uAct: { value: [0, 1, 2, 3, 4, 5, 6, 7].map(() => new THREE.Matrix4()) }, uOp: { value: 0 }, uCol: { value: new THREE.Color(mixHex(hex, '#000000', 0.94)) } },
       transparent: true, depthWrite: false, depthTest: false, side: THREE.DoubleSide,
-      vertexShader: `attribute vec4 aChain; uniform mat4 uAct[4];
-        void main(){ float wr = 1.0 - (aChain.x + aChain.y + aChain.z + aChain.w); vec4 hp = vec4(position, 1.0);
-          vec3 p = position*wr + (uAct[0]*hp).xyz*aChain.x + (uAct[1]*hp).xyz*aChain.y + (uAct[2]*hp).xyz*aChain.z + (uAct[3]*hp).xyz*aChain.w;
+      vertexShader: `attribute vec4 aChain; attribute vec4 aChain2; uniform mat4 uAct[8];
+        void main(){ float wr = 1.0 - (aChain.x + aChain.y + aChain.z + aChain.w + aChain2.x + aChain2.y + aChain2.z + aChain2.w); vec4 hp = vec4(position, 1.0);
+          vec3 p = position*wr + (uAct[0]*hp).xyz*aChain.x + (uAct[1]*hp).xyz*aChain.y + (uAct[2]*hp).xyz*aChain.z + (uAct[3]*hp).xyz*aChain.w
+                 + (uAct[4]*hp).xyz*aChain2.x + (uAct[5]*hp).xyz*aChain2.y + (uAct[6]*hp).xyz*aChain2.z + (uAct[7]*hp).xyz*aChain2.w;
           gl_Position = projectionMatrix*modelViewMatrix*vec4(p, 1.0); }`,
       fragmentShader: `uniform float uOp; uniform vec3 uCol; void main(){ gl_FragColor = vec4(uCol, uOp); }`,
     });
@@ -195,6 +198,7 @@ export function frame(t) {
     u.uKick.value = kick; u.uWind.value = wind; u.uPulse.value = pulse * after; u.uFlow.value = after ? smooth(0, 0.6, da) : 0.25;
     u.uWindDir.value.set(...(ep.windDir ?? [0.15, 0.2, -1])).normalize(); u.uFade.value = wolfOn;
     u.uKey.value.copy(E.keyDir);
+    u.uBreath.value = after * 0.012 * Math.sin(2 * Math.PI * t / (4 * T.e8));
   }
   for (const p of E.ghosts) p.visible = t > T.asm0 - 0.02 && t < T.hit + 0.08;
   { const ou = E.occluder.material.uniforms; if (mats) ou.uAct.value.forEach((m, i) => m.copy(mats[i])); ou.uOp.value = (ep.occlude ?? 0.9) * smooth(T.hit - 0.1, T.hit + 0.04, t) * (1 - outro); E.occluder.visible = ou.uOp.value > 0.002; }
@@ -204,8 +208,9 @@ export function frame(t) {
   if (after) { const sp = Math.exp(-da / 0.09); eyeI = 1.0 + 1.5 * sp + 0.08 * pulse; flare = 0.35 + 1.6 * sp + 0.15 * pulse; }
   if (T.story && t >= T.story.start) {   // 正文：眼睛一闪一闪；第 3 段特写那一拍亮起；两双眼睛一起闪
     const S3 = t >= T.story.seg3 ? Math.exp(-(t - T.story.seg3) / 0.25) : 0, F = E.storyFlash ?? 0;
-    eyeI *= 0.82 + 0.22 * Math.pow(0.5 + 0.5 * Math.sin(t * 7.3) * Math.sin(t * 3.1), 2) + 0.12 * pulse; eyeI += 1.1 * S3 + 1.0 * F; flare += 1.0 * S3 + 0.9 * F;
+    eyeI *= 0.82 + 0.22 * Math.pow(0.5 + 0.5 * Math.sin(t * 7.3) * Math.sin(t * 3.1), 2) + 0.35 * pulse; eyeI += 1.1 * S3 + 1.0 * F; flare += 1.0 * S3 + 0.9 * F + 0.4 * pulse;
   }
+  E.heroEyeI = eyeI;
   E.eyeGlows.forEach((g, i) => {
     const e = mats ? E.eyes[i].clone().applyMatrix4(mats[E.act.headSlot]) : E.eyes[i];
     g.position.copy(e).addScaledVector(fwd, -0.05);

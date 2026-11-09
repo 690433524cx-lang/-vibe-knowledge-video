@@ -108,7 +108,20 @@
    },
    {
     "name": "jaw",
-    "pitch": -32
+    "pitch": -32,
+    "parent": 2
+   },
+   {
+    "name": "earL",
+    "parent": 2
+   },
+   {
+    "name": "earR",
+    "parent": 2
+   },
+   {
+    "name": "tail0",
+    "parent": -1
    }
   ],
   "rise": 2,
@@ -219,87 +232,88 @@
    "去找〔真正属于自己〕的地方。",
    "你不是不合群，你只是在等〔真正懂你的人〕。"
   ],
-  "shots": [
-   {
-    "name": "wide",
-    "at": [
-     "start",
-     1.8
-    ],
+  "pack": 6,
+  "farEyes": [
+   1690,
+   640
+  ],
+  "packBright": 0.35,
+  "geom": {
+   "wide": {
     "yaw": 40,
     "pitch": -4,
-    "dist": 10.5,
-    "eyes": [
-     1180,
-     430
-    ]
-   },
-   {
-    "name": "wide2",
-    "at": [
-     "seg2b",
-     0
-    ],
-    "yaw": 42,
-    "pitch": -4,
-    "dist": 10.0,
+    "dist": 8.0,
     "eyes": [
      1150,
-     430
+     420
     ]
    },
-   {
-    "name": "pan",
-    "at": [
-     "seg3",
-     -0.25
-    ],
+   "pan": {
     "yaw": 42,
-    "pitch": -4,
-    "dist": 10.0,
+    "pitch": -12,
+    "dist": 8.0,
     "eyes": [
      1150,
-     430
+     470
     ],
-    "pan": 3.2
+    "pan": 2.8
+   }
+  },
+  "cams": [
+   {
+    "name": "中景",
+    "yaw": 40,
+    "pitch": -4,
+    "dist": 8.0,
+    "eyes": [
+     1150,
+     420
+    ],
+    "push": 0.08,
+    "orbit": 4
    },
    {
-    "name": "close",
-    "at": [
-     "seg3",
-     0.55
+    "name": "更近的侧面",
+    "yaw": -38,
+    "pitch": -3,
+    "dist": 4.4,
+    "eyes": [
+     820,
+     430
     ],
     "aim": "eyes",
+    "push": 0.1,
+    "orbit": 4
+   },
+   {
+    "name": "低机位",
+    "yaw": 42,
+    "pitch": -12,
+    "pitchTo": -13,
+    "dist": 8.0,
+    "eyes": [
+     1150,
+     470
+    ],
+    "pan": 2.8,
+    "push": 0.06,
+    "orbit": 4
+   },
+   {
+    "name": "脸部特写",
     "yaw": 6,
     "pitch": -3,
     "dist": 2.3,
     "eyes": [
      640,
      470
-    ]
-   },
-   {
-    "name": "close2",
-    "at": [
-     "seg3",
-     3.9
     ],
     "aim": "eyes",
-    "yaw": 3,
-    "pitch": -3,
-    "dist": 2.05,
-    "eyes": [
-     650,
-     470
-    ]
+    "push": 0.1,
+    "orbit": 4
    }
   ],
-  "pack": 6,
-  "farEyes": [
-   1690,
-   640
-  ],
-  "packBright": 0.2
+  "pathWidth": 3
  },
  "moves": [
   {
@@ -329,5 +343,38 @@
   "color": "#A24BFF",
   "text": "下一集：〔INTP〕"
  },
- "questionMin": 1.6
+ "questionMin": 1.6,
+ "keywords": [
+  "洞察",
+  "共情",
+  "理想主义"
+ ],
+ "idle": {
+  "t": [
+   7.328,
+   22.655
+  ],
+  "bones": {
+   "neck2": {
+    "yaw": 5,
+    "pitch": 2.5,
+    "f": 0.23
+   },
+   "head": {
+    "yaw": 6,
+    "pitch": 3,
+    "f": 0.31,
+    "ph": 1.7
+   },
+   "earL": {
+    "beatYaw": 12
+   },
+   "earR": {
+    "beatYaw": -12
+   },
+   "tail0": {
+    "sway": 14
+   }
+  }
+ }
 }

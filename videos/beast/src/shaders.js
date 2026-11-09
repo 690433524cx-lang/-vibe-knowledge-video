@@ -25,13 +25,13 @@ export function beastMaterial(o) {
     uCol: { value: col(o.col) }, uHi: { value: col(o.hi) }, uRim: { value: col(o.rim) },
     uBright: { value: o.bright ?? 1 }, uSize: { value: o.size ?? 0.0075 }, uMaxPx: { value: 6 }, uPulse: { value: 0 }, uFlow: { value: 0 },
     uFade: { value: 1 },
-    uAct: { value: [0, 1, 2, 3].map(() => new THREE.Matrix4()) },
+    uAct: { value: [0, 1, 2, 3, 4, 5, 6, 7].map(() => new THREE.Matrix4()) }, uBreath: { value: 0 },
   };
   return new THREE.ShaderMaterial({
     uniforms: u, transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending,
     vertexShader: /* glsl */`
-      attribute vec3 aNrm; attribute vec3 aComb; attribute vec4 aMisc; attribute vec4 aChain;
-      uniform mat4 uAct[4];
+      attribute vec3 aNrm; attribute vec3 aComb; attribute vec4 aMisc; attribute vec4 aChain; attribute vec4 aChain2;
+      uniform mat4 uAct[8]; uniform float uBreath;
       uniform float uPx, uTime, uA, uLag, uGhost, uHit, uAsm0, uKick, uWind, uBright, uSize, uMaxPx, uPulse, uFlow, uFade;
       uniform vec3 uC, uAxis, uCam, uWindDir, uKey, uCol, uHi, uRim;
       varying vec3 vCol; varying float vA;
@@ -39,10 +39,13 @@ export function beastMaterial(o) {
       void main(){
         float seed = aMisc.y, kind = aMisc.z, d = aMisc.w;
         // 专属动作：骨骼链的线性蒙皮（4 根骨骼 + 不动的其余部分）
-        float wr = 1.0 - (aChain.x + aChain.y + aChain.z + aChain.w);
+        float wr = 1.0 - (aChain.x + aChain.y + aChain.z + aChain.w + aChain2.x + aChain2.y + aChain2.z + aChain2.w);
         vec4 hp = vec4(position, 1.0);
-        vec3 p = position*wr + (uAct[0]*hp).xyz*aChain.x + (uAct[1]*hp).xyz*aChain.y + (uAct[2]*hp).xyz*aChain.z + (uAct[3]*hp).xyz*aChain.w;
-        vec3 n = normalize(aNrm*wr + mat3(uAct[0])*aNrm*aChain.x + mat3(uAct[1])*aNrm*aChain.y + mat3(uAct[2])*aNrm*aChain.z + mat3(uAct[3])*aNrm*aChain.w);
+        vec3 p = position*wr + (uAct[0]*hp).xyz*aChain.x + (uAct[1]*hp).xyz*aChain.y + (uAct[2]*hp).xyz*aChain.z + (uAct[3]*hp).xyz*aChain.w
+               + (uAct[4]*hp).xyz*aChain2.x + (uAct[5]*hp).xyz*aChain2.y + (uAct[6]*hp).xyz*aChain2.z + (uAct[7]*hp).xyz*aChain2.w;
+        vec3 n = normalize(aNrm*wr + mat3(uAct[0])*aNrm*aChain.x + mat3(uAct[1])*aNrm*aChain.y + mat3(uAct[2])*aNrm*aChain.z + mat3(uAct[3])*aNrm*aChain.w
+               + mat3(uAct[4])*aNrm*aChain2.x + mat3(uAct[5])*aNrm*aChain2.y + mat3(uAct[6])*aNrm*aChain2.z + mat3(uAct[7])*aNrm*aChain2.w);
+        p += aNrm*uBreath*wr;   // 呼吸：身体（不在骨骼链上的部分）沿法线轻轻起伏
         // 风：毛尖吹得最远，表面只有一点点
         float furT = kind > 0.5 ? (kind > 1.5 ? 0.55 : 1.0) : 0.0;
         float ph = uTime*(5.0 + 3.0*h1(seed*4.3)) + seed*6.2832 + dot(position, vec3(4.1, 3.3, 2.7));

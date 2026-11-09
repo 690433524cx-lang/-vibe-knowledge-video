@@ -35,7 +35,8 @@ export function timeline(ep, beats) {
   const next = nextBar(question + (ep.questionMin ?? 1.6)), gather = +(next + 3 * e8).toFixed(4), end = +(gather + 0.5).toFixed(4);
   const cards = { deal, spin0: jumps[0][0], jumps, pop, rush, cardHold, cardBack: next, backIn: next, flyBack: next, gather, end };
   const clip = +(end + (ep.endHold ?? 0.166)).toFixed(4);
-  return { beat, e8, hit, reveal, clip, g, cards, asm0: rush, act: [t1, t2, t3], title: t2, sentence: h(A.rise + A.hold + 1), outro, cardHold, cardBack: next, lift: pop, story, question, next, nextType: ep.next?.type };
+  const kw = (ep.keywords ?? []).map((_, i) => h(A.rise + A.hold + 1 + i)), header = h(A.rise + A.hold + 1 + kw.length), sentence = +(header + e8).toFixed(4);
+  return { beat, e8, hit, reveal, clip, g, cards, asm0: rush, act: [t1, t2, t3], title: t2, keywords: kw, header, sentence, sentenceOut: +(seg2a + 3 * e8).toFixed(4), outro, cardHold, cardBack: next, lift: pop, story, question, next, nextType: ep.next?.type };
 }
 
 export async function init() {
@@ -60,7 +61,7 @@ export async function init() {
     { name: `${ep.type} 卡弹出、飞向中央 / “${ep.type} 是——”`, t: C.pop }, { name: 'T_REVEAL 翻面亮相', t: T.reveal }, { name: '镜头冲进卡面（前半拍）', t: C.rush },
     { name: 'T_AWAKE 觉醒 / 嚎叫 / 月亮爆亮', t: T.hit },
     ...Array.from({ length: ep.action.voice.rings }, (_, k) => ({ name: '声波' + (k + 1), t: +(T.hit + k * ep.action.voice.gap * T.e8).toFixed(4) })),
-    { name: '嚎叫抬到位', t: T.act[0] }, { name: `嚎叫结束 · 大字 ${ep.type} · ${ep.animal.zh}`, t: T.act[1] }, { name: '一句话', t: T.sentence }, { name: '回到英雄姿态', t: T.act[2] },
+    { name: '嚎叫抬到位', t: T.act[0] }, { name: `嚎叫结束 · 大字 ${ep.type} · ${ep.animal.zh}`, t: T.act[1] }, ...T.keywords.map((t, i) => ({ name: `关键词「${ep.keywords[i]}」+ 小冲击波 + 镜头震动`, t })), { name: '大字和关键词移到左上角', t: T.header }, { name: '一句话', t: T.sentence }, { name: '回到英雄姿态', t: T.act[2] },
     ...T.story.subs.map((sb, k) => ({ name: `字幕${k + 1}「${sb.text.replace(/[〔〕]/g, '')}」`, t: sb.t0 })),
     { name: '第 1 段：拉远、狼群影子', t: T.story.start }, { name: '第 2 段：狼转头、狼群散去', t: T.story.seg2a }, { name: '第 2 段：光路开始延伸', t: T.story.seg2b },
     ...Array.from({ length: T.story.pathBeats }, (_, k) => ({ name: `光路延伸 ${k + 1}`, t: +(T.story.seg2b + (k + 1) * T.e8).toFixed(4) })),
@@ -77,7 +78,12 @@ export function render(t) {
   outCtx.setTransform(1, 0, 0, 1, 0, 0); outCtx.globalAlpha = 1; outCtx.globalCompositeOperation = 'source-over';
   if (MODE === 'card') cardOverlay(outCtx, gl, ep, tt, T);
   else {
-    outCtx.drawImage(gl, 0, 0);
+    // 关键词弹出时的小镜头震动（3px）；正文换镜头时的运动模糊
+    let sh = 0; for (const k of T.keywords) if (tt >= k && tt < k + 0.35) sh += Math.exp(-(tt - k) / 0.08);
+    const blur = E.story?.blur && tt >= T.story.start && tt < T.outro ? E.story.blur : 0;
+    if (blur > 0.3) outCtx.filter = `blur(${blur.toFixed(1)}px)`;
+    outCtx.drawImage(gl, 3 * sh * Math.sin(tt * 97), 3 * sh * Math.cos(tt * 83));
+    outCtx.filter = 'none';
     if (D) drawCards(outCtx, D, tt, T);
     videoOverlay(outCtx, tt, ep, T);
   }
