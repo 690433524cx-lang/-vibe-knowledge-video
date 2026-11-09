@@ -12,7 +12,7 @@ const { openBrowser, openPage } = require('./tools/page');
   const meta = await page.evaluate(() => ({ T: window.META.T, music: window.META.music, events: window.META.events, subs: window.META.subs }));
   const FPS = 30, n = Math.round(Number(secsArg ?? meta.T.clip) * FPS);
   const silent = path.join(outDir, `_${ep}_silent.mp4`), out = path.join(outDir, `${ep}_觉醒.mp4`);
-  const ff = spawn('ffmpeg', ['-v', 'error', '-y', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-', '-c:v', 'libx264', '-preset', 'medium', '-crf', '16', '-pix_fmt', 'yuv420p', silent], { stdio: ['pipe', 'inherit', 'inherit'] });
+  const ff = spawn('ffmpeg', ['-v', 'error', '-y', '-f', 'image2pipe', '-framerate', String(FPS), '-c:v', 'mjpeg', '-i', '-', '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', silent], { stdio: ['pipe', 'inherit', 'inherit'] });
   const done = new Promise((res, rej) => ff.on('close', c => c === 0 ? res() : rej(new Error('ffmpeg ' + c))));
   const t0 = Date.now();
   for (let f = 0; f < n; f++) {
