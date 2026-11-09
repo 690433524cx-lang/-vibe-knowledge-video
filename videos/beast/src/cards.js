@@ -153,7 +153,7 @@ function gridPos(i, push, orbit) {
   const depth = (1.5 - r) * 0.035;                 // 上面的行远一点（俯视）
   const sc = (1 - depth) * push;
   const cx = 960, cy = 552, w = GH * 0.8;
-  const x = cx + ((c - 1.5) * (w + GAPX)) * sc + orbit * (r - 1.5) * 18 * push;
+  const x = cx + ((c - 1.5) * (w + GAPX)) * sc + orbit * (r - 1.5) * 26 * push;
   const y = cy + ((r - 1.5) * (GH + GAPY)) * (1 - 0.025 * (1.5 - r)) * push;
   return { x, y, h: GH * sc, rot: 0 };
 }
@@ -171,14 +171,18 @@ function drawCard(ctx, img, x, y, h, rot, sx, alpha, o = {}) {
   if (o.tint) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = alpha * o.tint; rr(-w / 2, -h / 2, w, h, h * 0.075, ctx); ctx.fillStyle = rgba(o.glowCol, 0.35); ctx.fill(); }
   ctx.restore();
 }
+export const GRID = { pos: (i, push = 1, orbit = 0) => gridPos(i, push, orbit) };
 const lerpS = (a, b, e) => ({ x: lerp(a.x, b.x, e), y: lerp(a.y, b.y, e), h: lerp(a.h, b.h, e), rot: lerp(a.rot, b.rot, e) });
 
 // ------------------------------------------------------------ 每一帧
 export function drawCards(ctx, D, t, T) {
   const { cards, hero, heroIdx, border, motes, ringP } = D, n = cards.length, C = T.cards;
   // 镜头：转盘时缓慢推近网格、轻微环绕（±3 度）；片尾回到原样
-  const push = 1 + 0.035 * smooth(C.spin0, C.pop, t) * (1 - smooth(C.gather, C.end, t));
-  const orbit = Math.sin(clamp((t - C.spin0) / (C.pop - C.spin0)) * Math.PI) * Math.sin(3 * Math.PI / 180) / Math.sin(3 * Math.PI / 180) * 0.6;
+  // 镜头：转盘全程缓慢推近（含变慢的那一段）、网格轻微环绕（±3°，左右视差）；片尾回到原样
+  const prog = clamp((t - C.deal[C.deal.length - 1]) / (C.pop - C.deal[C.deal.length - 1]));
+  const push = 1 + 0.07 * prog * (1 - smooth(C.gather, C.end, t));
+  const orbit = Math.sin((prog - 0.5) * Math.PI) * (1 - smooth(C.gather, C.end, t)) * (t < C.pop ? 1 : 0);
+  const gridLive = smooth(C.deal[C.deal.length - 1] + 0.3, C.spin0 + 0.2, t) * (1 - smooth(C.pop, C.pop + 0.2, t));
   const dimP = smooth(C.pop, C.pop + 0.25, t) * (1 - smooth(C.backIn, C.backIn + 0.3, t));
   const exitK = smooth(T.reveal, T.reveal + 0.2, t) * (1 - smooth(C.backIn, C.backIn + 0.33, t));
   const inStack = t < C.deal[0] || t >= C.end - 0.001;
@@ -209,7 +213,7 @@ export function drawCards(ctx, D, t, T) {
   ring(false);
   const list = [];
   cards.forEach((c, i) => {
-    if (i === heroIdx && t >= C.pop && t < C.gather) return;   // 主角卡单独画
+    if (i === heroIdx && t >= C.pop && t < C.gather) return;   // 主角卡单独画（片尾在网格里正面朝上）
     const g = gridPos(i, push, orbit);
     // 发牌：从牌堆旋转着飞到格子，落下时一震
     const d0 = C.deal[i], df = 0.3;
@@ -220,8 +224,8 @@ export function drawCards(ctx, D, t, T) {
     else if (t < d0 + df) { const e = outCubic((t - d0) / df); p = lerpS(stackP, g, e); p.rot = ((i % 2 ? 1 : -1) * Math.PI * (1 - e)) * 1.1; p.y -= Math.sin(e * Math.PI) * 60; z = 100; }
     else { p = { ...g }; bump = Math.exp(-((t - d0 - df) / 0.07)) * (t - d0 - df < 0.35 ? 1 : 0); z = 10; }
     // 片尾：其他卡回到网格，然后 16 张收回成一叠
-    if (t >= C.gather) { const e = inOut(clamp((t - C.gather) / (C.end - 0.04 - C.gather))); p = lerpS(g, stackP, e); p.rot = stackP.rot * e; z = -i; bump = 0; }
-    let alpha = 1, glow = 0, sy = 1, h = p.h * (1 + 0.05 * bump), y = p.y + 4 * bump, dark = 0.4, blur = 0, pool = 0;
+    if (t >= C.gather) { const e = inOut(clamp((t - C.gather) / (C.end - 0.04 - C.gather))); p = lerpS(g, stackP, e); p.rot = stackP.rot * e; z = -i; bump = 0; if (i === heroIdx) p.flip = clamp((t - C.gather) / 0.2); }
+    let alpha = 1, glow = 0, sy = 1, h = p.h * (1 + 0.05 * bump), y = p.y + 4 * bump + gridLive * 4 * Math.sin(2 * Math.PI * 0.9 * t + i * 1.37), dark = 0.4, blur = 0, pool = 0;
     if (inStack || t < C.spin0) dark = 0;
     if (roulette || on[i] > 0.001) {
       // 被照到：向前弹起、放大 15%、向镜头倾斜约 12°、强光、底下一圈光；离开时回落。其他卡 60% 亮度
@@ -229,8 +233,11 @@ export function drawCards(ctx, D, t, T) {
       dark = 0.4 * (1 - k); glow = 1.6 * k; h *= 1 + 0.15 * k; y -= 34 * k; sy = 1 - 0.022 * k; z = k > 0.01 ? 200 + k : z; pool = k;
     }
     if (t >= C.pop) { dark = 0.75 * dimP; blur = 2.5 * dimP; h *= 1 - 0.1 * dimP; alpha = 1 - exitK; y += 30 * dimP + exitK * 260; }
-    if (t >= C.backIn && t < C.gather) { const k = smooth(C.backIn, C.backIn + 0.33, t); dark = 0.75 * (1 - k); blur = 2.5 * (1 - k); }
-    list.push({ c, x: p.x, y, h, rot: p.rot, alpha, glow, sy, dark, blur, z, i, pool, gy: p.y });
+    if (t >= C.backIn && t < C.gather) { const k = smooth(C.backIn, C.backIn + 0.33, t); dark = 0.75 * (1 - k) + 0.3 * k; blur = 2.5 * (1 - k);
+      // 下一集的卡：一圈它那一类颜色的光
+      if (c.type === T.nextType) { const kk = smooth(C.backIn + 0.15, C.backIn + 0.4, t) * (1 - smooth(C.gather, C.gather + 0.2, t)); dark *= 1 - kk; glow = 1.4 * kk * (0.85 + 0.15 * Math.sin(t * 9)); pool = 0.8 * kk; z = 150; }
+    }
+    list.push({ c, x: p.x, y, h, rot: p.rot, alpha, glow, sy, dark, blur, z, i, pool, gy: p.y, flip: p.flip });
   });
   list.sort((a, b) => a.z - b.z);
   for (const L of list) {
@@ -240,9 +247,22 @@ export function drawCards(ctx, D, t, T) {
       const gp = ctx.createRadialGradient(0, 0, 0, 0, 0, w * 0.95); gp.addColorStop(0, rgba(L.c.hex, 0.6 * L.pool)); gp.addColorStop(1, rgba(L.c.hex, 0));
       ctx.fillStyle = gp; ctx.beginPath(); ctx.arc(0, 0, w * 0.95, 0, Math.PI * 2); ctx.fill(); ctx.restore();
     }
-    drawCard(ctx, L.c.back, L.x, L.y, L.h, L.rot, 1, L.alpha, { glow: L.glow, glowCol: L.c.hex, sy: L.sy, dark: L.dark, blur: L.blur, tilt: L.pool * 0.21 });
+    if (L.flip != null && L.flip < 1) { const sx = Math.cos(Math.PI * L.flip); drawCard(ctx, L.flip < 0.5 ? hero.front : L.c.back, L.x, L.y, L.h, L.rot, Math.max(0.03, Math.abs(sx)), L.alpha, { dark: 0 }); continue; }
+    drawCard(ctx, L.c.back, L.x, L.y, L.h, L.rot, 1, L.alpha, { glow: L.glow, glowCol: L.c.hex, sy: L.sy, dark: L.dark, blur: L.blur, tilt: L.pool * 0.21 * (L.c.type === T.nextType && t >= C.backIn ? 0 : 1) });
   }
   ring(true);
+  // 网格上的粒子闪烁（发牌后到弹出之前）
+  if (gridLive > 0.01) {
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (let m = 0; m < 90; m++) {
+      const mo = motes[m], i = m % 16, g = gridPos(i, push, orbit), tw = Math.max(0, Math.sin(2 * Math.PI * (0.6 + mo.v * 0.7) * t + m * 2.1));
+      const x = g.x + Math.cos(mo.a) * g.h * 0.42, y = g.y + Math.sin(mo.a * 1.7) * g.h * 0.52, al = gridLive * Math.pow(tw, 4) * 0.8;
+      if (al < 0.02) continue;
+      const gr = ctx.createRadialGradient(x, y, 0, x, y, mo.s * 3); gr.addColorStop(0, `rgba(250,236,180,${al})`); gr.addColorStop(1, 'rgba(250,236,180,0)');
+      ctx.fillStyle = gr; ctx.fillRect(x - mo.s * 3, y - mo.s * 3, mo.s * 6, mo.s * 6);
+    }
+    ctx.restore();
+  }
   // 落下时的一圈小粒子
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
   cards.forEach((c, i) => {
@@ -301,17 +321,38 @@ export function drawCards(ctx, D, t, T) {
     }
     if (rush > 0) gold = { cx, cy, h, k: -rush, a: 1 - rush * 0.7 };
   } else if (t >= T.outro && t < C.gather) {
-    // 片尾：狼和月亮缩小，金色粒子聚成卡框，定格成收藏卡；翻回背面，飞回网格
+    // 结尾：狼和月亮缩小，金色粒子聚成卡框，定格成收藏卡（卡下方是问句）；下一个小节第一拍飞回网格，保持正面朝上
+    const CEN2 = { x: 960, y: 462, h: 1080 * 0.68, rot: 0 };
     const form = clamp((t - T.outro) / (C.cardHold - T.outro)), e = outCubic(form);
-    if (t < C.cardBack) {
-      const h = lerp(1080 * 2.4, CEN.h, e), a = smooth(0, 0.45, form);
-      drawCard(ctx, hero.front, CEN.x, CEN.y, h, 0, 1, a, { glow: 0.5 * a, glowCol: hero.hex });
-      if (form < 1) gold = { cx: CEN.x, cy: CEN.y, h, k: 1 - form, a: smooth(0, 0.3, form) };
+    if (t < C.backIn) {
+      // 定格的收藏卡也不能静止：极轻的推近、全息光泽扫过、眼睛一闪一闪、四周金色粒子缓缓飘动
+      const hold = clamp((t - C.cardHold) / (C.backIn - C.cardHold));
+      const h = lerp(1080 * 2.4, CEN2.h, e) * (1 + 0.035 * hold), a = smooth(0, 0.45, form);
+      drawCard(ctx, hero.front, CEN2.x, CEN2.y, h, 0, 1, a, { glow: (0.45 + 0.12 * Math.sin(t * 5)) * a, glowCol: hero.hex });
+      if (form < 1) gold = { cx: CEN2.x, cy: CEN2.y, h, k: 1 - form, a: smooth(0, 0.3, form) };
+      if (form >= 1) {
+        const w = h * 0.8, x0 = CEN2.x - w / 2, y0 = CEN2.y - h / 2, sxS = w / 1080;
+        ctx.save(); rr(x0, y0, w, h, h * 0.03, ctx); ctx.clip();
+        const sw = clamp((t - C.cardHold) / 1.4);
+        if (sw > 0 && sw < 1) { ctx.globalCompositeOperation = 'screen'; ctx.translate(x0 + lerp(-0.3, 1.3, sw) * w, CEN2.y); ctx.rotate(-0.62);
+          const bw = w * 0.5, g2 = ctx.createLinearGradient(-bw / 2, 0, bw / 2, 0); ['#FF3D8B', '#FFC23D', '#2BE36B', '#3AA8FF', '#A24BFF', '#FF3D8B'].forEach((col, i) => g2.addColorStop(i / 5, rgba(col, 0.18)));
+          ctx.fillStyle = g2; ctx.fillRect(-bw / 2, -h, bw, h * 2); ctx.setTransform(1, 0, 0, 1, 0, 0); }
+        ctx.globalCompositeOperation = 'lighter';
+        const tw = 0.6 + 0.4 * Math.sin(t * 9) * Math.sin(t * 4.1);
+        for (const [ex, ey] of hero.frontMeta.eyes ?? []) { const X = x0 + ex * sxS, Y = y0 + ey * sxS, R0 = 14 * sxS;
+          const g3 = ctx.createRadialGradient(X, Y, 0, X, Y, R0 * 3); g3.addColorStop(0, `rgba(225,255,235,${0.55 * tw})`); g3.addColorStop(0.3, rgba(hero.hex, 0.4 * tw)); g3.addColorStop(1, rgba(hero.hex, 0));
+          ctx.fillStyle = g3; ctx.fillRect(X - R0 * 3, Y - R0 * 3, R0 * 6, R0 * 6); }
+        ctx.restore();
+        ctx.save(); ctx.globalCompositeOperation = 'lighter';
+        for (let m = 0; m < 160; m++) { const b = border[m * 5], ang = b.a + t * (0.25 + 0.3 * b.v), rx = w * (0.62 + 0.12 * b.v), ry = h * (0.56 + 0.08 * b.v);
+          const x = CEN2.x + Math.cos(ang) * rx, y = CEN2.y + Math.sin(ang) * ry, al = 0.35 + 0.35 * Math.sin(t * 6 + b.ph * 20);
+          ctx.fillStyle = `rgba(236,214,150,${al})`; ctx.beginPath(); ctx.arc(x, y, b.s, 0, Math.PI * 2); ctx.fill(); }
+        ctx.restore();
+      }
     } else {
-      const k = clamp((t - C.cardBack) / 0.2), sx = Math.cos(Math.PI * k);
-      const fly = inOut(clamp((t - C.flyBack) / (C.gather - C.flyBack)));
-      const p = lerpS(CEN, hs, fly);
-      drawCard(ctx, k < 0.5 ? hero.front : (fly > 0.6 ? hero.back : hero.backHi), p.x, p.y, p.h, 0, Math.max(0.03, Math.abs(sx)), 1, { glow: 0.5 * (1 - fly), glowCol: hero.hex });
+      const fly = inOut(clamp((t - C.backIn) / 0.33));
+      const p = lerpS(CEN2, hs, fly);
+      drawCard(ctx, hero.front, p.x, p.y, p.h, 0, 1, 1, { glow: lerp(0.5, 0.35, fly), glowCol: hero.hex });
     }
   }
   if (gold) {

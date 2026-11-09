@@ -21,9 +21,21 @@ export function timeline(ep, beats) {
   // 转盘：每跳一下对齐一个拍点（先半拍、再一拍、再两拍；经过主角卡，假停在旁边那张上半拍，再退回主角卡）
   const jumps = ep.cards.jumps.map(([k, idx]) => [g(k), idx]);
   const pop = g(ep.cards.popBeat), rush = +(hit - hb).toFixed(4);
-  const outro = h(ep.outroBeats ?? 8), cardHold = +(outro + 1.5 * e8).toFixed(4), cardBack = +(cardHold + e8).toFixed(4);
-  const cards = { deal, spin0: jumps[0][0], jumps, pop, rush, cardHold, cardBack, backIn: cardBack, flyBack: +(cardBack + 0.2).toFixed(4), gather: +(cardBack + 1.5 * e8).toFixed(4), end: +(cardBack + 1.5 * e8 + 0.4).toFixed(4) };
-  return { beat, e8, hit, reveal, clip: ep.clip, g, cards, asm0: rush, act: [t1, t2, t3], title: t2, sentence: h(A.rise + A.hold + 1), outro, cardHold, cardBack, lift: pop };
+  // 正文：各段从小节第一拍（或拍点）开始；每条字幕显示 ≥ 1.0 + 0.17 × 字数（不计标点）秒，切换往后对齐到下一个拍点 / 小节第一拍
+  const S = ep.story, bar = 4 * e8, nextBar = x => +(hit + Math.ceil((x - hit) / bar - 1e-6) * bar).toFixed(4), nextBeat = x => +(hit + Math.ceil((x - hit) / e8 - 1e-6) * e8).toFixed(4);
+  const chars = s => s.replace(/[〔〕，。、？！：；“”‘’（）…—\s,.!?:;@]/g, '').length, need = s => 1.0 + 0.17 * chars(s);
+  const start = h(S.startBeat);
+  const seg2a = nextBar(start + need(S.subs[0])), seg2b = nextBar(seg2a + need(S.subs[1])), seg3 = nextBar(seg2b + need(S.subs[2]));
+  const outro = nextBar(seg3 + need(S.subs[3]));
+  const subs = [[S.subs[0], start, seg2a], [S.subs[1], seg2a, seg2b], [S.subs[2], seg2b, seg3], [S.subs[3], seg3, outro]].map(([text, t0, t1]) => ({ text, t0, t1, need: +need(text).toFixed(2), chars: chars(text) }));
+  const story = { start, seg2a, seg2b, seg3, pathBeats: Math.round((seg3 - seg2b) / e8) - 1, subs };
+  story.at = ([k, off]) => story[k] + off;
+  // 结尾：收藏卡 + 问句（≥ 1.6 秒）→ 下一个小节第一拍飞回网格 + 下一集 → 收回成一叠 → 回到第 0 帧
+  const cardHold = +(outro + 0.5).toFixed(4), question = +(outro + 2 * e8).toFixed(4);
+  const next = nextBar(question + (ep.questionMin ?? 1.6)), gather = +(next + 3 * e8).toFixed(4), end = +(gather + 0.5).toFixed(4);
+  const cards = { deal, spin0: jumps[0][0], jumps, pop, rush, cardHold, cardBack: next, backIn: next, flyBack: next, gather, end };
+  const clip = +(end + (ep.endHold ?? 0.166)).toFixed(4);
+  return { beat, e8, hit, reveal, clip, g, cards, asm0: rush, act: [t1, t2, t3], title: t2, sentence: h(A.rise + A.hold + 1), outro, cardHold, cardBack: next, lift: pop, story, question, next, nextType: ep.next?.type };
 }
 
 export async function init() {
@@ -49,8 +61,14 @@ export async function init() {
     { name: 'T_AWAKE 觉醒 / 嚎叫 / 月亮爆亮', t: T.hit },
     ...Array.from({ length: ep.action.voice.rings }, (_, k) => ({ name: '声波' + (k + 1), t: +(T.hit + k * ep.action.voice.gap * T.e8).toFixed(4) })),
     { name: '嚎叫抬到位', t: T.act[0] }, { name: `嚎叫结束 · 大字 ${ep.type} · ${ep.animal.zh}`, t: T.act[1] }, { name: '一句话', t: T.sentence }, { name: '回到英雄姿态', t: T.act[2] },
-    { name: '狼和月亮缩回卡里', t: T.outro }, { name: '收藏卡定格', t: C.cardHold }, { name: '翻回背面', t: C.cardBack }, { name: '16 张收回成一叠', t: C.gather }];
-  window.META = { ep, mode: MODE, W, H, T, music: ep.music, count: E.count, surface: E.surface, events: ev };
+    ...T.story.subs.map((sb, k) => ({ name: `字幕${k + 1}「${sb.text.replace(/[〔〕]/g, '')}」`, t: sb.t0 })),
+    { name: '第 1 段：拉远、狼群影子', t: T.story.start }, { name: '第 2 段：狼转头、狼群散去', t: T.story.seg2a }, { name: '第 2 段：光路开始延伸', t: T.story.seg2b },
+    ...Array.from({ length: T.story.pathBeats }, (_, k) => ({ name: `光路延伸 ${k + 1}`, t: +(T.story.seg2b + (k + 1) * T.e8).toFixed(4) })),
+    { name: '第 3 段：脸部特写、眼睛亮起', t: T.story.seg3 }, { name: '远处另一双眼睛', t: +(T.story.seg3 + T.e8).toFixed(4) }, { name: '两双眼睛一闪、光连起来', t: +(T.story.seg3 + 2 * T.e8).toFixed(4) },
+    { name: '结尾：缩回卡里', t: T.outro }, { name: '问句', t: T.question }, { name: '飞回网格 / 下一集', t: T.next }, { name: '16 张收回成一叠', t: C.gather }];
+  window.META_SUBS = T.story.subs;
+  window.E = E;
+  window.META = { ep, mode: MODE, W, H, T: { ...T, story: { ...T.story, at: undefined } }, subs: T.story.subs, music: ep.music, count: E.count, surface: E.surface, events: ev };
 }
 
 export function render(t) {

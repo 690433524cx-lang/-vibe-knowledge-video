@@ -1,6 +1,8 @@
 // 2D 层：左上角 logo、称号大字（金属渐变 + 发光）、天赋词弹出、收藏卡
 // 文字最亮不超过 #EBEBEB（亮度 235），保证“亮度 > 240 的像素 ≤ 0.5%”只由眼睛和光环决定。
-import { clamp, lerp, smooth, outBack, outCubic, mixHex, rgba, hash, rng } from './util.js';
+import { clamp, lerp, smooth, outBack, outCubic, inOut, mixHex, rgba, hash, rng } from './util.js';
+import { GRID, DECK } from './cards.js';
+const GRIDPOS = i => GRID.pos(i), DECKIDX = Object.fromEntries(DECK.map((d, i) => [d[0], i]));
 
 export const CJK = '"Noto Serif CJK SC", serif';
 export const LATIN = '"Cinzel", "Noto Serif CJK SC", serif';
@@ -138,20 +140,49 @@ export function videoOverlay(ctx, t, ep, T) {
   const sh = smooth(T.cards.deal[0], T.cards.deal[0] + 0.5, t) * (1 - smooth(T.cards.gather, T.cards.end, t));
   if (cA > 0.003) { ctx.save(); ctx.globalAlpha = cA; richLine(ctx, ep.concept, W / 2, lerp(ep.conceptY ?? 112, 56, sh), lerp(64, 52, sh), hex, { label: '概念大字' }); ctx.restore(); }
   if (t >= T.cards.pop && t < T.reveal) { const k = smooth(T.cards.pop, T.cards.pop + 0.08, t); ctx.save(); ctx.globalAlpha = k; richLine(ctx, ep.revealText, W / 2, 66, 72, hex, { label: '揭晓' }); ctx.restore(); }
-  // 嚎叫结束的那一拍：左下方大字“类型 · 动物名”；下一拍：一句话
-  const L = ep.textLeft ?? [100, 830];
-  if (t >= T.title && outT > 0.003) {
+  // 嚎叫结束的那一拍：左下方大字“类型 · 动物名”；下一拍：一句话。正文开始时两者一起移到左上角变成小标题（一句话读完再淡出），第 3 段前淡出
+  const L = ep.textLeft ?? [100, 830], ST = T.story;
+  const mv = ST ? inOut(smooth(ST.start, ST.start + 0.5, t)) : 0;
+  const titleA = ST ? 1 - smooth(ST.seg3 - 0.3, ST.seg3, t) : outT, sentA = ST ? 1 - smooth(ST.seg2a - 0.1, ST.seg2a + 0.2, t) : outT;
+  if (t >= T.title && titleA > 0.003) {
     const da = t - T.title, sizeL = 168, sizeC = 150;
     const m = metalRun([{ text: ep.type, font: `900 ${sizeL}px ${LATIN}`, gap: 30 }, { text: '·', font: `900 ${sizeC}px ${CJK}`, gap: 30, fill: hex }, { text: ep.animal.zh, font: `900 ${sizeC}px ${CJK}` }], sizeC, hex, (da - 0.12) / 0.5);
-    const k = clamp(da / 0.16), sc = lerp(1.18, 1, outBack(k, 1.4));
-    blitMetal(ctx, m, L[0] + m.tw / 2, L[1], sc, clamp(da / 0.06) * outT, hex, 24 + 36 * Math.exp(-da / 0.2));
-    box(L[0], L[1] - sizeC * 0.85, L[0] + m.tw, L[1] + sizeC * 0.12, '大字');
+    const k = clamp(da / 0.16), sc = lerp(1.18, 1, outBack(k, 1.4)) * lerp(1, 0.42, mv);
+    const x = lerp(L[0], 100, mv), y = lerp(L[1], 196, mv);
+    blitMetal(ctx, m, x + m.tw * sc / 2, y, sc, clamp(da / 0.06) * titleA, hex, (24 + 36 * Math.exp(-da / 0.2)) * lerp(1, 0.5, mv));
+    box(x, y - sizeC * 0.85 * sc, x + m.tw * sc, y + sizeC * 0.12 * sc, '大字');
   }
-  if (t >= T.sentence && outT > 0.003) {
+  if (t >= T.sentence && sentA > 0.003) {
     const da = t - T.sentence, k = clamp(da / 0.14);
-    ctx.save(); ctx.globalAlpha = clamp(da / 0.08) * outT; ctx.translate(0, (1 - outCubic(k)) * 24);
-    richLine(ctx, ep.line, L[0] + 8, L[1] + 112, 52, hex, { align: 'left', weight: 700, back: true, label: '一句话' });
+    ctx.save(); ctx.globalAlpha = clamp(da / 0.08) * sentA; ctx.translate(0, (1 - outCubic(k)) * 24);
+    richLine(ctx, ep.line, lerp(L[0] + 8, 106, mv), lerp(L[1] + 112, 252, mv), lerp(52, 34, mv), hex, { align: 'left', weight: 700, back: true, label: '一句话' });
     ctx.restore();
+  }
+  // 正文字幕：画面下方中央，52px，白色，关键词用这一类的颜色，暗色渐变底；在拍点上弹出（85% → 105% → 100%，0.2 秒）
+  if (ST) for (const sb of ST.subs) {
+    if (t < sb.t0 || t >= sb.t1 + 0.12) continue;
+    const da = t - sb.t0, outK = 1 - smooth(sb.t1, sb.t1 + 0.12, t);
+    const sc = da < 0.1 ? lerp(0.85, 1.05, outCubic(da / 0.1)) : da < 0.2 ? lerp(1.05, 1, (da - 0.1) / 0.1) : 1;
+    const y = 984;
+    ctx.save(); ctx.globalAlpha = outK;
+    const band = ctx.createLinearGradient(0, y - 120, 0, 1080); band.addColorStop(0, 'rgba(2,4,6,0)'); band.addColorStop(0.45, 'rgba(2,4,6,0.55)'); band.addColorStop(1, 'rgba(2,4,6,0.75)');
+    ctx.fillStyle = band; ctx.fillRect(0, y - 120, W, 1080 - y + 120);
+    ctx.globalAlpha = outK * clamp(da / 0.06); ctx.translate(W / 2, y); ctx.scale(sc, sc); ctx.translate(-W / 2, -y);
+    richLine(ctx, sb.text, W / 2, y, 52, hex, { weight: 700, label: '字幕' });
+    ctx.restore();
+  }
+  // 结尾：收藏卡下方的问句；飞回网格后：网格上方“下一集：INTP”、那张卡上方小字“下一集”
+  if (T.question && t >= T.question && t < T.next + 0.3) {
+    const da = t - T.question, k = clamp(da / 0.16), a = clamp(da / 0.08) * (1 - smooth(T.next, T.next + 0.25, t));
+    ctx.save(); ctx.globalAlpha = a; const y = 908; ctx.translate(W / 2, y); const sc = lerp(1.15, 1, outBack(k, 1.4)); ctx.scale(sc, sc); ctx.translate(-W / 2, -y);
+    richLine(ctx, ep.question, W / 2, y, 56, hex, { weight: 900, label: '问句' }); ctx.restore();
+  }
+  if (T.next && ep.next && t >= T.next && t < T.cards.end) {
+    const a = smooth(T.next, T.next + 0.15, t) * (1 - smooth(T.cards.gather, T.cards.gather + 0.25, t));
+    ctx.save(); ctx.globalAlpha = a; richLine(ctx, ep.next.text, W / 2, 56, 52, ep.next.color, { label: '下一集' }); ctx.restore();
+    const g = GRIDPOS(DECKIDX[ep.next.type]), k2 = smooth(T.next + 0.15, T.next + 0.4, t) * (1 - smooth(T.cards.gather, T.cards.gather + 0.2, t));
+    if (k2 > 0.003) { ctx.save(); ctx.globalAlpha = k2; ctx.font = `900 30px ${CJK}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.shadowColor = rgba(ep.next.color, 1); ctx.shadowBlur = 14; ctx.fillStyle = mixHex(ep.next.color, '#EBEBEB', 0.55);
+      const y = g.y - g.h / 2 - 40 + 4 * Math.sin(t * 6); ctx.fillText('下一集', g.x, y); ctx.restore(); box(g.x - 50, y - 18, g.x + 50, y + 18, '下一集小字'); }
   }
 }
 

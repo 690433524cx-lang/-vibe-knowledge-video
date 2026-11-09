@@ -11,6 +11,7 @@ import { loadMesh, samplePoints } from './sample.js';
 import { buildFX } from './fx.js';
 import { makeAction } from './action.js';
 import { buildSilhouettes } from './silhouettes.js';
+import { buildStory } from './story.js';
 import { clamp, lerp, smooth, outCubic, hash, rng, D2R, mixHex } from './util.js';
 
 export const E = {};               // 引擎状态
@@ -136,6 +137,8 @@ export async function initEngine(canvas, ep, { W, H, mode, T }) {
   E.sil = await buildSilhouettes(ep, { E, addPoints, geo });
   // ---- 月亮（钉在镜头上）和专属特效
   E.fx = buildFX(ep.fx, { E, THREE, addPoints, addGlow, geo, C, hex });
+  // ---- 正文三段的场景
+  E.story = buildStory({ E, addPoints, addGlow, geo });
   return E;
 }
 
@@ -167,7 +170,7 @@ export function beatPulse(t, sharp = 7) {
 export function frame(t) {
   const ep = E.ep, hex = ep.color, T = E.T;
   SHARED.uTime.value = t % T.clip;
-  const cam = heroCam(t);
+  const cam = (E.story && !E.card ? E.story.cam(t, heroCam) : null) ?? heroCam(t);
   const da = t - T.hit, after = da >= 0 ? 1 : 0;
   const sh = after && da < 0.4 ? Math.exp(-da * 11) : 0;
   E.camera.position.copy(cam.pos); E.camera.up.set(0, 1, 0); E.camera.lookAt(cam.target); E.camera.fov = cam.fov; E.camera.updateProjectionMatrix(); E.camera.updateMatrixWorld();
@@ -182,7 +185,7 @@ export function frame(t) {
   const outro = smooth(T.outro, T.outro + 0.5, t);
   const wolfOn = t >= T.asm0 ? 1 - outro : 0;
   // ---- 骨骼动作
-  const aw = E.act ? E.act.weight(t) : 0, mats = E.act ? E.act.pose(aw) : null;
+  const aw = E.act ? E.act.weight(t) : 0, mats = E.act ? E.act.pose(aw, t) : null;
   const kick = after ? 0.075 * (da / 0.07) * Math.exp(1 - da / 0.07) : 0;
   const wind = after ? smooth(0, 0.35, da) * (0.85 + 0.25 * pulse) : 0;
   for (const p of [E.beast, ...E.ghosts]) {
@@ -199,6 +202,10 @@ export function frame(t) {
   const eyeOpen = smooth(T.asm0, T.asm0 + 0.1, t);
   let eyeI = 0.85, flare = 0.2;
   if (after) { const sp = Math.exp(-da / 0.09); eyeI = 1.0 + 1.5 * sp + 0.08 * pulse; flare = 0.35 + 1.6 * sp + 0.15 * pulse; }
+  if (T.story && t >= T.story.start) {   // 正文：眼睛一闪一闪；第 3 段特写那一拍亮起；两双眼睛一起闪
+    const S3 = t >= T.story.seg3 ? Math.exp(-(t - T.story.seg3) / 0.25) : 0, F = E.storyFlash ?? 0;
+    eyeI *= 0.82 + 0.22 * Math.pow(0.5 + 0.5 * Math.sin(t * 7.3) * Math.sin(t * 3.1), 2) + 0.12 * pulse; eyeI += 1.1 * S3 + 1.0 * F; flare += 1.0 * S3 + 0.9 * F;
+  }
   E.eyeGlows.forEach((g, i) => {
     const e = mats ? E.eyes[i].clone().applyMatrix4(mats[E.act.headSlot]) : E.eyes[i];
     g.position.copy(e).addScaledVector(fwd, -0.05);
@@ -211,18 +218,19 @@ export function frame(t) {
     g.scale.setScalar(s * (0.6 + 0.4 * vis)); g.scale.y *= Math.max(0.08, eyeOpen);
   });
   // ---- 地面冲击波
-  const gu = E.ground.material.uniforms; gu.uWave.value = after ? da * 7.5 : -1; gu.uO.value.set(E.C.x, E.groundY, E.C.z - 0.4); gu.uBase.value = after ? smooth(0, 0.6, da) * (0.6 + 0.4 * pulse) * (1 - outro) : 0;
+  const gu = E.ground.material.uniforms; gu.uWave.value = after ? da * 7.5 : -1; gu.uO.value.set(E.C.x, E.groundY, E.C.z - 0.4); gu.uBase.value = after ? smooth(0, 0.6, da) * (0.6 + 0.4 * pulse) * (1 - outro) * (1 - smooth(T.story?.start ?? 99, (T.story?.start ?? 99) + 0.5, t)) : 0;
   // ---- 叫声涟漪：从嘴向嚎叫方向（屏幕平面内）扩散
   if (E.ripples) {
-    const m = E.act.mouth(aw), ru = E.ripples.material.uniforms;
+    const m = E.act.mouth(aw, t), ru = E.ripples.material.uniforms;
     const D = m.dir.clone(); D.addScaledVector(fwd, -D.dot(fwd)).normalize();
     ru.uA.value = t; ru.uO.value.copy(m.pos); ru.uD.value.copy(D); ru.uE2.value.copy(new THREE.Vector3().crossVectors(fwd, D).normalize());
-    E.act.pose(aw);
+    E.act.pose(aw, t);
   }
   for (const g of E.glows) if (g.userData.billboard) g.quaternion.copy(E.camera.quaternion);
   // ---- 剪影、月亮和特效
   E.sil.update(t, { right, up, fwd });
   E.fx.update(t, { pulse, after, da, right, up, fwd, t, outro });
+  if (E.story) E.story.update(t, { pulse, up, right, fwd });
   // ---- 背景：近黑 + 星点 + 动物身后很淡的主色光晕
   const fu = E.final.uniforms;
   fu.uTime.value = t % T.clip; fu.uGlowCol.value.set(hex);
@@ -239,7 +247,7 @@ export function toScreen(v) { const p = v.clone().project(E.camera); return [(p.
 // 要避让的区域：狼的脸、狼的身体（全部关节，含动作）、月亮（圆）
 export function avoidRegions(t) {
   const J = E.meta.joints || {}, out = [];
-  const act = E.act, aw = act ? act.weight(t) : 0; if (act) act.pose(aw);
+  const act = E.act, aw = act ? act.weight(t) : 0; if (act) act.pose(aw, t);
   const jawSlot = act ? E.meta.chain.findIndex(b => b.name === 'jaw') : -1;
   const P = n => { const v = new THREE.Vector3(...J[n]); if (act && /nose|occiput|jaw|ear/i.test(n)) v.applyMatrix4(/jaw/i.test(n) && jawSlot >= 0 ? act.mats[jawSlot] : act.mats[act.headSlot]); return toScreen(v); };
   if (t >= E.T.asm0 && t < E.T.outro + 0.3) {
@@ -255,6 +263,6 @@ export function avoidRegions(t) {
         const [x, y] = toScreen(a); out.push({ label: '身体', circle: [x, y, rw * ppu] }); }
     }
   }
-  const [mx, my, mr] = E.L.moon; out.push({ label: '月亮', circle: [mx, my, mr + 10] });
+  const [mx, my, mr] = E.L.moon; if (t >= E.T.asm0 && t < E.T.outro + 0.3) out.push({ label: '月亮', circle: [mx, my, mr + 10] });
   return out;
 }

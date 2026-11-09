@@ -15,11 +15,15 @@ export function makeAction(meta, ep, HIT, beat) {
   const weight = a => a < t0 ? 0 : a < t1 ? inOut((a - t0) / (t1 - t0)) : a < t2 ? 1 : a < t3 ? 1 - inOut((a - t2) / (t3 - t2)) : 0;
   const mats = [0, 1, 2, 3].map(() => new THREE.Matrix4());
   const tmp = new THREE.Matrix4(), R = new THREE.Matrix4(), Ry = new THREE.Matrix4();
-  function pose(w) {
+  // 正文里的其他动作（例如转头）：同一条骨骼链，各有自己的时间 [t0 开始, t1 到位, t2 开始收回, t3 收回]
+  const moves = (ep.moves ?? []).map(m => ({ ...m, w: a => a < m.t[0] ? 0 : a < m.t[1] ? inOut((a - m.t[0]) / (m.t[1] - m.t[0])) : a < m.t[2] ? 1 : a < m.t[3] ? 1 - inOut((a - m.t[2]) / (m.t[3] - m.t[2])) : 0 }));
+  function pose(w, t = -1) {
     meta.chain.forEach((b, i) => {
       const p = V(b.pivot);
-      R.makeRotationAxis(lateral, -(b.pitch ?? 0) * w * Math.PI / 180);
-      Ry.makeRotationAxis(up, (b.yaw ?? 0) * w * Math.PI / 180);
+      let pitch = (b.pitch ?? 0) * w, yaw = (b.yaw ?? 0) * w;
+      for (const m of moves) { const mb = m.bones[b.name]; if (!mb) continue; const k = m.w(t); pitch += (mb.pitch ?? 0) * k; yaw += (mb.yaw ?? 0) * k; }
+      R.makeRotationAxis(lateral, -pitch * Math.PI / 180);
+      Ry.makeRotationAxis(up, yaw * Math.PI / 180);
       tmp.makeTranslation(p.x, p.y, p.z).multiply(Ry).multiply(R).multiply(new THREE.Matrix4().makeTranslation(-p.x, -p.y, -p.z));
       const parent = b.parent ?? i - 1;
       mats[i].copy(parent >= 0 ? mats[parent] : new THREE.Matrix4()).multiply(tmp);
@@ -30,8 +34,8 @@ export function makeAction(meta, ep, HIT, beat) {
   const slot = n => meta.chain.findIndex(b => b.name === n);
   const head = slot('head'), jaw = slot('jaw');
   // 嘴的位置和嚎叫方向（随动作）
-  function mouth(w) {
-    pose(w);
+  function mouth(w, t = -1) {
+    pose(w, t);
     const nose = V(J.nose).applyMatrix4(mats[head]), occ = V(J.occiput).applyMatrix4(mats[head]);
     const jt = V(J.jawTip).applyMatrix4(mats[jaw >= 0 ? jaw : head]);
     const m = nose.clone().lerp(jt, 0.5);

@@ -127,14 +127,12 @@
   }
  },
  "stillT": 7.6,
- "clip": 10.0,
  "line": "你很少开口，但总能〔看穿人心〕。",
  "concept": "每一种 MBTI，都有一只对应的〔动物〕",
  "revealText": "〔INFJ〕 是——",
  "intro": {
   "animals": []
  },
- "outroBeats": 8,
  "frame": {
   "moon": [
    1230,
@@ -212,5 +210,124 @@
    ]
   ],
   "popBeat": -1
- }
+ },
+ "story": {
+  "startBeat": 6,
+  "subs": [
+   "别人总觉得你太〔安静〕、太〔难懂〕。",
+   "野外的独狼，大多是〔主动离开〕狼群，",
+   "去找〔真正属于自己〕的地方。",
+   "你不是不合群，你只是在等〔真正懂你的人〕。"
+  ],
+  "shots": [
+   {
+    "name": "wide",
+    "at": [
+     "start",
+     1.8
+    ],
+    "yaw": 40,
+    "pitch": -4,
+    "dist": 10.5,
+    "eyes": [
+     1180,
+     430
+    ]
+   },
+   {
+    "name": "wide2",
+    "at": [
+     "seg2b",
+     0
+    ],
+    "yaw": 42,
+    "pitch": -4,
+    "dist": 10.0,
+    "eyes": [
+     1150,
+     430
+    ]
+   },
+   {
+    "name": "pan",
+    "at": [
+     "seg3",
+     -0.25
+    ],
+    "yaw": 42,
+    "pitch": -4,
+    "dist": 10.0,
+    "eyes": [
+     1150,
+     430
+    ],
+    "pan": 3.2
+   },
+   {
+    "name": "close",
+    "at": [
+     "seg3",
+     0.55
+    ],
+    "aim": "eyes",
+    "yaw": 6,
+    "pitch": -3,
+    "dist": 2.3,
+    "eyes": [
+     640,
+     470
+    ]
+   },
+   {
+    "name": "close2",
+    "at": [
+     "seg3",
+     3.9
+    ],
+    "aim": "eyes",
+    "yaw": 3,
+    "pitch": -3,
+    "dist": 2.05,
+    "eyes": [
+     650,
+     470
+    ]
+   }
+  ],
+  "pack": 6,
+  "farEyes": [
+   1690,
+   640
+  ],
+  "packBright": 0.2
+ },
+ "moves": [
+  {
+   "name": "转头看向右侧",
+   "bones": {
+    "neck1": {
+     "yaw": 30
+    },
+    "neck2": {
+     "yaw": 30
+    },
+    "head": {
+     "yaw": 35
+    }
+   },
+   "t": [
+    10.661,
+    11.327,
+    30,
+    31
+   ]
+  }
+ ],
+ "question": "你身边有这样的 INFJ 吗？〔@ 他〕",
+ "next": {
+  "type": "INTP",
+  "color": "#A24BFF",
+  "text": "下一集：〔INTP〕"
+ },
+ "questionMin": 1.6
 }
