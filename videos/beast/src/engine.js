@@ -190,7 +190,8 @@ export function frame(t) {
   // ---- 骨骼动作
   const aw = E.act ? E.act.weight(t) : 0, mats = E.act ? E.act.pose(aw, t) : null;
   const kick = after ? 0.075 * (da / 0.07) * Math.exp(1 - da / 0.07) : 0;
-  const wind = after ? smooth(0, 0.35, da) * (0.85 + 0.25 * pulse) : 0;
+  const inBody = T.story && t >= T.story.start && t < T.outro ? 1 : 0;
+  const wind = after ? smooth(0, 0.35, da) * (0.85 + 0.25 * pulse) * (1 + 0.9 * inBody) : 0;
   for (const p of [E.beast, ...E.ghosts]) {
     const u = p.material.uniforms;
     if (mats) u.uAct.value.forEach((m, i) => m.copy(mats[i]));

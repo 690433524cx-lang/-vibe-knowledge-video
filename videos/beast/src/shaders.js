@@ -51,7 +51,7 @@ export function beastMaterial(o) {
         float ph = uTime*(5.0 + 3.0*h1(seed*4.3)) + seed*6.2832 + dot(position, vec3(4.1, 3.3, 2.7));
         p += uWindDir*uWind*(furT*0.075 + 0.004)*(0.6 + 0.4*sin(ph));
         vec3 pAnim = p;
-        p += aComb*uWind*furT*0.02*sin(ph*1.7);
+        p += aComb*uWind*furT*0.045*sin(ph*1.7);
         // 觉醒一刻向外弹一下
         p = uC + (p - uC)*(1.0 + uKick*(0.55 + 0.9*h1(seed*7.3)));
         // 汇聚：从眼睛开始向外，四面八方的粒子沿旋涡被吸过来，越来越快

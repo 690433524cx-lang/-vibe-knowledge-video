@@ -282,8 +282,11 @@
      560
     ],
     "aim": "eyes",
-    "push": 0.2,
-    "orbit": 4
+    "push": 0.3,
+    "orbit": 4,
+    "orbitN": 3,
+    "sway": 2.5,
+    "swayN": 3
    },
    {
     "name": "低机位",
@@ -303,10 +306,10 @@
     "name": "脸部特写",
     "yaw": 6,
     "pitch": -3,
-    "dist": 2.5,
+    "dist": 2.7,
     "eyes": [
-     780,
-     570
+     900,
+     620
     ],
     "aim": "eyes",
     "push": 0.1,

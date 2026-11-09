@@ -33,7 +33,7 @@ export function buildStory(X) {
   // 每条字幕一个镜头：[起, 止) 内缓慢推近（距离 × 0.92）、轻微环绕（±4°）；换镜头时 0.3 秒快速推拉 + 运动模糊
   const SH = S.cams.map((c, i) => ({ ...c, t0: ST.subs[i].t0, t1: ST.subs[i].t1 }));
   function shotAt(c, u) {
-    const sp = { ...c, dist: c.dist * (1 - (c.push ?? 0.08) * u), yaw: c.yaw + (c.orbit ?? 4) * Math.sin((u - 0.5) * Math.PI), pitch: c.pitch + (c.pitchTo != null ? (c.pitchTo - c.pitch) * u : 0), pan: (c.pan ?? 0) * inOut(u) };
+    const sp = { ...c, dist: c.dist * (1 - (c.push ?? 0.08) * u), yaw: c.yaw + (c.orbit ?? 4) * Math.sin(u * Math.PI * 2 * (c.orbitN ?? 2.5)), pitch: c.pitch + (c.pitchTo != null ? (c.pitchTo - c.pitch) * u : 0) + (c.sway ?? 2) * Math.sin(u * Math.PI * 2 * (c.swayN ?? 2.2) + 0.7), pan: (c.pan ?? 0) * inOut(u) };
     return shot(sp, c.aim === 'eyes' ? eyeMid(lerp(c.t0, c.t1, u)) : C);
   }
 
@@ -143,11 +143,11 @@ export function buildStory(X) {
   }
   // 空气里的光尘：前景大颗（离镜头 1–4 个单位，虚化）、背景小颗（已有的 E.dust）
   {
-    const n = 220, P = new Float32Array(n * 3), M = new Float32Array(n * 4);
-    for (let i = 0; i < n; i++) { P.set([(R() - 0.5) * 2, (R() - 0.5) * 2, 0], i * 3); M.set([0.4 + 0.6 * R(), R(), 0.5 + R(), 1.2 + R() * 3]); M.set([0.4 + 0.6 * R(), R(), 0.5 + R(), 1.2 + R() * 3], i * 4); }
+    const n = 520, P = new Float32Array(n * 3), M = new Float32Array(n * 4);
+    for (let i = 0; i < n; i++) { P.set([(R() - 0.5) * 2, (R() - 0.5) * 2, 0], i * 3); M.set([0.4 + 0.6 * R(), R(), 0.5 + R(), 1.2 + R() * 3], i * 4); }
     E.fgDust = addPoints(geo({ position: [P, 3], aMisc: [M, 4] }), fxPointsMaterial({ col: mixHex(hex, '#E6F2EA', 0.6), hi: '#FFFFFF', size: 0.035, maxPx: 22, bright: 0.5,
       uniforms: { uK: { value: 0 }, uAsp: { value: E.W / E.H } }, uniformDecl: 'uniform float uK, uAsp;',
-      posHook: `float d = aMisc.w, th = 0.2867; vec2 q = position.xy + vec2(uTime*0.03*aMisc.z + 0.05*sin(uTime*0.7 + aMisc.y*30.0), uTime*0.02*aMisc.z + 0.04*sin(uTime*0.9 + aMisc.y*17.0));
+      posHook: `float d = aMisc.w, th = 0.2867; vec2 q = position.xy + vec2(uTime*0.06*aMisc.z + 0.08*sin(uTime*1.1 + aMisc.y*30.0), uTime*0.04*aMisc.z + 0.06*sin(uTime*1.3 + aMisc.y*17.0));
         q = mod(q + 1.0, 2.0) - 1.0; p = vec3(q.x*d*th*uAsp, q.y*d*th, -d); vis = uK; b *= 0.35 + 0.25*sin(uTime*2.0 + aMisc.y*40.0); sz = 1.0 + 1.5/d;` }), 60, E.camera);
   }
 
