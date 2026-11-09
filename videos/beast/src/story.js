@@ -109,7 +109,7 @@ export function buildStory(X) {
         float head = exp(-pow((uL - u)*14.0, 2.0));
         float flow = 0.6 + 0.4*sin(u*60.0 - uTime*9.0);
         float spark = step(0.92, h1(aMisc.y*13.0 + floor(uTime*20.0)))*head;
-        b *= flow*(0.7 + (1.6 + 1.5*uS)*head) + spark*2.0; hot = head + spark; sz = 1.0 + head*(1.0 + uS);` }), 6);
+        b *= flow*(0.7 + (0.9 + 0.6*uS)*head) + spark*1.1; hot = 0.6*head + spark*0.6; sz = 1.0 + head*(0.4 + 0.5*uS);` }), 6);
   }
   E.beacon = X.addGlow(0, mixHex(hex, '#FFFFFF', 0.35), 3.2, 20);
   E.beaconCore = X.addGlow(1, mixHex(hex, '#FFFFFF', 0.2), 2.2, 21, { core: '#F2FFF6' });
@@ -174,7 +174,7 @@ export function buildStory(X) {
       const sceneOn = smooth(ST.start, ST.start + 0.8, t) * out;
       E.rock.material.uniforms.uK.value = sceneOn; E.rock.material.uniforms.uP.value = s.pulse; E.rock.visible = sceneOn > 0.002;
       E.ridgeL.material.uniforms.uK.value = smooth(ST.start + 0.6, ST.start + 1.6, t) * out * (1 - 0.6 * smooth(ST.seg3, ST.seg3 + 0.6, t)); E.ridgeL.visible = E.ridgeL.material.uniforms.uK.value > 0.002;
-      E.ridgeR.material.uniforms.uK.value = smooth(ST.seg2b - 1.0, ST.seg2b, t) * out; E.ridgeR.visible = E.ridgeR.material.uniforms.uK.value > 0.002;
+      E.ridgeR.material.uniforms.uK.value = smooth(ST.seg2b - 1.0, ST.seg2b, t) * out * (1 - smooth(ST.seg3, ST.seg3 + 0.3, t)); E.ridgeR.visible = E.ridgeR.material.uniforms.uK.value > 0.002;
       // 狼群：第 1 段出现；字幕 1 那一拍开始慢慢淡去、化成粒子飘散
       const packIn = smooth(ST.start + 0.8, ST.start + 1.8, t), dis = smooth(ST.seg2a, ST.seg2a + 1.6, t);
       pack.forEach((pk, k) => {
@@ -193,8 +193,8 @@ export function buildStory(X) {
       const bf = beats % 1, surge = t < ST.seg2b ? 0 : Math.exp(-bf * 5);
       const L = t < ST.seg2b ? 0 : clamp((Math.floor(beats) + Math.min(1.08, 1.6 * outBackS(clamp(bf / 0.25)))) / nb);
       E.path.material.uniforms.uS.value = surge;
-      E.path.material.uniforms.uL.value = L * 1.02; E.path.material.uniforms.uK.value = (t >= ST.seg2b ? 1 : 0) * out * (1 - 0.5 * smooth(ST.seg3, ST.seg3 + 0.6, t)); E.path.visible = t >= ST.seg2b && out > 0.002;
-      const bk = smooth(ST.seg2b + (nb - 1) * T.e8, ST.seg2b + nb * T.e8, t) * out;
+      E.path.material.uniforms.uL.value = L * 1.02; E.path.material.uniforms.uK.value = (t >= ST.seg2b ? 1 : 0) * out * (1 - smooth(ST.seg3, ST.seg3 + 0.3, t)); E.path.visible = t >= ST.seg2b && out > 0.002;
+      const bk = smooth(ST.seg2b + (nb - 1) * T.e8, ST.seg2b + nb * T.e8, t) * out * (1 - smooth(ST.seg3, ST.seg3 + 0.3, t));
       E.beacon.position.copy(p3).add(V(0, 0.4, 0)); E.beaconCore.position.copy(E.beacon.position);
       E.beacon.material.uniforms.uInt.value = 0.25 * bk * (0.85 + 0.15 * s.pulse); E.beaconCore.material.uniforms.uInt.value = 0.9 * bk * (0.85 + 0.25 * s.pulse);
       E.beacon.visible = E.beaconCore.visible = bk > 0.002;

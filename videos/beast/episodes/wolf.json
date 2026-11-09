@@ -276,13 +276,13 @@
     "name": "更近的侧面",
     "yaw": -38,
     "pitch": -3,
-    "dist": 4.4,
+    "dist": 4.8,
     "eyes": [
-     820,
-     430
+     880,
+     560
     ],
     "aim": "eyes",
-    "push": 0.1,
+    "push": 0.2,
     "orbit": 4
    },
    {
@@ -303,10 +303,10 @@
     "name": "脸部特写",
     "yaw": 6,
     "pitch": -3,
-    "dist": 2.3,
+    "dist": 2.5,
     "eyes": [
-     640,
-     470
+     780,
+     570
     ],
     "aim": "eyes",
     "push": 0.1,
@@ -356,24 +356,25 @@
   ],
   "bones": {
    "neck2": {
-    "yaw": 5,
-    "pitch": 2.5,
-    "f": 0.23
+    "yaw": 8,
+    "pitch": 3.5,
+    "f": 0.27
    },
    "head": {
-    "yaw": 6,
-    "pitch": 3,
-    "f": 0.31,
-    "ph": 1.7
+    "yaw": 9,
+    "pitch": 4,
+    "f": 0.36,
+    "ph": 1.7,
+    "beatPitch": 2.5
    },
    "earL": {
-    "beatYaw": 12
+    "beatYaw": 14
    },
    "earR": {
-    "beatYaw": -12
+    "beatYaw": -14
    },
    "tail0": {
-    "sway": 14
+    "sway": 18
    }
   }
  }
