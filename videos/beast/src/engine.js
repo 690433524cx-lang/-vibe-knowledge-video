@@ -59,7 +59,7 @@ export async function initEngine(canvas, ep, { W, H, mode, T }) {
   });
   E.count = pts.count; E.surface = pts.surface;
   const g = geo({ position: [pts.pos, 3], aNrm: [pts.nrm, 3], aComb: [pts.comb, 3], aMisc: [pts.misc, 4], aChain: [pts.chain, 4] });
-  const matOpts = { col: hex, hi: mixHex(hex, '#FFFFFF', 0.7), rim: mixHex(hex, '#FFFFFF', 0.55), bright: ep.bright ?? 2.0, size: 0.0068 };
+  const matOpts = { col: hex, hi: mixHex(hex, '#FFFFFF', 0.7), rim: mixHex(hex, '#FFFFFF', 0.55), bright: (ep.bright ?? 2.0) * (mode === 'card' ? (ep.cardBright ?? 1.3) : 1), size: 0.0068 };
   E.beast = addPoints(g, beastMaterial(matOpts), 5);
   // 拖尾：同一批粒子，时间往回错开、只画一部分、越来越暗；只在汇聚途中可见
   E.ghosts = Array.from({ length: 10 }, (_, i) => 0.012 * (i + 1)).map((lag, i) => {

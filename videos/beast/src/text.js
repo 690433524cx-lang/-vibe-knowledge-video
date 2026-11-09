@@ -134,8 +134,10 @@ export function videoOverlay(ctx, t, ep, T) {
   const outT = 1 - smooth(T.outro, T.outro + 0.35, t);
   // 概念大字：第 0 帧到主角卡升起那一拍保持不动；然后换成“INFJ 是——”（觉醒那一拍消失）
   const cA = t < T.cards.pop ? 1 : back;
-  if (cA > 0.003) { ctx.save(); ctx.globalAlpha = cA; richLine(ctx, ep.concept, W / 2, ep.conceptY ?? 112, 64, hex, { label: '概念大字' }); ctx.restore(); }
-  if (t >= T.cards.pop && t < T.reveal) { const k = smooth(T.cards.pop, T.cards.pop + 0.08, t); ctx.save(); ctx.globalAlpha = k; richLine(ctx, ep.revealText, W / 2, ep.conceptY ?? 112, 72, hex, { label: '揭晓' }); ctx.restore(); }
+  // 发牌后缩小到 52px 并上移，给网格让位置；片尾回到 64px
+  const sh = smooth(T.cards.deal[0], T.cards.deal[0] + 0.5, t) * (1 - smooth(T.cards.gather, T.cards.end, t));
+  if (cA > 0.003) { ctx.save(); ctx.globalAlpha = cA; richLine(ctx, ep.concept, W / 2, lerp(ep.conceptY ?? 112, 56, sh), lerp(64, 52, sh), hex, { label: '概念大字' }); ctx.restore(); }
+  if (t >= T.cards.pop && t < T.reveal) { const k = smooth(T.cards.pop, T.cards.pop + 0.08, t); ctx.save(); ctx.globalAlpha = k; richLine(ctx, ep.revealText, W / 2, 66, 72, hex, { label: '揭晓' }); ctx.restore(); }
   // 嚎叫结束的那一拍：左下方大字“类型 · 动物名”；下一拍：一句话
   const L = ep.textLeft ?? [100, 830];
   if (t >= T.title && outT > 0.003) {
@@ -170,9 +172,11 @@ export function cardOverlay(ctx, gl, ep, a, T) {
   // 卡面：GL 画面
   ctx.save(); rr(X0, Y0, CW, CH, RR); ctx.clip();
   ctx.drawImage(gl, 0, 0, W, H);
+  // 卡面整体提亮：这一类颜色的渐变光（左上亮、右下暗）
+  { ctx.save(); ctx.globalCompositeOperation = 'screen'; const lg = ctx.createLinearGradient(X0, Y0, X0 + CW * 0.7, Y0 + CH); lg.addColorStop(0, rgba(hex, 0.3)); lg.addColorStop(0.55, rgba(hex, 0.12)); lg.addColorStop(1, rgba(hex, 0.04)); ctx.fillStyle = lg; ctx.fillRect(X0, Y0, CW, CH); ctx.restore(); }
   // 下半部压暗，给文字
   const dk = ctx.createLinearGradient(0, 700, 0, Y0 + CH);
-  dk.addColorStop(0, 'rgba(3,3,8,0)'); dk.addColorStop(0.45, 'rgba(3,3,8,0.55)'); dk.addColorStop(1, 'rgba(3,3,8,0.8)');
+  dk.addColorStop(0, 'rgba(3,3,8,0)'); dk.addColorStop(0.45, 'rgba(3,3,8,0.3)'); dk.addColorStop(1, 'rgba(3,3,8,0.55)');
   ctx.fillStyle = dk; ctx.fillRect(X0, 700, CW, CH);
   // 全息彩虹光泽：两条斜向的宽带 + 细斜纹
   ctx.globalCompositeOperation = 'screen';
@@ -209,8 +213,12 @@ export function cardOverlay(ctx, gl, ep, a, T) {
   ctx.restore();
   // 类型 · 动物名 + 一句话（卡片下方的暗处）
   const mT = metalRun([{ text: ep.type, font: `900 150px ${LATIN}`, gap: 24 }, { text: '·', font: `900 130px ${CJK}`, gap: 24, fill: hex }, { text: ep.animal.zh, font: `900 150px ${CJK}` }], 150, hex, null);
-  const ts = Math.min(0.82, 560 / mT.tw), tx = X0 + 50;
-  blitMetal(ctx, mT, tx + mT.tw * ts / 2, 1070, ts, 1, hex, 24); box(tx, 1070 - 128 * ts, tx + mT.tw * ts, 1070 + 18 * ts, '大字');
-  ctx.save(); richLine(ctx, ep.line, tx + 6, 1160, 48, hex, { align: 'left', weight: 700, back: true, label: '一句话' }); ctx.restore();
-  logo(ctx, hex, X0 + 34, Y0 + CH - 62, 24);
+  const ts = CW * 0.5 / mT.tw, tx = X0 + 50;
+  blitMetal(ctx, mT, tx + mT.tw * ts / 2, 1000, ts, 1, hex, 24); box(tx, 1000 - 128 * ts, tx + mT.tw * ts, 1000 + 18 * ts, '大字');
+  // 那一句话：64px，按逗号分成两行（视频里卡高 80% 时约 41px）
+  const cut = ep.line.indexOf('，'), lines = cut > 0 ? [ep.line.slice(0, cut + 1), ep.line.slice(cut + 1)] : [ep.line];
+  { ctx.save(); ctx.font = `900 64px ${CJK}`; const lw = Math.max(...lines.map(l => ctx.measureText(l.replace(/[〔〕]/g, '')).width));
+    ctx.fillStyle = 'rgba(4,6,8,0.62)'; ctx.beginPath(); ctx.roundRect(tx - 26, 1092 - 58, lw + 64, 84 * (lines.length - 1) + 116, 24); ctx.fill(); ctx.restore(); }
+  lines.forEach((ln, i) => { ctx.save(); richLine(ctx, ln, tx + 6, 1092 + i * 84, 64, hex, { align: 'left', weight: 900, label: '一句话' }); ctx.restore(); });
+  logo(ctx, hex, X0 + CW - 196, Y0 + 50, 26);
 }

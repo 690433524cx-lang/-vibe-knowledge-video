@@ -60,19 +60,19 @@ export function back(type, grp, w = FW, h = FH) {
   c.restore(); c.globalAlpha = 1;
   frame(c, w, h, s);
   // 徽记：外圆、内圆、旋转的方块、八条光芒、中心菱形；下面“兽格觉醒”
-  const g = goldGrad(c, w * 0.25, h * 0.15, w * 0.75, h * 0.6), cx = w / 2, cy = h * 0.36, r = 62 * s;
+  const g = goldGrad(c, w * 0.25, h * 0.1, w * 0.75, h * 0.55), cx = w / 2, cy = h * 0.31, r = 56 * s;
   c.save(); c.strokeStyle = g; c.fillStyle = g; c.lineWidth = 2.4 * s; c.shadowColor = 'rgba(232,217,168,0.45)'; c.shadowBlur = 8 * s;
   c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.stroke();
   c.lineWidth = 1.3 * s; c.beginPath(); c.arc(cx, cy, r * 0.78, 0, Math.PI * 2); c.stroke();
   for (const rot of [0, Math.PI / 4]) { c.save(); c.translate(cx, cy); c.rotate(rot); c.lineWidth = 1.7 * s; c.strokeRect(-r * 0.52, -r * 0.52, r * 1.04, r * 1.04); c.restore(); }
   for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; c.beginPath(); c.moveTo(cx + Math.cos(a) * r * 1.06, cy + Math.sin(a) * r * 1.06); c.lineTo(cx + Math.cos(a) * r * (i % 2 ? 1.18 : 1.3), cy + Math.sin(a) * r * (i % 2 ? 1.18 : 1.3)); c.stroke(); }
   c.save(); c.translate(cx, cy); c.rotate(Math.PI / 4); c.fillRect(-8 * s, -8 * s, 16 * s, 16 * s); c.restore();
-  c.font = `900 ${28 * s}px ${CJK}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('兽格觉醒', cx, cy + r + 34 * s);
+  c.font = `900 ${26 * s}px ${CJK}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('兽格觉醒', cx, cy + r + 30 * s);
   c.restore();
   // 类型字母：大（卡高的约 22%，网格里约 36px），用这一类的颜色
   c.font = `900 ${80 * s}px ${LATIN}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.shadowColor = rgba(hex, 0.95); c.shadowBlur = 14 * s;
-  c.fillStyle = mixHex(hex, '#EBEBEB', 0.3); let tw = c.measureText(type).width; if (tw > w * 0.84) { c.font = `900 ${80 * s * w * 0.84 / tw}px ${LATIN}`; }
-  c.fillText(type, cx, h - 64 * s);
+  c.fillStyle = mixHex(hex, '#EBEBEB', 0.3); const tw = c.measureText(type).width; const fsz = 80 * s * w * 0.6 / tw; c.font = `900 ${fsz}px ${LATIN}`;
+  c.fillText(type, cx, h - 30 * s - fsz * 0.42);
   return c.canvas;
 }
 
@@ -141,27 +141,29 @@ export async function buildCards(ep) {
   hero.backHi = back(hero.type, hero.grp, 600, 750);
   const R = rng(77), border = [];
   for (let i = 0; i < 900; i++) { const u = R(); let d = u * 3.6, x, y; if (d < 0.8) { x = d - 0.4; y = -0.5; } else if ((d -= 0.8) < 1) { x = 0.4; y = d - 0.5; } else if ((d -= 1) < 0.8) { x = 0.4 - d; y = 0.5; } else { d -= 0.8; x = -0.4; y = 0.5 - d; } border.push({ x, y, a: R() * Math.PI * 2, v: 0.4 + R() * 1.4, s: 1 + R() * 2.2, ph: R() }); }
-  const motes = Array.from({ length: 16 * 14 }, () => ({ a: R() * Math.PI * 2, v: 0.6 + R(), s: 1 + R() * 1.5 }));
-  return { cards, hero, heroIdx: cards.indexOf(hero), border, motes };
+  const motes = Array.from({ length: 16 * 14 }, () => ({ a: R() * Math.PI * 2, v: 0.6 + R(), s: 1 + R() * 1.5 }));   // 落地粒子、牌堆粒子环共用
+  const ringP = Array.from({ length: 520 }, () => ({ a: R() * Math.PI * 2, v: 0.7 + R() * 0.6, s: 1.2 + R() * 2.4, h: (R() - 0.5) }));
+  return { cards, hero, heroIdx: cards.indexOf(hero), border, motes, ringP };
 }
 
 // 4×4 网格（略微俯视的透视）：第 r 行、第 c 列 → 屏幕位置、卡高
-const GH = 168, GAPX = 34, GAPY = 22;
+const GH = 206, GAPX = 16, GAPY = 12;
 function gridPos(i, push, orbit) {
   const r = Math.floor(i / 4), c = i % 4;
-  const depth = (1.5 - r) * 0.06;                 // 上面的行远一点（俯视）
+  const depth = (1.5 - r) * 0.035;                 // 上面的行远一点（俯视）
   const sc = (1 - depth) * push;
-  const cx = 960, cy = 610, w = GH * 0.8;
+  const cx = 960, cy = 552, w = GH * 0.8;
   const x = cx + ((c - 1.5) * (w + GAPX)) * sc + orbit * (r - 1.5) * 18 * push;
-  const y = cy + ((r - 1.5) * (GH + GAPY)) * (1 - 0.04 * (1.5 - r)) * push * 0.96;
+  const y = cy + ((r - 1.5) * (GH + GAPY)) * (1 - 0.025 * (1.5 - r)) * push;
   return { x, y, h: GH * sc, rot: 0 };
 }
-const STACK = { x: 960, y: 610, h: GH * 1.05 };
+const STACK = { x: 960, y: 572, h: 1080 * 0.35 };
 function drawCard(ctx, img, x, y, h, rot, sx, alpha, o = {}) {
   if (alpha <= 0.003 || Math.abs(sx) < 0.002) return;
   const w = h * 0.8;
   ctx.save(); ctx.globalAlpha = alpha; ctx.translate(x, y); ctx.rotate(rot); ctx.scale(sx, o.sy ?? 1);
-  if (o.glow) { ctx.shadowColor = rgba(o.glowCol, Math.min(1, o.glow)); ctx.shadowBlur = h * 0.18 * o.glow; } else { ctx.shadowColor = 'rgba(0,0,0,0.65)'; ctx.shadowBlur = h * 0.07; }
+  if (o.tilt) ctx.transform(1, 0, -o.tilt * 0.12, 1, 0, 0);
+  if (o.glow) { ctx.shadowColor = rgba(o.glowCol, Math.min(1, o.glow)); ctx.shadowBlur = h * 0.16 * o.glow; } else { ctx.shadowColor = 'rgba(0,0,0,0.65)'; ctx.shadowBlur = h * 0.07; }
   if (o.blur) ctx.filter = `blur(${o.blur}px)`;
   ctx.drawImage(img, -w / 2, -h / 2, w, h);
   ctx.filter = 'none'; ctx.shadowBlur = 0;
@@ -173,9 +175,9 @@ const lerpS = (a, b, e) => ({ x: lerp(a.x, b.x, e), y: lerp(a.y, b.y, e), h: ler
 
 // ------------------------------------------------------------ 每一帧
 export function drawCards(ctx, D, t, T) {
-  const { cards, hero, heroIdx, border, motes } = D, n = cards.length, C = T.cards;
+  const { cards, hero, heroIdx, border, motes, ringP } = D, n = cards.length, C = T.cards;
   // 镜头：转盘时缓慢推近网格、轻微环绕（±3 度）；片尾回到原样
-  const push = 1 + 0.07 * smooth(C.spin0, C.pop, t) * (1 - smooth(C.gather, C.end, t));
+  const push = 1 + 0.035 * smooth(C.spin0, C.pop, t) * (1 - smooth(C.gather, C.end, t));
   const orbit = Math.sin(clamp((t - C.spin0) / (C.pop - C.spin0)) * Math.PI) * Math.sin(3 * Math.PI / 180) / Math.sin(3 * Math.PI / 180) * 0.6;
   const dimP = smooth(C.pop, C.pop + 0.25, t) * (1 - smooth(C.backIn, C.backIn + 0.3, t));
   const exitK = smooth(T.reveal, T.reveal + 0.2, t) * (1 - smooth(C.backIn, C.backIn + 0.33, t));
@@ -185,6 +187,26 @@ export function drawCards(ctx, D, t, T) {
   for (let j = C.jumps.length - 1; j >= 0; j--) if (t >= C.jumps[j][0]) { lit = C.jumps[j][1]; litAge = t - C.jumps[j][0]; break; }
   if (t >= C.pop) lit = -1;
   const roulette = t >= C.spin0 && t < C.pop;
+  // 每张卡被照亮的程度：亮起 0.08 秒，离开后 0.15 秒回落
+  const on = new Array(n).fill(0);
+  C.jumps.forEach(([tj, idx], j) => { const tn = C.jumps[j + 1]?.[0] ?? C.pop; on[idx] = Math.max(on[idx], smooth(tj, tj + 0.08, t) * (1 - smooth(tn, tn + 0.15, t))); });
+  // 牌堆周围缓慢旋转的金色粒子环（第 0 帧和片尾一样）
+  const ringA = (1 - smooth(C.deal[0], C.deal[0] + 0.3, t)) + smooth(C.gather + 0.1, C.end, t);
+  const ring = (front) => {
+    if (ringA <= 0.003) return;
+    ctx.save(); ctx.globalCompositeOperation = 'lighter';
+    for (let m = 0; m < ringP.length; m++) {
+      const mo = ringP[m], a = mo.a + 2 * Math.PI * t / T.clip, sn = Math.sin(a);
+      if ((sn > 0) !== front) continue;
+      const rx = STACK.h * (0.58 + 0.12 * mo.v), ry = STACK.h * (0.16 + 0.04 * mo.v);
+      const x = STACK.x + Math.cos(a) * rx, y = STACK.y + STACK.h * 0.12 + sn * ry + mo.h * 50;
+      const al = ringA * (front ? 0.95 : 0.45) * (0.55 + 0.45 * Math.sin(2 * Math.PI * 4 * t / T.clip + m * 1.7));
+      const g = ctx.createRadialGradient(x, y, 0, x, y, mo.s * 2.6); g.addColorStop(0, `rgba(250,232,170,${al})`); g.addColorStop(0.35, `rgba(226,190,100,${al * 0.6})`); g.addColorStop(1, 'rgba(226,190,100,0)');
+      ctx.fillStyle = g; ctx.fillRect(x - mo.s * 2.6, y - mo.s * 2.6, mo.s * 5.2, mo.s * 5.2);
+    }
+    ctx.restore();
+  };
+  ring(false);
   const list = [];
   cards.forEach((c, i) => {
     if (i === heroIdx && t >= C.pop && t < C.gather) return;   // 主角卡单独画
@@ -192,24 +214,35 @@ export function drawCards(ctx, D, t, T) {
     // 发牌：从牌堆旋转着飞到格子，落下时一震
     const d0 = C.deal[i], df = 0.3;
     let p, z = 0, rot = 0, bump = 0;
-    const stackP = { x: STACK.x + (i - 8) * 0.0, y: STACK.y - (n - 1 - i) * 1.6, h: STACK.h, rot: ((i * 37) % 7 - 3) * 0.012 };
+    const stackP = { x: STACK.x + ((i * 37) % 5 - 2) * 0.8, y: STACK.y + (i - (n - 1) / 2) * 3.2, h: STACK.h, rot: ((i * 37) % 7 - 3) * 0.006 };
+    if (i === 0) stackP.y -= 10 + 8 * Math.sin(2 * Math.PI * 3 * t / T.clip);   // 牌堆顶部的卡轻轻浮动（周期整除成片时长，首尾一致）
     if (t < d0) { p = stackP; z = -i; }
     else if (t < d0 + df) { const e = outCubic((t - d0) / df); p = lerpS(stackP, g, e); p.rot = ((i % 2 ? 1 : -1) * Math.PI * (1 - e)) * 1.1; p.y -= Math.sin(e * Math.PI) * 60; z = 100; }
     else { p = { ...g }; bump = Math.exp(-((t - d0 - df) / 0.07)) * (t - d0 - df < 0.35 ? 1 : 0); z = 10; }
     // 片尾：其他卡回到网格，然后 16 张收回成一叠
     if (t >= C.gather) { const e = inOut(clamp((t - C.gather) / (C.end - 0.04 - C.gather))); p = lerpS(g, stackP, e); p.rot = stackP.rot * e; z = -i; bump = 0; }
-    let alpha = 1, glow = 0, sy = 1, h = p.h * (1 + 0.05 * bump), y = p.y + 4 * bump, dark = 0.42, blur = 0;
+    let alpha = 1, glow = 0, sy = 1, h = p.h * (1 + 0.05 * bump), y = p.y + 4 * bump, dark = 0.4, blur = 0, pool = 0;
     if (inStack || t < C.spin0) dark = 0;
-    if (roulette) {
-      dark = 0.3;
-      if (i === lit) { const k = Math.exp(-litAge / 0.12); dark = 0; glow = 0.75 + 0.5 * k; h *= 1.1 + 0.04 * k; y -= 16; sy = 1.04; z = 200; }
+    if (roulette || on[i] > 0.001) {
+      // 被照到：向前弹起、放大 15%、向镜头倾斜约 12°、强光、底下一圈光；离开时回落。其他卡 60% 亮度
+      const k = on[i];
+      dark = 0.4 * (1 - k); glow = 1.6 * k; h *= 1 + 0.15 * k; y -= 34 * k; sy = 1 - 0.022 * k; z = k > 0.01 ? 200 + k : z; pool = k;
     }
     if (t >= C.pop) { dark = 0.75 * dimP; blur = 2.5 * dimP; h *= 1 - 0.1 * dimP; alpha = 1 - exitK; y += 30 * dimP + exitK * 260; }
     if (t >= C.backIn && t < C.gather) { const k = smooth(C.backIn, C.backIn + 0.33, t); dark = 0.75 * (1 - k); blur = 2.5 * (1 - k); }
-    list.push({ c, x: p.x, y, h, rot: p.rot, alpha, glow, sy, dark, blur, z, i });
+    list.push({ c, x: p.x, y, h, rot: p.rot, alpha, glow, sy, dark, blur, z, i, pool, gy: p.y });
   });
   list.sort((a, b) => a.z - b.z);
-  for (const L of list) drawCard(ctx, L.c.back, L.x, L.y, L.h, L.rot, 1, L.alpha, { glow: L.glow, glowCol: L.c.hex, sy: L.sy, dark: L.dark, blur: L.blur });
+  for (const L of list) {
+    if (L.pool > 0.01) {   // 卡底下投出的一圈光
+      const w = L.h * 0.8, py = L.gy + L.h * 0.47;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.translate(L.x, py); ctx.scale(1, 0.22);
+      const gp = ctx.createRadialGradient(0, 0, 0, 0, 0, w * 0.95); gp.addColorStop(0, rgba(L.c.hex, 0.6 * L.pool)); gp.addColorStop(1, rgba(L.c.hex, 0));
+      ctx.fillStyle = gp; ctx.beginPath(); ctx.arc(0, 0, w * 0.95, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    }
+    drawCard(ctx, L.c.back, L.x, L.y, L.h, L.rot, 1, L.alpha, { glow: L.glow, glowCol: L.c.hex, sy: L.sy, dark: L.dark, blur: L.blur, tilt: L.pool * 0.21 });
+  }
+  ring(true);
   // 落下时的一圈小粒子
   ctx.save(); ctx.globalCompositeOperation = 'lighter';
   cards.forEach((c, i) => {
@@ -220,7 +253,7 @@ export function drawCards(ctx, D, t, T) {
   ctx.restore();
 
   // ---- 主角卡
-  const hs = gridPos(heroIdx, push, orbit), CEN = { x: 960, y: 592, h: 1080 * 0.75, rot: 0 };
+  const hs = gridPos(heroIdx, push, orbit), CEN = { x: 960, y: 594, h: 1080 * 0.8, rot: 0 };
   let gold = null;
   if (t >= C.pop && t < T.reveal) {
     // 弹出：旋转着飞到中央、放大到画面高度 75%，背面朝镜头，绿光一拍比一拍亮

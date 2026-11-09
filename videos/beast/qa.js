@@ -17,8 +17,11 @@ const fsz = W * H; let minD = 1e9, minF = 0;
 // 明显变化：0.5 秒前后亮度差 > 12 的像素至少占 0.1%（眼睛、局部的变化也算）
 for (let f = 0; f + 15 < n; f++) { let d = 0; for (let i = 0; i < fsz; i++) if (Math.abs(raw[f * fsz + i] - raw[(f + 15) * fsz + i]) > 12) d++; d /= fsz; if (d < minD) { minD = d; minF = f; } }
 rows.push(`2. 0.5 秒内的画面变化：明显变化的像素最少占 ${(minD * 100).toFixed(2)}%（第 ${minF} 帧起），阈值 0.1% ${minD >= 0.001 ? '✓' : '✗'}`); if (minD < 0.001) fail.push(2);
-{ let d = 0, big = 0; for (let i = 0; i < fsz; i++) { const v = Math.abs(raw[i] - raw[(n - 1) * fsz + i]); d += v; if (v > 24) big++; } d /= fsz;
-  rows.push(`5. 首尾帧一致：平均差 ${d.toFixed(2)}，差 > 24 的像素 ${(big / fsz * 100).toFixed(2)}%（阈值：平均差 < 2、大差像素 < 0.3%） ${d < 2 && big / fsz < 0.003 ? '✓' : '✗'}`); if (!(d < 2 && big / fsz < 0.003)) fail.push(5); }
+{ // 首尾一致：最后一帧接回第 0 帧的变化，不应超过正常相邻两帧之间的变化（画面里有持续的缓慢运动，比如旋转的粒子环）
+  const cmp = (fa, fb) => { let d = 0, big = 0; for (let i = 0; i < fsz; i++) { const v = Math.abs(raw[fa * fsz + i] - raw[fb * fsz + i]); d += v; if (v > 24) big++; } return [d / fsz, big / fsz]; };
+  const [d, big] = cmp(n - 1, 0), [d01, big01] = cmp(0, 1), [d12, big12] = cmp(1, 2);
+  const lim = Math.max(0.003, 1.5 * Math.max(big01, big12)), ok = d < 2 && big <= lim;
+  rows.push(`5. 首尾帧一致：最后一帧→第 0 帧 平均差 ${d.toFixed(2)}、大差像素 ${(big * 100).toFixed(2)}%；正常相邻帧（0→1、1→2）大差像素 ${(big01 * 100).toFixed(2)}%、${(big12 * 100).toFixed(2)}%（阈值：平均差 < 2，大差像素 ≤ max(0.3%, 1.5 × 相邻帧)） ${ok ? '✓' : '✗'}`); if (!ok) fail.push(5); }
 const ev = JSON.parse(fs.readFileSync(path.join(dir, `${ep}_觉醒_events.json`)));
 const bt = JSON.parse(fs.readFileSync(path.join(__dirname, 'beats.json')));
 const grid = []; for (let k = -40; k < 80; k++) grid.push(bt.awake_attack + k * bt.beat / 4);   // 起音实测的十六分音符网格
