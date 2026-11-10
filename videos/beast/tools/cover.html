@@ -1,0 +1,57 @@
+<!doctype html><meta charset="utf-8">
+<canvas id="out" width="1080" height="1350"></canvas>
+<script type="module">
+// 封面（4:5，1080×1350）：主角收藏卡在中央，其他 15 张卡背在后面摊成扇形（变暗、虚化），上方大字钩子，下方系列名
+import { back, DECK, GROUP } from '../src/cards.js';
+import { mixHex, rgba, rng } from '../src/util.js';
+const q = new URLSearchParams(location.search), TYPE = q.get('type') || 'INFJ';
+const ep = await (await fetch(`../episodes/${q.get('ep') || 'wolf'}.json`)).json();
+const f = new FontFace('Cinzel', 'url(../assets/fonts/Cinzel.ttf)', { weight: '400 900' }); await f.load(); document.fonts.add(f);
+const c = document.getElementById('out').getContext('2d'), W = 1080, H = 1350, hex = ep.color;
+for (const w of [700, 900]) { c.font = `${w} 20px "Noto Serif CJK SC"`; c.fillText('你的是哪只动物兽格觉醒第集狼型人格', -900, -900); }
+await document.fonts.ready;
+const img = await new Promise(r => { const i = new Image(); i.onload = () => r(i); i.src = `../assets/cards/front_${TYPE}.png`; });
+// 背景：主色的深色径向渐变 + 星点 + 中心一团主色光
+const bg = c.createRadialGradient(W / 2, H * 0.55, 0, W / 2, H * 0.55, H * 0.8);
+bg.addColorStop(0, mixHex(hex, '#05060A', 0.72)); bg.addColorStop(0.55, mixHex(hex, '#04050A', 0.9)); bg.addColorStop(1, '#020205');
+c.fillStyle = bg; c.fillRect(0, 0, W, H);
+const R = rng(5); for (let i = 0; i < 600; i++) { const s = R(); c.fillStyle = `rgba(220,230,225,${0.12 + 0.55 * s * s})`; c.fillRect(R() * W, R() * H, s > 0.92 ? 2 : 1, s > 0.92 ? 2 : 1); }
+// 后面的 15 张卡背：扇形摊开
+const others = DECK.filter(d => d[0] !== TYPE);
+c.save(); c.filter = 'blur(1.5px)';
+others.forEach((d, i) => {
+  const n = others.length, th = (i / (n - 1) - 0.5) * 2 * 52 * Math.PI / 180, PX = W / 2, PY = 1580, Rr = 900, h = 330;
+  const x = PX + Rr * Math.sin(th), y = PY - Rr * Math.cos(th);
+  c.save(); c.translate(x, y); c.rotate(th); c.globalAlpha = 0.5; c.shadowColor = 'rgba(0,0,0,0.7)'; c.shadowBlur = 20;
+  c.drawImage(back(d[0], d[2]), -h * 0.4, -h / 2, h * 0.8, h); c.restore();
+});
+c.restore();
+// 主角卡：中央、略微倾斜、绿色光晕
+const cw = 952, ch = 1222, sc = 0.66, w = cw * sc, h = ch * sc, cx = W / 2, cy = 770;
+c.save(); c.translate(cx, cy); c.rotate(-2.5 * Math.PI / 180);
+c.shadowColor = rgba(hex, 0.95); c.shadowBlur = 90; c.fillStyle = '#000'; c.beginPath(); c.roundRect(-w / 2, -h / 2, w, h, 40 * sc); c.fill();
+c.shadowBlur = 0; c.beginPath(); c.roundRect(-w / 2, -h / 2, w, h, 40 * sc); c.clip();
+c.drawImage(img, 64, 64, cw, ch, -w / 2, -h / 2, w, h); c.restore();
+// 光点粒子
+c.save(); c.globalCompositeOperation = 'lighter';
+for (let i = 0; i < 160; i++) { const a = R() * Math.PI * 2, r = 380 + R() * 260, x = cx + Math.cos(a) * r * 0.85, y = cy + Math.sin(a) * r * 0.95, s = 1 + R() * 3;
+  const g = c.createRadialGradient(x, y, 0, x, y, s * 3); g.addColorStop(0, `rgba(250,232,170,${0.3 + 0.5 * R()})`); g.addColorStop(1, 'rgba(250,232,170,0)'); c.fillStyle = g; c.fillRect(x - s * 3, y - s * 3, s * 6, s * 6); }
+c.restore();
+// 上方钩子大字（两行）
+const line = (txt, y, size, parts) => {
+  c.save(); c.font = `900 ${size}px "Noto Serif CJK SC"`; c.textBaseline = 'middle';
+  const ws = parts.map(p => c.measureText(p[0]).width), tw = ws.reduce((a, b) => a + b, 0); let x = W / 2 - tw / 2;
+  parts.forEach((p, i) => { c.shadowColor = p[1] ? rgba(hex, 0.95) : 'rgba(0,0,0,0.9)'; c.shadowBlur = p[1] ? 30 : 16; c.fillStyle = p[1] ? mixHex(hex, '#EBEBEB', 0.15) : '#EBEBEB';
+    c.lineWidth = size * 0.06; c.strokeStyle = 'rgba(0,0,0,0.6)'; c.strokeText(p[0], x, y); c.fillText(p[0], x, y); x += ws[i]; });
+  c.restore();
+};
+line('', 118, 96, [['你的 MBTI', false]]);
+line('', 236, 104, [['是哪只', false], ['动物', true], ['？', false]]);
+// 底部：系列名 + 集数
+c.save(); c.font = '900 44px "Noto Serif CJK SC"'; c.textAlign = 'center'; c.textBaseline = 'middle';
+c.fillStyle = 'rgba(4,6,8,0.65)'; c.beginPath(); c.roundRect(W / 2 - 330, 1245, 660, 74, 37); c.fill();
+c.strokeStyle = '#C9A24A'; c.lineWidth = 2; c.stroke();
+c.fillStyle = '#E8D9A8'; c.shadowColor = 'rgba(232,217,168,0.6)'; c.shadowBlur = 12; c.fillText('兽格觉醒 · 16 型人格 ｜ 第 1 集', W / 2, 1283);
+c.restore();
+window.READY = true;
+</script>
